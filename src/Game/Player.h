@@ -1,0 +1,42 @@
+#pragma once
+#include "State.h"
+#include "Action.h"
+#include "Strategy.h"
+#include <memory>
+
+// Player class - can be used directly or inherited for advanced behavior
+class Player {
+protected:
+    double money;
+    std::string name;
+    std::unique_ptr<Strategy> strategy;
+    
+public:
+    // Constructor
+    Player(double initialMoney, std::unique_ptr<Strategy> strat, std::string name = "Uzan");
+    
+    // Virtual destructor for proper cleanup
+    virtual ~Player() = default;
+    
+    // Get action based on game state (delegates to strategy)
+    virtual Action getAction(const State& state);
+    
+    // Get bet amount (returns 1, can be overridden for advanced betting strategies)
+    virtual double getBet();
+    
+    // Update the player's money
+    void updateMoney(double amount);
+    void resetPlayer(double moeny = 0);
+    
+    // Get current money
+    double getMoney() const { return money; }
+
+    std::string getName() const { return name; }
+    
+    // Set strategy
+    void setStrategy(std::unique_ptr<Strategy> strat);
+    
+    // Clone the player
+    Player* clone() const;
+};
+
