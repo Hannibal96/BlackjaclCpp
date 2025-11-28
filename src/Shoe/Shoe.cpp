@@ -69,3 +69,48 @@ void Shoe::reset() {
     shuffle();
 }
 
+
+// DebugShoe methods
+DebugShoe::DebugShoe(int numDecks, double penetration, int seed)
+    : Shoe(numDecks, penetration), state(static_cast<uint32_t>(seed)), initialSeed(static_cast<uint32_t>(seed)) {
+    reset();
+}
+
+void DebugShoe::shuffle() {
+    // DebugShoe does not shuffle
+}
+
+void DebugShoe::reset() {
+    initializeFromDecks();
+    state = initialSeed;
+    currentIndex = 0;
+    endShoe = false;
+    calculatePenetrationThreshold();
+}
+
+Card DebugShoe::dealCard() {
+    if (cards.empty()) {
+        reset();
+    }
+    
+    size_t n = cards.size();
+    size_t index = state % n;
+    
+    Card card = cards[index];
+    cards.erase(cards.begin() + index);
+    
+    // Update state: state = (state * 1664525 + 1013904223) % (2**32)
+    state = state * 1664525 + 1013904223;
+    
+    // Check penetration threshold
+    // Since we remove cards, we need to check if remaining cards <= (Total - Threshold)
+    // Total cards initially = numDecks * 52
+    // penetrationThreshold was calculated as Total * penetration
+    // When cards.size() <= (Total - penetrationThreshold), we've dealt enough cards
+    size_t totalCards = numDecks * 52;
+    if (cards.size() <= totalCards - penetrationThreshold) {
+        endShoe = true;
+    }
+    
+    return card;
+}

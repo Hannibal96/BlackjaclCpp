@@ -52,6 +52,10 @@ add_gtest(BlackjackBenchmark
     ${CMAKE_CURRENT_SOURCE_DIR}/BlackjackBenchmark.cpp
 )
 
+add_gtest(DebugShoeTest
+    ${CMAKE_CURRENT_SOURCE_DIR}/DebugShoeTest.cpp
+)
+
 # convenient meta-target to build all tests
 add_custom_target(tests ALL
   DEPENDS
@@ -61,4 +65,5 @@ add_custom_target(tests ALL
     BasicStrategyRegressionTest
     PerformanceBenchmark
     BlackjackBenchmark
+    DebugShoeTest
 )

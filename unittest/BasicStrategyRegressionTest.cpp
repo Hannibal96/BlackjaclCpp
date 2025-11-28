@@ -89,7 +89,7 @@ class BasicStrategyRegressionTest : public ::testing::TestWithParam<Case> {
 protected:
     using json = nlohmann::json;
 
-    const uint64_t NUM_ROUNDS = 1'00'000'000ULL;  
+    const uint64_t NUM_ROUNDS = 1'000'000'000ULL;  
     const int NUM_THREADS = 16;
     json csm_data, cc_data;
 
@@ -189,25 +189,25 @@ TEST_P(BasicStrategyRegressionTest, ParallelSimulationRegressionTest) {
 
     Edge theory_edge = GetEdge(c);
 
-    std::cout << "CSM Theoretical Edge %: " << std::fixed << std::setprecision(4) << theory_edge.csm_edge << "%";
-    RegressionResult csm_res = RunRegression(c, 0.0, NUM_ROUNDS);
-    std::cout << " CSM Empiric Edge %: " << std::fixed << std::setprecision(4) << csm_res.empiric_edge * 100 << "%" << std::endl;
-    double csm_error = csm_res.empiric_edge * 100 + theory_edge.csm_edge;
-    if(abs(csm_error) > 0.01){
-        std::cout << "CSM Error is " << csm_error << " which is > 0.01... recalculating" << std::endl;
-        csm_res = RunRegression(c, 0.0, NUM_ROUNDS * 10);
-        csm_error = csm_res.empiric_edge * 100 + theory_edge.csm_edge;
-    }
-
     std::cout << "Cut Card Theoretical Edge %: " << std::fixed << std::setprecision(4) << theory_edge.cut_card_edge << "%";
     RegressionResult cc_res = RunRegression(c, 75.0, NUM_ROUNDS);
     std::cout << " Cut Card Empiric Edge %: " << std::fixed << std::setprecision(4) << cc_res.empiric_edge * 100 << "%" << std::endl;
     double cc_error = cc_res.empiric_edge * 100 + theory_edge.cut_card_edge;
-    if(abs(csm_error) > 0.01){
-        std::cout << "Cut Card Error is " << cc_error << " which is > 0.01... recalculating" << std::endl;
-        cc_res = RunRegression(c, 75.0, NUM_ROUNDS * 10);
-        cc_error = cc_res.empiric_edge * 100 + theory_edge.cut_card_edge;
-    }
+    // if(abs(cc_error) > 0.01){
+    //     std::cout << "Cut Card Error is " << cc_error << " which is > 0.01... recalculating" << std::endl;
+    //     cc_res = RunRegression(c, 75.0, NUM_ROUNDS * 10);
+    //     cc_error = cc_res.empiric_edge * 100 + theory_edge.cut_card_edge;
+    // }
+
+    std::cout << "CSM Theoretical Edge %: " << std::fixed << std::setprecision(4) << theory_edge.csm_edge << "%";
+    RegressionResult csm_res = RunRegression(c, 0.0, NUM_ROUNDS);
+    std::cout << " CSM Empiric Edge %: " << std::fixed << std::setprecision(4) << csm_res.empiric_edge * 100 << "%" << std::endl;
+    double csm_error = csm_res.empiric_edge * 100 + theory_edge.csm_edge;
+    // if(abs(csm_error) > 0.01){
+    //     std::cout << "CSM Error is " << csm_error << " which is > 0.01... recalculating" << std::endl;
+    //     csm_res = RunRegression(c, 0.0, NUM_ROUNDS * 10);
+    //     csm_error = csm_res.empiric_edge * 100 + theory_edge.csm_edge;
+    // }
 
     std::cout << "CSM Errors: " << csm_error << "%, "; 
     std::cout << "Cut Card: " << cc_error << "%" << std::endl;
@@ -241,16 +241,16 @@ static const float blackJackPay[] = {1.2, 1.5};
 
 
 static std::vector<Case> AllCases = [] {
-    int deck_size = 2;
-    bool stand_soft17 = true;
-    bool double_after_split = false;
-    int split_after_split = 3;
-    DoubleDownOn double_on = DoubleDownOn::ANY;
-    bool re_split_aces = true;
-    bool hit_split_aces = false;
-    bool peek_ = false;
-    Surrender surrender_ = Surrender::NO_SURRENDER;
-    float black_jack_pay = 1.2;
+    // int deck_size = 6;
+    // bool stand_soft17 = true;
+    // bool double_after_split = false;
+    // int split_after_split = 4;
+    // DoubleDownOn double_on = DoubleDownOn::ANY;
+    // bool re_split_aces = false;
+    // bool hit_split_aces = true;
+    // bool peek_ = false;
+    // Surrender surrender_ = Surrender::SURRENDER_ANY;
+    // float black_jack_pay = 1.5;
 
     std::vector<Case> v;
 
@@ -268,12 +268,13 @@ static std::vector<Case> AllCases = [] {
                                     for (Surrender surr : surrender)
                                         for (float bj : blackJackPay){
                                             Case new_case{d, ss17, das, sas, don, rsa, hsa, peek, surr, bj};
-                                            // if (caseDistance(base_case, new_case) == 1)
-                                            if (!peek && surr != Surrender::NO_SURRENDER)
-                                                continue;
+                                            // if (caseDistance(base_case, new_case) != 0)
+                                            //     continue;
+                                            // if (!peek && surr != Surrender::NO_SURRENDER)
+                                            //     continue;
                                             v.push_back(new_case);
                                         }
-    static std::mt19937 rng(12);
+    static std::mt19937 rng(1234);
     std::shuffle(v.begin(), v.end(), rng);
     return v;
 }();

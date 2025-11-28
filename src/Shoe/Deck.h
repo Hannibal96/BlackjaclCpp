@@ -4,7 +4,7 @@
 #include <string>
 
 enum class Rank { TWO = 2, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING, ACE };
-enum class Suit { HEARTS, DIAMONDS, CLUBS, SPADES };
+enum class Suit { DIAMONDS, HEARTS, CLUBS, SPADES };
 
 // Mark inline if this lives in a header to avoid ODR issues
 inline std::ostream& operator<<(std::ostream& os, Suit s) {

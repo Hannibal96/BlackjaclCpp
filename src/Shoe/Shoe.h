@@ -5,7 +5,7 @@
 
 // Shoe class for managing multiple decks of cards
 class Shoe {
-private:
+protected:
     std::vector<Card> cards;
     size_t currentIndex;
     int numDecks;
@@ -22,10 +22,10 @@ public:
     Shoe(int numDecks, double penetration);
     
     // Shuffle the shoe
-    void shuffle();
+    virtual void shuffle();
     
     // Deal a card from the shoe
-    Card dealCard();
+    virtual Card dealCard();
     
     // Check if the penetration threshold has been reached
     bool isEndShoe() const { return endShoe; }
@@ -37,6 +37,19 @@ public:
     size_t totalCards() const { return cards.size(); }
     
     // Reset the shoe (reshuffle all cards)
-    void reset();
+    virtual void reset();
+};
+
+class DebugShoe : public Shoe {
+protected:
+    uint32_t state;
+    uint32_t initialSeed;
+
+public:
+    DebugShoe(int numDecks, double penetration, int seed = 42);
+    
+    void shuffle() override;
+    Card dealCard() override;
+    void reset() override;
 };
 
