@@ -20,9 +20,9 @@ BlackjackTable::BlackjackTable(const BlackjackRules& gameRules, std::vector<Play
       doubleDownOn(gameRules.doubleDownOn),
       round_number(0ULL)
 {
-    // Initialize player hands map
+    // Initialize player slots map
     for (auto* player : players) {
-        playerHands[player] = std::vector<Hand>();
+        playerSlots[player] = std::vector<Slot>();
     }
 }
 
@@ -47,8 +47,10 @@ void BlackjackTable::round() {
         aliveHands = playersPlay();
     } else {
         for (auto* player : players) {
-            for (auto& hand : playerHands[player]) {
-                aliveHands.push_back({player, &hand});
+            for (auto& slot : playerSlots[player]) {
+                for (auto& hand : slot.getHands()) {
+                    aliveHands.push_back({player, &hand});
+                }
             }
         }
     }
@@ -78,7 +80,7 @@ void BlackjackTable::round() {
 // Clear all hands from previous round
 void BlackjackTable::clearHands() {
     dealerHand.clear();
-    for (auto& pair : playerHands) {
+    for (auto& pair : playerSlots) {
         pair.second.clear();
     }
 }
@@ -87,24 +89,29 @@ void BlackjackTable::clearHands() {
 void BlackjackTable::collectBets() {
     for (auto* player : players) {
         double bet = player->getBet();
-        Hand hand(bet);
-        playerHands[player].push_back(hand);
+        playerSlots[player].emplace_back(bet);
     }
 }
 
 // Deal initial two cards to each player and dealer
 // Returns true if round is over (dealer blackjack), keeping the possibility to double down on blackjack for later
 bool BlackjackTable::dealInitialCards() {
+    // First card to each slot
     for (auto* player : players) {
-        Card card = shoe->dealCard();
-        playerHands[player][0].addCard(card);
+        for (auto& slot : playerSlots[player]) {
+            Card card = shoe->dealCard();
+            slot[0].addCard(card);
+        }
     }
     
     dealerHand.addCard(shoe->dealCard());
     
+    // Second card to each slot
     for (auto* player : players) {
-        Card card = shoe->dealCard();
-        playerHands[player][0].addCard(card);
+        for (auto& slot : playerSlots[player]) {
+            Card card = shoe->dealCard();
+            slot[0].addCard(card);
+        }
     }
     
     // American vs European blackjack
@@ -119,56 +126,62 @@ bool BlackjackTable::dealInitialCards() {
 // Let each player play their hands
 // Returns alive hands (not bust, not surrendered)
 std::vector<std::pair<Player*, Hand*>> BlackjackTable::playersPlay() {
-    std::vector<std::pair<Player*, size_t>> aliveHandIndices;
+    std::vector<std::pair<Player*, std::pair<size_t, size_t>>> aliveHandIndices;
     Card dealerUpCard = dealerHand[0];
     
-    // TODO: this is also incorrect for the order of the game
+    // Iterate over each slot for each player
     for (auto* player : players) {
-        std::vector<Hand>& hands = playerHands[player];
-        for (size_t i = 0; i < hands.size(); ++i) {
-            while(true) {
-                // Calculate allowed actions based on rules
-                std::vector<Action> allowedActions = getAllowedActions(hands[i]);
-                
-                State state(hands[i], dealerUpCard, allowedActions);
-                Action action = player->getAction(state);
-                
-                if (action == Action::HIT) {
-                    hands[i].addCard(shoe->dealCard());
-                    if (hands[i].isBust()) {
-                        player->updateMoney(-hands[i].getBet());
+        std::vector<Slot>& slots = playerSlots[player];
+        for (size_t slotIdx = 0; slotIdx < slots.size(); ++slotIdx) {
+            Slot& slot = slots[slotIdx];
+            // Iterate over each hand in the slot
+            for (size_t handIdx = 0; handIdx < slot.getHands().size(); ++handIdx) {
+                while(true) {
+                    // Refresh hand reference each iteration to avoid invalidation
+                    Hand& hand = slot[handIdx];
+                    // Calculate allowed actions based on rules
+                    std::vector<Action> allowedActions = getAllowedActions(hand, slot.getHands().size());
+                    
+                    State state(hand, dealerUpCard, allowedActions);
+                    Action action = player->getAction(state);
+                    
+                    if (action == Action::HIT) {
+                        hand.addCard(shoe->dealCard());
+                        if (hand.isBust()) {
+                            player->updateMoney(-hand.getBet());
+                            break;  
+                        }
+                    }
+                    else if (action == Action::STAND) {
+                        aliveHandIndices.push_back({player, {slotIdx, handIdx}});
+                        break;
+                    }
+                    else if (action == Action::DOUBLE_DOWN) {
+                        hand.multiplyBet(2.0f);
+                        hand.addCard(shoe->dealCard());
+                        if (hand.isBust()) {
+                            player->updateMoney(-hand.getBet());
+                        }
+                        aliveHandIndices.push_back({player, {slotIdx, handIdx}});
+                        break;
+                    }
+                    else if (action == Action::SPLIT) {
+                        // Split the hand - new hand is added to the slot
+                        Hand newHand = hand.split();
+                        slot.addHand(newHand);
+                        // Continue playing the current hand
+                    }
+                    // TODO: move surrender to pre action
+                    else if (action == Action::SURRENDER) {
+                        double originalBet = hand.getBet();
+                        hand.multiplyBet(0.5f);
+                        double lossAmount = hand.getBet();
+                        player->updateMoney(-lossAmount);
                         break;  
                     }
-                }
-                else if (action == Action::STAND) {
-                    aliveHandIndices.push_back({player, i});
-                    break;
-                }
-                else if (action == Action::DOUBLE_DOWN) {
-                    hands[i].multiplyBet(2.0f);
-                    hands[i].addCard(shoe->dealCard());
-                    if (hands[i].isBust()) {
-                        player->updateMoney(-hands[i].getBet());
+                    else {
+                        throw std::invalid_argument("Invalid action");
                     }
-                    aliveHandIndices.push_back({player, i});
-                    break;
-                }
-                else if (action == Action::SPLIT) {
-                    // Split the hand (modifies current hand, returns new hand)
-                    Hand newHand = hands[i].split();
-                    // Insert the new hand right after the current hand position
-                    hands.insert(hands.begin() + i + 1, newHand);
-                }
-                // TODO: move surrender to pre action
-                else if (action == Action::SURRENDER) {
-                    double originalBet = hands[i].getBet();
-                    hands[i].multiplyBet(0.5f);
-                    double lossAmount = hands[i].getBet();
-                    player->updateMoney(-lossAmount);
-                    break;  
-                }
-                else {
-                    throw std::invalid_argument("Invalid action");
                 }
             }
         }
@@ -176,8 +189,10 @@ std::vector<std::pair<Player*, Hand*>> BlackjackTable::playersPlay() {
     
     // Convert indices to pointers now that all vector modifications are complete
     std::vector<std::pair<Player*, Hand*>> aliveHands;
-    for (const auto& [player, handIndex] : aliveHandIndices) {
-        aliveHands.push_back({player, &playerHands[player][handIndex]});
+    for (const auto& [player, indices] : aliveHandIndices) {
+        size_t slotIdx = indices.first;
+        size_t handIdx = indices.second;
+        aliveHands.push_back({player, &playerSlots[player][slotIdx][handIdx]});
     }
     
     return aliveHands;
@@ -209,8 +224,8 @@ bool BlackjackTable::shouldDealerHit() const {
 }
 
 // Calculate allowed actions based on hand and table rules
-std::vector<Action> BlackjackTable::getAllowedActions(const Hand& hand) const {
-    if (playerHands.at(players[0]).size() > maxSplits){
+std::vector<Action> BlackjackTable::getAllowedActions(const Hand& hand, size_t handsInSlot) const {
+    if (handsInSlot > maxSplits){
         throw std::logic_error("Cannot have more hands than maxSplit");
     }
     std::vector<Action> actions;
@@ -235,7 +250,8 @@ std::vector<Action> BlackjackTable::getAllowedActions(const Hand& hand) const {
         if((!hitSplitAces) && (hand[0].getValue() == 11)){
             actions = std::vector<Action>{Action::STAND};
         } 
-        if ((playerHands.at(players[0]).size() < maxSplits) && hand.isPair()){
+        // Check if more splits are allowed based on maxSplits
+        if(handsInSlot < maxSplits && hand.isPair()){
             if(hand[0].getValue() != 11){
                 actions.push_back(Action::SPLIT);
             } else if(resplitAces){
@@ -313,14 +329,12 @@ void BlackjackTable::evaluate(const std::vector<std::pair<Player*, Hand*>>& aliv
 
 std::ostream& operator<<(std::ostream& os, const BlackjackTable& table){
     os << "*========* Round number: " << table.round_number << " *========* " << std::endl;
-    os << table.dealerHand << std::endl;
+    os << "Dealer: " << table.dealerHand << std::endl;
 
-    for(const auto& [player, hands] : table.playerHands){
+    for(const auto& [player, slots] : table.playerSlots){
         os << "Player Name: " << player->getName() << ", Money: " << player->getMoney() << std::endl;
-        int hand_idx = 1;
-        for(const auto& hand : hands){
-            os << hand_idx << "th Hand: " << hand << std::endl;
-            hand_idx++;
+        for(size_t i = 0; i < slots.size(); ++i){
+            os << "Slot " << (i + 1) << ": " << std::endl << slots[i] << std::endl;
         }
     }
     return os;
