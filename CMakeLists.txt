@@ -18,10 +18,10 @@ add_library(blackjack_objs OBJECT
     src/Game/Hand.cpp
     src/Game/Slot.cpp
     src/Game/Player.cpp
-    src/Game/RandomStrategy.cpp
-    src/Game/BasicStrategy.cpp
     src/Game/Table.cpp
     src/Game/BlackjackTable.cpp
+    src/RL/RandomStrategy.cpp
+    src/RL/BasicStrategy.cpp
     src/Utils/Utils.cpp
 )
 target_include_directories(blackjack_objs

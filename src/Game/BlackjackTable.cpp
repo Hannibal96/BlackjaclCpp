@@ -1,6 +1,6 @@
 #include "BlackjackTable.h"
 #include "BlackjackRules.h"
-#include "State.h"
+#include "RL/State.h"
 #include <algorithm>
 #include <stdexcept>
 #include <iostream>

@@ -1,7 +1,7 @@
 #pragma once
-#include "State.h"
-#include "Action.h"
-#include "Strategy.h"
+#include "RL/State.h"
+#include "RL/Action.h"
+#include "RL/Strategy.h"
 #include <memory>
 
 // Player class - can be used directly or inherited for advanced behavior

@@ -1,7 +1,7 @@
 #pragma once
-#include "Hand.h"
+#include "Game/Hand.h"
 #include "Action.h"
-#include "../Shoe/Deck.h"
+#include "Shoe/Deck.h"
 #include <vector>
 
 // State struct representing the current game state

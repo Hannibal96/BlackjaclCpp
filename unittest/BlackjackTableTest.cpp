@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
-#include "../src/Game/BlackjackTable.h"
-#include "../src/Game/Player.h"
-#include "../src/Game/RandomStrategy.h"
-#include "../src/Game/BlackjackRules.h"
+#include "Game/BlackjackTable.h"
+#include "Game/Player.h"
+#include "RL/RandomStrategy.h"
+#include "Game/BlackjackRules.h"
 #include <memory>
 
 // Test fixture for BlackjackTable tests

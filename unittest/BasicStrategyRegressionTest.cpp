@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
-#include "../src/Game/BlackjackTable.h"
-#include "../src/Game/Player.h"
-#include "../src/Game/BasicStrategy.h"
-#include "../src/Game/RandomStrategy.h"
-#include "../src/Game/BlackjackRules.h"
-#include "../src/Utils/Utils.h"
+#include "Game/BlackjackTable.h"
+#include "Game/Player.h"
+#include "RL/BasicStrategy.h"
+#include "RL/RandomStrategy.h"
+#include "Game/BlackjackRules.h"
+#include "Utils/Utils.h"
 #include <memory>
 #include <iostream>
 #include <iomanip>

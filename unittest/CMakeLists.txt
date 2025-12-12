@@ -18,6 +18,11 @@ function(add_gtest TARGET_NAME)
             GTest::gtest_main
             $<TARGET_OBJECTS:blackjack_objs>
     )
+    target_include_directories(${TARGET_NAME}
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/src
+            ${CMAKE_SOURCE_DIR}/include
+    )
     set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 20)
     gtest_discover_tests(${TARGET_NAME})
 endfunction()

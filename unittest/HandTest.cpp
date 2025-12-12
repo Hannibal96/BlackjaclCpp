@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../src/Game/Hand.h"
+#include "Game/Hand.h"
 
 // Test fixture for Hand tests
 class HandTest : public ::testing::Test {
