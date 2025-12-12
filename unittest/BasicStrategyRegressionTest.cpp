@@ -5,7 +5,6 @@
 #include "RL/RandomStrategy.h"
 #include "Game/BlackjackRules.h"
 #include "Utils/Utils.h"
-#include <memory>
 #include <iostream>
 #include <iomanip>
 #include <chrono>

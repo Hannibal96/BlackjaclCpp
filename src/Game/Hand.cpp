@@ -1,5 +1,4 @@
 #include "Hand.h"
-#include <algorithm>
 #include <stdexcept>
 
 // Default constructor

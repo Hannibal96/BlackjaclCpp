@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <stdexcept>
 #include <iostream>
-#include <iomanip>
 
 // Constructor
 BlackjackTable::BlackjackTable(const BlackjackRules& gameRules, std::vector<Player*> gamePlayers)
