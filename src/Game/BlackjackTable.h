@@ -2,6 +2,7 @@
 #include "Table.h"
 #include "BlackjackRules.h"
 #include "Hand.h"
+#include "Slot.h"
 #include <map>
 #include <vector>
 #include <utility>
@@ -26,12 +27,12 @@ private:
     
     // Game state
     Hand dealerHand;
-    std::map<Player*, std::vector<Hand>> playerHands;   // TODO: replace this with slots for enabling to track the number of splits
+    std::map<Player*, std::vector<Slot>> playerSlots;
     
     // Helper methods
     void clearHands();
     bool shouldDealerHit() const;
-    std::vector<Action> getAllowedActions(const Hand& hand) const;
+    std::vector<Action> getAllowedActions(const Hand& hand, size_t handsInSlot) const;
     
 protected:
     // Implement abstract methods from Table

@@ -16,6 +16,7 @@ add_library(blackjack_objs OBJECT
     src/Shoe/Deck.cpp
     src/Shoe/Shoe.cpp
     src/Game/Hand.cpp
+    src/Game/Slot.cpp
     src/Game/Player.cpp
     src/Game/RandomStrategy.cpp
     src/Game/BasicStrategy.cpp
