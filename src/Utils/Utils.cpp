@@ -1,5 +1,6 @@
 #include "Utils.h"
 #include "../Game/BlackjackTable.h"
+#include "RL/QLearningStrategy.h"
 #include <iostream>
 #include <iomanip>
 #include <chrono>
@@ -11,7 +12,7 @@
 // Global mutex for thread-safe console output
 static std::mutex g_consoleMutex;
 
-bool runSimulation(const BlackjackRules& rules, std::vector<Player*>& players, uint64_t numRounds, bool showProgress) {
+bool runSimulation(const BlackjackRules& rules, std::vector<Player*>& players, uint64_t numRounds) {
     if (players.empty()) {
         std::lock_guard<std::mutex> lock(g_consoleMutex);
         std::cerr << "Error: No players provided" << std::endl;
@@ -37,51 +38,6 @@ bool runSimulation(const BlackjackRules& rules, std::vector<Player*>& players, u
         for (int i = 1; i <= numRounds; ++i) {
             table.round();
             // std::cout << table << std::endl;
-            
-            // Update progress every second or on completion (only if showProgress is true)
-            if (showProgress) {
-                auto currentTime = std::chrono::high_resolution_clock::now();
-                auto timeSinceUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(
-                    currentTime - lastUpdateTime).count();
-                
-                if (timeSinceUpdate >= 1000 || i == numRounds) {
-                    auto totalElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        currentTime - startTime).count();
-                    double secondsElapsed = totalElapsed / 1000.0;
-                    
-                    // Calculate hands per second
-                    int handsSinceLastUpdate = i - lastHandCount;
-                    double intervalSeconds = timeSinceUpdate / 1000.0;
-                    double currentHandsPerSec = handsSinceLastUpdate / intervalSeconds;
-                    double avgHandsPerSec = i / secondsElapsed;
-                    
-                    // Calculate progress percentage
-                    double progress = (static_cast<double>(i) / numRounds) * 100.0;
-                    
-                    // Calculate ETA
-                    double remainingHands = numRounds - i;
-                    double etaSeconds = remainingHands / avgHandsPerSec;
-                    int etaMinutes = static_cast<int>(etaSeconds / 60);
-                    int etaSecs = static_cast<int>(etaSeconds) % 60;
-                    
-                    std::lock_guard<std::mutex> lock(g_consoleMutex);
-                    std::cout << "\rHands: " << i << "/" << numRounds 
-                              << " (" << std::fixed << std::setprecision(1) << progress << "%)"
-                              << " | Speed: " << std::setprecision(0) << currentHandsPerSec << " hands/s"
-                              << " | Avg: " << avgHandsPerSec << " hands/s"
-                              << " | Elapsed: " << std::setprecision(1) << secondsElapsed << "s"
-                              << " | ETA: " << etaMinutes << "m" << etaSecs << "s    ";
-                    std::cout.flush();
-                    
-                    lastUpdateTime = currentTime;
-                    lastHandCount = i;
-                }
-            }
-        }
-        
-        if (showProgress) {
-            std::lock_guard<std::mutex> lock(g_consoleMutex);
-            std::cout << std::endl; // New line after progress completes
         }
         
         return true;
@@ -94,14 +50,12 @@ bool runSimulation(const BlackjackRules& rules, std::vector<Player*>& players, u
 }
 
 
-std::vector<std::vector<Player*>> runParallelSimulation(const BlackjackRules& rules, 
+std::vector<Player*> runParallelSimulation(const BlackjackRules& rules, 
                                                         const std::vector<Player*>& players, 
                                                         uint64_t numRounds, 
-                                                        int numThreads, 
-                                                        bool showProgress) {
+                                                        int numThreads) {
                                                             
-    std::vector<std::vector<Player*>> resultPlayers;
-    resultPlayers.resize(numThreads);
+    std::vector<Player*> resultPlayers;
     
     if (players.empty()) {
         std::cerr << "Error: No players provided" << std::endl;
@@ -138,7 +92,7 @@ std::vector<std::vector<Player*>> runParallelSimulation(const BlackjackRules& ru
         threadData[t].rounds = roundsPerThread + (t < remainingRounds ? 1 : 0);
     }
     
-    // Launch threads with showProgress = false
+    // Launch threads
     std::vector<std::future<bool>> futures;
     for (int t = 0; t < numThreads; ++t) {
         futures.push_back(std::async(
@@ -146,8 +100,7 @@ std::vector<std::vector<Player*>> runParallelSimulation(const BlackjackRules& ru
             runSimulation,
             std::cref(rules),
             std::ref(threadData[t].players),
-            threadData[t].rounds,
-            showProgress  
+            threadData[t].rounds
         ));
     }
     
@@ -162,16 +115,24 @@ std::vector<std::vector<Player*>> runParallelSimulation(const BlackjackRules& ru
     auto endTime = std::chrono::high_resolution_clock::now();
     auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
     double elapsedSec = elapsedMs / 1000.0;
-    if(showProgress){
-        std::cout.flush();
-        std::cout << "All threads completed in " << std::fixed << std::setprecision(2) << elapsedSec << " seconds!\n";
-        std::cout << "Average speed: " << std::setprecision(0) << (numRounds / elapsedSec) << " hands/sec\n\n";
+    
+    // Create averaged result players
+    // Start by cloning players from first thread
+    for (size_t p = 0; p < players.size(); ++p) {
+        resultPlayers.push_back(threadData[0].players[p]->clone());
     }
     
-    for(size_t t = 0; t < numThreads ; ++t ){
+    // Accumulate players from remaining threads
+    for (size_t t = 1; t < numThreads; ++t) {
         for (size_t p = 0; p < players.size(); ++p) {
-            resultPlayers[t].push_back(threadData[t].players[p]->clone());
+            *resultPlayers[p] += *threadData[t].players[p];
         }
+    }
+    
+    // Divide by number of threads to get average
+    double factor = 1.0 / numThreads;
+    for (size_t p = 0; p < players.size(); ++p) {
+        *resultPlayers[p] *= factor;
     }
     
     // Clean up cloned players

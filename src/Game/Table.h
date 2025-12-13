@@ -3,9 +3,12 @@
 #include "Player.h"
 #include "Hand.h"
 #include "../Shoe/Shoe.h"
+#include "RL/State.h"
+#include "RL/Action.h"
 #include <vector>
 #include <memory>
 #include <utility>
+#include <tuple>
 
 // Abstract Table class for managing game flow
 class Table {
@@ -22,9 +25,9 @@ protected:
     // Protected helper methods for subclasses
     virtual void collectBets() = 0;
     virtual bool dealInitialCards() = 0;  // Returns true if round is over (dealer BJ or all players BJ)
-    virtual std::vector<std::pair<Player*, Hand*>> playersPlay() = 0;  // Returns alive hands (not bust, not surrendered)
+    virtual std::vector<std::tuple<Player*, Hand*, State, Action>> playersPlay() = 0;  // Returns alive hands with state and action
     virtual void dealerPlays(DealerAction dealer_action) = 0;
-    virtual void evaluate(const std::vector<std::pair<Player*, Hand*>>& aliveHands) = 0;
+    virtual void evaluate(const std::vector<std::tuple<Player*, Hand*, State, Action>>& aliveHands) = 0;
     
 public:
     // Constructor - receives rules, creates shoe, does NOT store rules

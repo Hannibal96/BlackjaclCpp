@@ -24,8 +24,8 @@ public:
     // Get bet amount (returns 1, can be overridden for advanced betting strategies)
     virtual double getBet();
     
-    // Update the player's money
-    void updateMoney(double amount);
+    // Update the player's money with SARS parameters for learning strategies
+    void updateMoney(double reward, const State& state, Action action, const State& nextState);
     void resetPlayer(double moeny = 0);
     
     // Get current money
@@ -35,6 +35,16 @@ public:
     
     // Set strategy
     void setStrategy(std::unique_ptr<Strategy> strat);
+    
+    // Get strategy (const access)
+    const Strategy* getStrategy() const { return strategy.get(); }
+    
+    // Get mutable strategy access (for averaging operations)
+    Strategy* getMutableStrategy() { return strategy.get(); }
+    
+    // Averaging operators for combining players from parallel simulations
+    Player& operator+=(const Player& other);
+    Player& operator*=(double factor);
     
     // Clone the player
     Player* clone() const;

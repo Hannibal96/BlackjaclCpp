@@ -49,6 +49,20 @@ target_include_directories(BasicStrategyRegressionTest PRIVATE
     "${CMAKE_SOURCE_DIR}/include"
 )
 
+add_gtest(BasicStrategyTest
+    ${CMAKE_CURRENT_SOURCE_DIR}/BasicStrategyTest.cpp
+)
+target_include_directories(BasicStrategyTest PRIVATE
+    "${CMAKE_SOURCE_DIR}/include"
+)
+
+add_gtest(QLearningRegressionTest
+    ${CMAKE_CURRENT_SOURCE_DIR}/QLearningRegressionTest.cpp
+)
+target_include_directories(QLearningRegressionTest PRIVATE
+    "${CMAKE_SOURCE_DIR}/include"
+)
+
 add_gtest(PerformanceBenchmark
     ${CMAKE_CURRENT_SOURCE_DIR}/PerformanceBenchmark.cpp
 )
@@ -68,6 +82,8 @@ add_custom_target(tests ALL
     HandTest
     BlackjackTableTest
     BasicStrategyRegressionTest
+    BasicStrategyTest
+    QLearningRegressionTest
     PerformanceBenchmark
     BlackjackBenchmark
     DebugShoeTest

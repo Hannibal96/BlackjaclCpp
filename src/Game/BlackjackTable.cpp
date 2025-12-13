@@ -39,22 +39,28 @@ void BlackjackTable::round() {
     // Deal initial cards - returns true if round is over
     bool delaer_bj = dealInitialCards();
     
-    std::vector<std::pair<Player*, Hand*>> aliveHands;
+    std::vector<std::tuple<Player*, Hand*, State, Action>> aliveHands;
     
     // Only continue with player actions if there is no dealer bj
     if (!delaer_bj) {
         aliveHands = playersPlay();
     } else {
+        // Dealer has blackjack - all hands are evaluated immediately
+        Card dealerUpCard = dealerHand[0];
         for (auto* player : players) {
             for (auto& slot : playerSlots[player]) {
                 for (auto& hand : slot.getHands()) {
-                    aliveHands.push_back({player, &hand});
+                    // Create initial state for hands that didn't get to play
+                    std::vector<Action> allowedActions = getAllowedActions(hand, slot.getHands().size());
+                    State state(hand, dealerUpCard, allowedActions);
+                    Action action = Action::STAND;  // Default action when dealer has blackjack
+                    aliveHands.push_back({player, &hand, state, action});
                 }
             }
         }
     }
 
-    bool all_players_bj = std::all_of(aliveHands.begin(), aliveHands.end(), [](auto& p) { return p.second->isBlackjack(); });
+    bool all_players_bj = std::all_of(aliveHands.begin(), aliveHands.end(), [](auto& h) { return std::get<1>(h)->isBlackjack(); });
     bool dealer_has_chance_bj = dealerHand[0].getValue() == 10 || dealerHand[0].getValue() == 11;
 
     DealerAction dealer_action;
@@ -88,7 +94,7 @@ void BlackjackTable::clearHands() {
 void BlackjackTable::collectBets() {
     for (auto* player : players) {
         double bet = player->getBet();
-        playerSlots[player].emplace_back(bet);
+        playerSlots[player].emplace_back(bet, maxSplits);
     }
 }
 
@@ -123,9 +129,9 @@ bool BlackjackTable::dealInitialCards() {
 }
 
 // Let each player play their hands
-// Returns alive hands (not bust, not surrendered)
-std::vector<std::pair<Player*, Hand*>> BlackjackTable::playersPlay() {
-    std::vector<std::pair<Player*, std::pair<size_t, size_t>>> aliveHandIndices;
+// Returns alive hands (not bust, not surrendered) with their state and action
+std::vector<std::tuple<Player*, Hand*, State, Action>> BlackjackTable::playersPlay() {
+    std::vector<std::tuple<Player*, std::pair<size_t, size_t>, State, Action>> aliveHandIndices;
     Card dealerUpCard = dealerHand[0];
     
     // Iterate over each slot for each player
@@ -147,27 +153,44 @@ std::vector<std::pair<Player*, Hand*>> BlackjackTable::playersPlay() {
                     if (action == Action::HIT) {
                         hand.addCard(shoe->dealCard());
                         if (hand.isBust()) {
-                            player->updateMoney(-hand.getBet());
+                            // Create terminal state (bust) with empty allowed actions
+                            State nextState(hand, dealerUpCard, {});
+                            double reward = -hand.getBet();
+                            player->updateMoney(reward, state, action, nextState);
                             break;  
+                        } else {
+                            // Non-terminal state - player continues with updated hand
+                            std::vector<Action> nextAllowedActions = getAllowedActions(hand, slot.getHands().size());
+                            State nextState(hand, dealerUpCard, nextAllowedActions);
+                            player->updateMoney(0.0, state, action, nextState);
                         }
                     }
                     else if (action == Action::STAND) {
-                        aliveHandIndices.push_back({player, {slotIdx, handIdx}});
+                        aliveHandIndices.push_back({player, {slotIdx, handIdx}, state, action});
                         break;
                     }
                     else if (action == Action::DOUBLE_DOWN) {
                         hand.multiplyBet(2.0f);
                         hand.addCard(shoe->dealCard());
                         if (hand.isBust()) {
-                            player->updateMoney(-hand.getBet());
+                            // Create terminal state (bust) with empty allowed actions
+                            State nextState(hand, dealerUpCard, {});
+                            double reward = -hand.getBet();
+                            player->updateMoney(reward, state, action, nextState);
+                        } else {
+                            // Non-bust double down - still alive
+                            aliveHandIndices.push_back({player, {slotIdx, handIdx}, state, action});
                         }
-                        aliveHandIndices.push_back({player, {slotIdx, handIdx}});
                         break;
                     }
                     else if (action == Action::SPLIT) {
                         // Split the hand - new hand is added to the slot
                         Hand newHand = hand.split();
                         slot.addHand(newHand);
+                        // Update with reward 0 - split creates two hands with equal expected value
+                        std::vector<Action> nextAllowedActions = getAllowedActions(hand, slot.getHands().size());
+                        State nextState(hand, dealerUpCard, nextAllowedActions);
+                        player->updateMoney(0.0, state, action, nextState);
                         // Continue playing the current hand
                     }
                     // TODO: move surrender to pre action
@@ -175,7 +198,10 @@ std::vector<std::pair<Player*, Hand*>> BlackjackTable::playersPlay() {
                         double originalBet = hand.getBet();
                         hand.multiplyBet(0.5f);
                         double lossAmount = hand.getBet();
-                        player->updateMoney(-lossAmount);
+                        // Create terminal state (surrendered) with empty allowed actions
+                        State nextState(hand, dealerUpCard, {});
+                        double reward = -lossAmount;
+                        player->updateMoney(reward, state, action, nextState);
                         break;  
                     }
                     else {
@@ -187,11 +213,11 @@ std::vector<std::pair<Player*, Hand*>> BlackjackTable::playersPlay() {
     }
     
     // Convert indices to pointers now that all vector modifications are complete
-    std::vector<std::pair<Player*, Hand*>> aliveHands;
-    for (const auto& [player, indices] : aliveHandIndices) {
+    std::vector<std::tuple<Player*, Hand*, State, Action>> aliveHands;
+    for (const auto& [player, indices, state, action] : aliveHandIndices) {
         size_t slotIdx = indices.first;
         size_t handIdx = indices.second;
-        aliveHands.push_back({player, &playerSlots[player][slotIdx][handIdx]});
+        aliveHands.push_back({player, &playerSlots[player][slotIdx][handIdx], state, action});
     }
     
     return aliveHands;
@@ -285,43 +311,57 @@ std::vector<Action> BlackjackTable::getAllowedActions(const Hand& hand, size_t h
 }
 
 // Evaluate alive hands and process payments
-void BlackjackTable::evaluate(const std::vector<std::pair<Player*, Hand*>>& aliveHands) {
+void BlackjackTable::evaluate(const std::vector<std::tuple<Player*, Hand*, State, Action>>& aliveHands) {
     int dealerValue = dealerHand.getValue();
     bool dealerBusted = dealerHand.isBust();
     bool dealerBlackjack = dealerHand.isBlackjack();
+    Card dealerUpCard = dealerHand[0];
     
     // Only evaluate hands that are still alive (not bust, not surrendered)
-    for (const auto& [player, hand] : aliveHands) {
+    for (const auto& [player, hand, state, action] : aliveHands) {
         int playerValue = hand->getValue();
         bool playerBlackjack = hand->isBlackjack();
         double bet = hand->getBet();
         
+        // Create terminal next state after dealer plays
+        State nextState(*hand, dealerUpCard, {});
+        
         if (playerBlackjack && dealerBlackjack) {
+            // Push - no reward
+            player->updateMoney(0.0, state, action, nextState);
             continue;
         }
         
         if (playerBlackjack) {
-            player->updateMoney(bet * blackjackPayout);
+            double reward = bet * blackjackPayout;
+            player->updateMoney(reward, state, action, nextState);
             continue;
         }
         
         if (dealerBlackjack) {
-            player->updateMoney(-bet);
+            double reward = -bet;
+            player->updateMoney(reward, state, action, nextState);
             continue;
         }
         
         if (dealerBusted) {
-            player->updateMoney(bet);
+            double reward = bet;
+            player->updateMoney(reward, state, action, nextState);
             continue;
         }
         
         if (playerValue > dealerValue) {
-            player->updateMoney(bet);
+            double reward = bet;
+            player->updateMoney(reward, state, action, nextState);
         }
         else if (playerValue < dealerValue) {
-            player->updateMoney(-bet);
+            double reward = -bet;
+            player->updateMoney(reward, state, action, nextState);
         }
-        // else: playerValue == dealerValue - PUSH (no money exchanged)
+        else {
+            // Push - no reward
+            player->updateMoney(0.0, state, action, nextState);
+        }
     }
 }
 

@@ -11,7 +11,7 @@ private:
     
 public:
     // Constructor
-    explicit Slot(double betAmount);
+    explicit Slot(double betAmount, size_t maxHands = 4);
     
     // Add a hand to the slot (used after a split)
     void addHand(const Hand& hand);
