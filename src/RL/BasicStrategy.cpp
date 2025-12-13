@@ -82,7 +82,8 @@ bool BasicStrategy::loadFromJson(const std::string& filepath) {
 
 Action BasicStrategy::getAction(const State& state) {
     // Get hand type
-    HandType handType = getHandType(state.playerHand);
+    bool splitAllowed = std::find(state.allowedActions.begin(), state.allowedActions.end(), Action::SPLIT) != state.allowedActions.end();
+    HandType handType = state.playerHand.getHandType(splitAllowed);
     if (handType == HandType::ZOMBIE) {
         return Action::HIT;
     }
@@ -102,8 +103,8 @@ Action BasicStrategy::getAction(const State& state) {
     // Get dealer card value
     int dealerValue = state.dealerCard.getValue();
     
-    // For now, use count = 0 (basic strategy without counting)
-    int count = 0;
+    // Use count from state
+    int count = state.count;
     
     // Lookup action in table
     try {
@@ -135,18 +136,6 @@ Action BasicStrategy::getAction(const State& state) {
 
 
 // TODO: not belong here
-HandType BasicStrategy::getHandType(const Hand& hand) const {
-    if(hand.cardCount() == 1){
-        return HandType::ZOMBIE;
-    } else if (hand.isPair()) {
-        return HandType::PAIR;
-    } else if (hand.isSoft()) {
-        return HandType::SOFT;
-    } else {
-        return HandType::HARD;
-    }
-}
-
 HandType BasicStrategy::stringToHandType(const std::string& handTypeStr) const {
     if (handTypeStr == "HandType.HARD") {
         return HandType::HARD;
@@ -165,5 +154,15 @@ std::unique_ptr<Strategy> BasicStrategy::clone() const {
     // Share the lookup table pointer instead of copying (it's read-only during gameplay)
     cloned->lookupTable = this->lookupTable;
     return cloned;
+}
+
+void BasicStrategy::setAction(int count, HandType handType, unsigned int playerSum, unsigned int dealerHand, ActionWithFallback action) {
+    // Initialize lookup table if it doesn't exist
+    if (!lookupTable) {
+        lookupTable = std::make_shared<std::map<int, std::map<HandType, std::map<int, std::map<int, ActionWithFallback>>>>>();
+    }
+    
+    // Set the action in the lookup table
+    (*lookupTable)[count][handType][playerSum][dealerHand] = action;
 }
 

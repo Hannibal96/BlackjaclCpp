@@ -2,6 +2,14 @@
 #include <vector>
 #include "../Shoe/Deck.h"
 
+// Enum to represent the type of hand
+enum class HandType {
+    HARD=0,
+    SOFT,
+    PAIR,
+    ZOMBIE
+};
+
 // Hand class representing a player's hand in blackjack
 class Hand {
 private:
@@ -60,6 +68,9 @@ public:
     // Check if hand is soft (has an Ace counted as 11)
     bool isSoft() const;
     bool isHard() const;
+    
+    // Get the type of hand (HARD, SOFT, PAIR, or ZOMBIE)
+    HandType getHandType(bool pairAllowed = true) const;
     
     // Split the hand into two hands
     // Modifies current hand to keep only first card, returns new hand with second card

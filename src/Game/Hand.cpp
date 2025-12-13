@@ -135,6 +135,20 @@ Hand Hand::split() {
 }
 
 
+HandType Hand::getHandType(bool pairAllowed) const {
+    if(cardCount() == 1){
+        return HandType::ZOMBIE;
+    } else if (isPair() and pairAllowed) {
+        return HandType::PAIR;
+    } else if (isSoft()) {
+        return HandType::SOFT;
+    } else if (isHard()) {
+        return HandType::HARD;
+    }
+    
+    throw std::logic_error("Unable to determine hand type for hand with " + std::to_string(cardCount()) + " cards");
+}
+
 std::ostream& operator<<(std::ostream& os, const Hand& hand) {
     os << "Bet: " << hand.bet << (hand.isSplit ? " After Split" : " Not splited") << std::endl;
     for(Card card : hand.cards){

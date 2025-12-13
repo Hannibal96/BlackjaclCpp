@@ -9,9 +9,10 @@ struct State {
     Hand playerHand;
     Card dealerCard;
     std::vector<Action> allowedActions;
+    int count;
     
-    // Constructor with all relevant fields
-    State(const Hand& hand, const Card& dealer, const std::vector<Action>& actions)
-        : playerHand(hand), dealerCard(dealer), allowedActions(actions) {}
+    // Constructor with all relevant fields (count defaults to 0)
+    State(const Hand& hand, const Card& dealer, const std::vector<Action>& actions, int count = 0)
+        : playerHand(hand), dealerCard(dealer), allowedActions(actions), count(count) {}
 };
 

@@ -1,16 +1,9 @@
 #pragma once
 #include "Strategy.h"
+#include "Game/Hand.h"
 #include <map>
 #include <string>
 #include <memory>
-
-// Enum to represent the type of hand
-enum class HandType {
-    HARD,
-    SOFT,
-    PAIR,
-    ZOMBIE
-};
 
 // Struct to hold an action and its fallback
 struct ActionWithFallback {
@@ -28,9 +21,6 @@ private:
     // Nested map structure: count -> hand_type -> player_sum -> dealer_card -> action
     // Using shared_ptr so clones can share the same lookup table (it's read-only during gameplay)
     std::shared_ptr<std::map<int, std::map<HandType, std::map<int, std::map<int, ActionWithFallback>>>>> lookupTable;
-    
-    // Helper function to determine hand type from Hand object
-    HandType getHandType(const Hand& hand) const;
     
     // Helper function to convert string to HandType
     HandType stringToHandType(const std::string& handTypeStr) const;
@@ -53,5 +43,8 @@ public:
     
     // Check if the lookup table is loaded
     bool isLoaded() const { return lookupTable && !lookupTable->empty(); }
+    
+    // Set action in the lookup table for a specific state
+    void setAction(int count, HandType handType, unsigned int playerSum, unsigned int dealerHand, ActionWithFallback action);
 };
 
