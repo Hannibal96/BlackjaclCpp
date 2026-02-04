@@ -70,6 +70,7 @@ public:
         if (value < final_value) {
             value = final_value;
         }
+        this->value = value;
         n++;
     }
     

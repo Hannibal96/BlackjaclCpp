@@ -29,62 +29,28 @@ endfunction()
 
 add_compile_definitions(PROJECT_ROOT="${PROJECT_ROOT_PATH}")
 
-# list ONLY the test .cpp files here; production .cpp are in blackjack_objs
-add_gtest(ShoeTest
-    ${CMAKE_CURRENT_SOURCE_DIR}/ShoeTest.cpp
-)
+# Regression tests subdirectory
+add_subdirectory(regression)
 
-add_gtest(HandTest
-    ${CMAKE_CURRENT_SOURCE_DIR}/HandTest.cpp
-)
+# Standard unit tests
+add_gtest(ShoeTest ${CMAKE_CURRENT_SOURCE_DIR}/ShoeTest.cpp)
+add_gtest(HandTest ${CMAKE_CURRENT_SOURCE_DIR}/HandTest.cpp)
+add_gtest(BlackjackTableTest ${CMAKE_CURRENT_SOURCE_DIR}/BlackjackTableTest.cpp)
+add_gtest(BasicStrategyTest ${CMAKE_CURRENT_SOURCE_DIR}/BasicStrategyTest.cpp)
+add_gtest(PerformanceBenchmark ${CMAKE_CURRENT_SOURCE_DIR}/PerformanceBenchmark.cpp)
+add_gtest(BlackjackBenchmark ${CMAKE_CURRENT_SOURCE_DIR}/BlackjackBenchmark.cpp)
+add_gtest(DebugShoeTest ${CMAKE_CURRENT_SOURCE_DIR}/DebugShoeTest.cpp)
 
-add_gtest(BlackjackTableTest
-    ${CMAKE_CURRENT_SOURCE_DIR}/BlackjackTableTest.cpp
-)
-
-add_gtest(BasicStrategyRegressionTest
-    ${CMAKE_CURRENT_SOURCE_DIR}/BasicStrategyRegressionTest.cpp
-)
-target_include_directories(BasicStrategyRegressionTest PRIVATE
-    "${CMAKE_SOURCE_DIR}/include"
-)
-
-add_gtest(BasicStrategyTest
-    ${CMAKE_CURRENT_SOURCE_DIR}/BasicStrategyTest.cpp
-)
-target_include_directories(BasicStrategyTest PRIVATE
-    "${CMAKE_SOURCE_DIR}/include"
-)
-
-add_gtest(QLearningRegressionTest
-    ${CMAKE_CURRENT_SOURCE_DIR}/QLearningRegressionTest.cpp
-)
-target_include_directories(QLearningRegressionTest PRIVATE
-    "${CMAKE_SOURCE_DIR}/include"
-)
-
-add_gtest(PerformanceBenchmark
-    ${CMAKE_CURRENT_SOURCE_DIR}/PerformanceBenchmark.cpp
-)
-
-add_gtest(BlackjackBenchmark
-    ${CMAKE_CURRENT_SOURCE_DIR}/BlackjackBenchmark.cpp
-)
-
-add_gtest(DebugShoeTest
-    ${CMAKE_CURRENT_SOURCE_DIR}/DebugShoeTest.cpp
-)
-
-# convenient meta-target to build all tests
+# Convenient meta-target to build all tests
 add_custom_target(tests ALL
   DEPENDS
     ShoeTest
     HandTest
     BlackjackTableTest
-    BasicStrategyRegressionTest
     BasicStrategyTest
-    QLearningRegressionTest
     PerformanceBenchmark
     BlackjackBenchmark
     DebugShoeTest
+    BasicStrategyRegressionTest
+    QLearningRegressionTest
 )
