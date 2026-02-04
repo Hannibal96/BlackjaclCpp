@@ -46,5 +46,22 @@ public:
     
     // Set action in the lookup table for a specific state
     void setAction(int count, HandType handType, unsigned int playerSum, unsigned int dealerHand, ActionWithFallback action);
+    
+    // Get action directly from lookup table by keys (returns HIT if not found)
+    Action getActionFromTable(int count, HandType handType, int playerSum, int dealerCard) const;
+    
+    // Averaging operators (no-op for BasicStrategy since it's read-only)
+    Strategy& operator+=(const Strategy& other) override {
+        // BasicStrategy is read-only, no accumulation needed
+        return *this;
+    }
+    
+    Strategy& operator*=(double factor) override {
+        // BasicStrategy is read-only, no scaling needed
+        return *this;
+    }
+    
+    // Friend function for printing the strategy table
+    friend std::ostream& operator<<(std::ostream& os, const BasicStrategy& strategy);
 };
 

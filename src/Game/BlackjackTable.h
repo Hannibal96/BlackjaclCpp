@@ -38,9 +38,9 @@ protected:
     // Implement abstract methods from Table
     void collectBets() override;
     bool dealInitialCards() override;  // Returns true if round is over (dealer BJ or all players BJ)
-    std::vector<std::pair<Player*, Hand*>> playersPlay() override;  // Returns alive hands (not bust, not surrendered)
+    std::vector<std::tuple<Player*, Hand*, State, Action>> playersPlay() override;  // Returns alive hands with their state and action
     void dealerPlays(DealerAction dealer_action) override;
-    void evaluate(const std::vector<std::pair<Player*, Hand*>>& aliveHands) override;
+    void evaluate(const std::vector<std::tuple<Player*, Hand*, State, Action>>& aliveHands) override;
     
 public:
     // Constructor - creates shoe based on rules

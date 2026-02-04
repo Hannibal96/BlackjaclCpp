@@ -19,9 +19,11 @@ double Player::getBet() {
     return 1.0;
 }
 
-// Update the player's money
-void Player::updateMoney(double amount) {
-    money += amount;
+// Update the player's money with SARS parameters for learning strategies
+void Player::updateMoney(double reward, const State& state, Action action, const State& nextState) {
+    money += reward;
+    // Update strategy table (for learning strategies like Q-learning)
+    strategy->updateTable(state, action, reward, nextState);
 }
 
 void Player::resetPlayer(double moeny){
@@ -34,6 +36,31 @@ void Player::setStrategy(std::unique_ptr<Strategy> strat) {
         throw std::invalid_argument("Player must have a strategy");
     }
     strategy = std::move(strat);
+}
+
+// Averaging operators for combining players from parallel simulations
+Player& Player::operator+=(const Player& other) {
+    // Sum the money
+    money += other.money;
+    
+    // Apply += to strategy
+    if (strategy && other.strategy) {
+        *strategy += *other.strategy;
+    }
+    
+    return *this;
+}
+
+Player& Player::operator*=(double factor) {
+    // Scale the money
+    money *= factor;
+    
+    // Apply *= to strategy
+    if (strategy) {
+        *strategy *= factor;
+    }
+    
+    return *this;
 }
 
 // Clone the player

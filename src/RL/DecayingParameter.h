@@ -17,6 +17,9 @@ public:
         return value;
     }
     
+    // Clone the parameter with current state
+    virtual std::unique_ptr<DecayingParameter> clone() const = 0;
+    
     // Update the value according to the specific decay strategy
     virtual void updateValue() = 0;
 };
@@ -38,29 +41,45 @@ public:
             value = final_value;
         }
     }
+    
+    std::unique_ptr<DecayingParameter> clone() const override {
+        return std::make_unique<EpsilonDecayingParameter>(value, final_value, gamma);
+    }
+    
+    double getGamma() const { return gamma; }
+    double getFinalValue() const { return final_value; }
 };
 
 // Linear decay parameter
 // Updates as: value = n / (n + N) where n is the number of updates
 class LinearDecayingParameter : public DecayingParameter {
 private:
-    int n;     // Number of times update has been called
-    int N;     // Parameter controlling decay rate
-    double initial_value;
+    double n;     // Number of times update has been called
+    double N;     // Parameter controlling decay rate
     
 public:
     LinearDecayingParameter(double initial_value, double final_value, int N)
         : DecayingParameter(initial_value, final_value), 
-          n(0), N(N), initial_value(initial_value) {}
+          n(N * (1-initial_value) / initial_value), N(N){          }
     
     void updateValue() override {
-        n++;
         // Calculate new value using linear decay formula
-        double value = static_cast<double>(n) / (n + N);
+        double value = static_cast<double>(N) / (n + N);
         
         // Ensure value doesn't go below final_value
         if (value < final_value) {
             value = final_value;
         }
+        n++;
     }
+    
+    std::unique_ptr<DecayingParameter> clone() const override {
+        auto cloned = std::make_unique<LinearDecayingParameter>(value, final_value, N);
+        cloned->n = this->n;  // Preserve decay state
+        cloned->value = this->value;
+        return cloned;
+    }
+    
+    int getN() const { return N; }
+    double getFinalValue() const { return final_value; }
 };

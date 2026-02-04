@@ -1,6 +1,8 @@
 #include "BasicStrategy.h"
 #include <fstream>
 #include <iostream>
+#include <iomanip>
+#include <set>
 #include <nlohmann/json.hpp>
 #include <filesystem>
 #include <sstream>
@@ -164,5 +166,111 @@ void BasicStrategy::setAction(int count, HandType handType, unsigned int playerS
     
     // Set the action in the lookup table
     (*lookupTable)[count][handType][playerSum][dealerHand] = action;
+}
+
+Action BasicStrategy::getActionFromTable(int count, HandType handType, int playerSum, int dealerCard) const {
+    if (!lookupTable) {
+        return Action::HIT;
+    }
+    
+    try {
+        return lookupTable->at(count).at(handType).at(playerSum).at(dealerCard).primary;
+    } catch (const std::out_of_range&) {
+        return Action::HIT;  // Default if not found
+    }
+}
+
+// Helper function to convert action to string for display
+static std::string actionToString(const ActionWithFallback& action) {
+    if (action.primary == Action::HIT) {
+        return "H";
+    } else if (action.primary == Action::STAND) {
+        return "S";
+    } else if (action.primary == Action::DOUBLE_DOWN) {
+        if (action.fallback == Action::HIT) {
+            return "Dh";
+        } else if (action.fallback == Action::STAND) {
+            return "Ds";
+        } else {
+            return "D";
+        }
+    } else if (action.primary == Action::SPLIT) {
+        return "P";
+    } else if (action.primary == Action::SURRENDER) {
+        if (action.fallback == Action::HIT) {
+            return "Xh";
+        } else if (action.fallback == Action::STAND) {
+            return "Xs";
+        } else {
+            return "X";
+        }
+    }
+    return "?";
+}
+
+// Helper function to convert HandType to string for display
+static std::string handTypeToString(HandType handType) {
+    switch (handType) {
+        case HandType::HARD: return "Hard";
+        case HandType::SOFT: return "Soft";
+        case HandType::PAIR: return "Pair";
+        default: return "Unknown";
+    }
+}
+
+// Operator<< for printing the strategy table
+std::ostream& operator<<(std::ostream& os, const BasicStrategy& strategy) {
+    if (!strategy.lookupTable || strategy.lookupTable->empty()) {
+        os << "Strategy table is empty or not loaded.\n";
+        return os;
+    }
+    
+    // Iterate through counts
+    for (const auto& [count, handTypes] : *strategy.lookupTable) {
+        os << "\n========== Count: " << count << " ==========\n";
+        
+        // Iterate through hand types (HARD, SOFT, PAIR)
+        for (const auto& [handType, playerSums] : handTypes) {
+            if(handType == HandType::ZOMBIE) {
+                continue; // Skip ZOMBIE hand type
+            }
+            os << "\n" << handTypeToString(handType) << "\n";
+            
+            // Find all unique dealer cards and player sums
+            std::set<int> dealerCards;
+            std::set<int> playerSumValues;
+            
+            for (const auto& [playerSum, dealerMap] : playerSums) {
+                playerSumValues.insert(playerSum);
+                for (const auto& [dealerCard, action] : dealerMap) {
+                    dealerCards.insert(dealerCard);
+                }
+            }
+            
+            // Print header row (dealer cards)
+            os << "    ";
+            for (int dealerCard : dealerCards) {
+                os << std::setw(4) << dealerCard;
+            }
+            os << "\n";
+            
+            // Print each row (player sum)
+            for (int playerSum : playerSumValues) {
+                os << std::setw(3) << playerSum << " ";
+                
+                for (int dealerCard : dealerCards) {
+                    auto dealerIt = playerSums.at(playerSum).find(dealerCard);
+                    if (dealerIt != playerSums.at(playerSum).end()) {
+                        os << std::setw(4) << actionToString(dealerIt->second);
+                    } else {
+                        os << std::setw(4) << "-";
+                    }
+                }
+                os << "\n";
+            }
+        }
+    }
+    
+    return os;
 }
 

@@ -2,7 +2,8 @@
 #include <stdexcept>
 
 // Constructor with bet amount
-Slot::Slot(double betAmount) : splitCount(0) {
+Slot::Slot(double betAmount, size_t maxHands) : splitCount(0) {
+    hands.reserve(maxHands);  // Preallocate to avoid reallocation during splits
     hands.emplace_back(betAmount);
 }
 

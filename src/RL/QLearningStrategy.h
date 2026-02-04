@@ -16,10 +16,15 @@ private:
     using QTableKey = std::pair<StateKey, Action>;
     std::map<QTableKey, double> qTable;
     
-    // Learning parameters
-    std::unique_ptr<DecayingParameter> alpha;  // Learning rate (can decay)
-    double gamma;           // Discount factor
-    std::unique_ptr<DecayingParameter> epsilon;  // Exploration rate (can decay)
+    // Per-state learning parameters
+    std::map<StateKey, std::unique_ptr<DecayingParameter>> alphaMap;    // Per-state learning rate
+    std::map<StateKey, std::unique_ptr<DecayingParameter>> epsilonMap;  // Per-state exploration rate
+    
+    // Template parameters for creating new state entries
+    std::unique_ptr<DecayingParameter> alphaTemplate;
+    std::unique_ptr<DecayingParameter> epsilonTemplate;
+    
+    double gamma;  // Discount factor (global)
     
     // Random number generator for epsilon-greedy exploration
     mutable std::mt19937 rng;
@@ -29,9 +34,27 @@ private:
     StateKey stateToKey(const State& state) const {
         int count = state.count;
         HandType handType = state.playerHand.getHandType();
-        unsigned int playerSum = state.playerHand.getValue();
         unsigned int dealerHand = state.dealerCard.getValue();
+        unsigned int playerSum;
+        if(handType == HandType::PAIR) {
+            // For pairs, use the value of one card (not the total), this is for the case of 66 and AA which can cause confustions 
+            playerSum = state.playerHand[0].getValue();
+        } else {
+            playerSum = state.playerHand.getValue();
+        }
         return std::make_tuple(count, handType, playerSum, dealerHand);
+    }
+    
+    // Get or create a decaying parameter for a state from the given map using the template
+    DecayingParameter& getOrCreateParam(const StateKey& key, 
+                                        std::map<StateKey, std::unique_ptr<DecayingParameter>>& paramMap,
+                                        const std::unique_ptr<DecayingParameter>& paramTemplate) {
+        auto it = paramMap.find(key);
+        if (it == paramMap.end()) {
+            paramMap[key] = paramTemplate->clone();
+            return *paramMap[key];
+        }
+        return *it->second;
     }
     
     // Get Q-value for a state-action pair (returns 0 if not in table)
@@ -77,16 +100,19 @@ public:
     // Constructor with learning rate, discount factor, and epsilon (exploration rate)
     QLearningStrategy(std::unique_ptr<DecayingParameter> alpha_param, 
                      std::unique_ptr<DecayingParameter> epsilon_param, double discount_factor=1.0)
-        : alpha(std::move(alpha_param)), gamma(discount_factor), 
-          epsilon(std::move(epsilon_param)),
-          rng(std::random_device{}()), dist(0.0, 1.0) {}
+        : alphaTemplate(std::move(alpha_param)), epsilonTemplate(std::move(epsilon_param)),
+          gamma(discount_factor), rng(std::random_device{}()), dist(0.0, 1.0) {}
     
     // Epsilon-greedy action selection
     Action getAction(const State& state) override {
+        StateKey key = stateToKey(state);
+        DecayingParameter& stateEpsilon = getOrCreateParam(key, epsilonMap, epsilonTemplate);
+        
         // Epsilon-greedy: explore with probability epsilon, exploit otherwise
-        if (dist(rng) < epsilon->getValue()) {
+        if (dist(rng) < stateEpsilon.getValue()) {
             // Explore: choose random action from allowed actions
             std::uniform_int_distribution<size_t> actionDist(0, state.allowedActions.size() - 1);
+            stateEpsilon.updateValue();  // Decay epsilon for this state
             return state.allowedActions[actionDist(rng)];
         } else {
             // Exploit: choose greedy action
@@ -96,39 +122,61 @@ public:
     
     // Update Q-table using Q-learning update rule
     // Q(s,a) = Q(s,a) + α * [r + γ * max_a' Q(s',a') - Q(s,a)]
-    void updateTable(const State& state, Action action, double reward, const State& nextState) {
+    void updateTable(const State& state, Action action, double reward, const State& nextState) override {
+        StateKey key = stateToKey(state);
+        DecayingParameter& stateAlpha = getOrCreateParam(key, alphaMap, alphaTemplate);
+        
         // Get current Q-value
         double currentQ = getQValue(state, action);
         
         // Get maximum Q-value for next state
         double maxNextQ = getMaxQValue(nextState);
         
-        // Q-learning update
-        double newQ = currentQ + alpha->getValue() * (reward + gamma * maxNextQ - currentQ);
+        // Special handling for SPLIT: we play two hands, so expected value doubles
+        if (action == Action::SPLIT) {
+            maxNextQ *= 2.0;
+        }
+        
+        // Q-learning update with per-state alpha
+        double newQ = currentQ + stateAlpha.getValue() * (reward + gamma * maxNextQ - currentQ);
         
         // Update Q-table
-        StateKey key = stateToKey(state);
         qTable[std::make_pair(key, action)] = newQ;
+        stateAlpha.updateValue();  // Decay alpha for this state
     }
     
-    // Update alpha (decay learning rate)
-    void updateAlpha() {
-        alpha->updateValue();
+    // Update alpha for a specific state (decay learning rate)
+    void updateAlpha(const State& state) {
+        StateKey key = stateToKey(state);
+        getOrCreateParam(key, alphaMap, alphaTemplate).updateValue();
     }
     
-    // Update epsilon (decay exploration rate)
-    void updateEpsilon() {
-        epsilon->updateValue();
+    // Update epsilon for a specific state (decay exploration rate)
+    void updateEpsilon(const State& state) {
+        StateKey key = stateToKey(state);
+        getOrCreateParam(key, epsilonMap, epsilonTemplate).updateValue();
     }
     
-    // Get current alpha value
-    double getAlpha() const {
-        return alpha->getValue();
+    // Get alpha value for a specific state
+    double getAlpha(const State& state) {
+        StateKey key = stateToKey(state);
+        return getOrCreateParam(key, alphaMap, alphaTemplate).getValue();
     }
     
-    // Get current epsilon value
-    double getEpsilon() const {
-        return epsilon->getValue();
+    // Get epsilon value for a specific state
+    double getEpsilon(const State& state) {
+        StateKey key = stateToKey(state);
+        return getOrCreateParam(key, epsilonMap, epsilonTemplate).getValue();
+    }
+    
+    // Get template alpha value (initial value for new states)
+    double getTemplateAlpha() const {
+        return alphaTemplate->getValue();
+    }
+    
+    // Get template epsilon value (initial value for new states)
+    double getTemplateEpsilon() const {
+        return epsilonTemplate->getValue();
     }
     
     // Get Q-table size (for debugging/monitoring)
@@ -138,13 +186,24 @@ public:
     
     // Clone method for Strategy interface
     std::unique_ptr<Strategy> clone() const override {
-        // Note: This creates a new strategy with the same parameters but empty Q-table
-        // For training, you typically don't need to clone the Q-table itself
-        auto alphaClone = std::make_unique<EpsilonDecayingParameter>(
-            alpha->getValue(), alpha->getValue(), 1.0);
-        auto epsilonClone = std::make_unique<EpsilonDecayingParameter>(
-            epsilon->getValue(), epsilon->getValue(), 1.0);
-        return std::make_unique<QLearningStrategy>(std::move(alphaClone), gamma, std::move(epsilonClone));
+        // Clone with template parameters
+        auto cloned = std::make_unique<QLearningStrategy>(
+            alphaTemplate->clone(), epsilonTemplate->clone(), gamma);
+        
+        // Copy the learned Q-table
+        cloned->qTable = this->qTable;
+        
+        // Copy per-state alpha map
+        for (const auto& [key, param] : alphaMap) {
+            cloned->alphaMap[key] = param->clone();
+        }
+        
+        // Copy per-state epsilon map
+        for (const auto& [key, param] : epsilonMap) {
+            cloned->epsilonMap[key] = param->clone();
+        }
+        
+        return cloned;
     }
     
     // Convert Q-learning strategy to BasicStrategy by extracting best actions
@@ -198,4 +257,34 @@ public:
         
         return basicStrategy;
     }
+
+    // Averaging operators for combining Q-tables from parallel simulations
+    Strategy& operator+=(const Strategy& other) override {
+        // Try to cast to QLearningStrategy
+        const QLearningStrategy* otherQL = dynamic_cast<const QLearningStrategy*>(&other);
+        if (otherQL) {
+            // Sum each entry in the Q-table
+            for (const auto& [key, value] : otherQL->qTable) {
+                qTable[key] += value;
+            }
+        }
+        return *this;
+    }
+    
+    Strategy& operator*=(double factor) override {
+        // Multiply each entry in the Q-table by the factor
+        for (auto& [key, value] : qTable) {
+            value *= factor;
+        }
+        return *this;
+    }
+
+    // Friend function for printing the Q-learning strategy table
+    friend std::ostream& operator<<(std::ostream& os, const QLearningStrategy& strategy) {
+        // Convert Q-table to BasicStrategy format and print it
+        auto basicStrategy = strategy.toBasicStrategy();
+        os << *basicStrategy;
+        return os;
+    }
+
 };
