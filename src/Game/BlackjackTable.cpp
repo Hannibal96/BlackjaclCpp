@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <iostream>
+#include <tuple>
 
 // Constructor
 BlackjackTable::BlackjackTable(const BlackjackRules& gameRules, std::vector<Player*> gamePlayers)
@@ -150,6 +151,11 @@ std::vector<std::tuple<Player*, Hand*, State, Action>> BlackjackTable::playersPl
                     State state(hand, dealerUpCard, allowedActions);
                     Action action = player->getAction(state);
                     
+                    if (hand.isSoft() && hand.getValue() == 12 && dealerHand.getValue() == 11)
+                    {
+                        int dbg_break = 0; // set breakpoint here
+                    }
+
                     if (action == Action::HIT) {
                         hand.addCard(shoe->dealCard());
                         if (hand.isBust()) {

@@ -7,6 +7,7 @@
 #include <memory>
 #include <random>
 #include <algorithm>
+#include <cmath>
 
 // Q-Learning strategy for reinforcement learning
 class QLearningStrategy : public Strategy {
@@ -17,16 +18,16 @@ private:
     std::map<QTableKey, double> qTable;
     
     // Per-state learning parameters
-    std::map<StateKey, std::unique_ptr<DecayingParameter>> alphaMap;    // Per-state learning rate
-    std::map<StateKey, std::unique_ptr<DecayingParameter>> epsilonMap;  // Per-state exploration rate
-    
+    std::map<StateKey, std::unique_ptr<DecayingParameter>> alphaMap;        // Per-state learning rate
+    std::map<StateKey, std::unique_ptr<DecayingParameter>> temperatureMap;  // Per-state temperature for Boltzmann exploration
+
     // Template parameters for creating new state entries
     std::unique_ptr<DecayingParameter> alphaTemplate;
-    std::unique_ptr<DecayingParameter> epsilonTemplate;
-    
+    std::unique_ptr<DecayingParameter> temperatureTemplate;
+
     double gamma;  // Discount factor (global)
-    
-    // Random number generator for epsilon-greedy exploration
+
+    // Random number generator for Boltzmann exploration
     mutable std::mt19937 rng;
     mutable std::uniform_real_distribution<double> dist;
     
@@ -63,6 +64,7 @@ private:
         auto it = qTable.find(std::make_pair(key, action));
         return (it != qTable.end()) ? it->second : 0.0;
     }
+
     
     // Get the maximum Q-value for a given state across all allowed actions
     double getMaxQValue(const State& state) const {
@@ -97,27 +99,60 @@ private:
     }
     
 public:
-    // Constructor with learning rate, discount factor, and epsilon (exploration rate)
-    QLearningStrategy(std::unique_ptr<DecayingParameter> alpha_param, 
-                     std::unique_ptr<DecayingParameter> epsilon_param, double discount_factor=1.0)
-        : alphaTemplate(std::move(alpha_param)), epsilonTemplate(std::move(epsilon_param)),
+    __attribute__((noinline)) double getQValueDebug(const HandType handType, int playerSum, int dealerHand, Action action) const;
+
+    // Constructor with learning rate, discount factor, and temperature (for Boltzmann exploration)
+    QLearningStrategy(std::unique_ptr<DecayingParameter> alpha_param,
+                     std::unique_ptr<DecayingParameter> temperature_param, double discount_factor=1.0)
+        : alphaTemplate(std::move(alpha_param)), temperatureTemplate(std::move(temperature_param)),
           gamma(discount_factor), rng(std::random_device{}()), dist(0.0, 1.0) {}
     
-    // Epsilon-greedy action selection
+    // Boltzmann (softmax) action selection
+    // P(a|s) = exp(Q(s,a)/τ) / Σ exp(Q(s,b)/τ)
     Action getAction(const State& state) override {
         StateKey key = stateToKey(state);
-        DecayingParameter& stateEpsilon = getOrCreateParam(key, epsilonMap, epsilonTemplate);
-        
-        // Epsilon-greedy: explore with probability epsilon, exploit otherwise
-        if (dist(rng) < stateEpsilon.getValue()) {
-            // Explore: choose random action from allowed actions
-            std::uniform_int_distribution<size_t> actionDist(0, state.allowedActions.size() - 1);
-            stateEpsilon.updateValue();  // Decay epsilon for this state
-            return state.allowedActions[actionDist(rng)];
-        } else {
-            // Exploit: choose greedy action
-            return getGreedyAction(state);
+        DecayingParameter& stateTemperature = getOrCreateParam(key, temperatureMap, temperatureTemplate);
+        double temperature = stateTemperature.getValue();
+
+        // Collect Q-values for all allowed actions
+        std::vector<double> qValues;
+        qValues.reserve(state.allowedActions.size());
+        for (const Action& action : state.allowedActions) {
+            qValues.push_back(getQValue(state, action));
         }
+
+        // Find max Q-value for numerical stability (log-sum-exp trick)
+        double maxQ = *std::max_element(qValues.begin(), qValues.end());
+
+        // Compute Boltzmann probabilities with numerical stability
+        std::vector<double> probabilities;
+        probabilities.reserve(qValues.size());
+        double sumExp = 0.0;
+        for (double q : qValues) {
+            double expVal = std::exp((q - maxQ) / temperature);
+            probabilities.push_back(expVal);
+            sumExp += expVal;
+        }
+
+        // Normalize to get probabilities
+        for (double& p : probabilities) {
+            p /= sumExp;
+        }
+
+        // Sample action according to probabilities
+        double randomValue = dist(rng);
+        double cumulativeProb = 0.0;
+        for (size_t i = 0; i < state.allowedActions.size(); ++i) {
+            cumulativeProb += probabilities[i];
+            if (randomValue <= cumulativeProb) {
+                stateTemperature.updateValue();  // Decay temperature for this state
+                return state.allowedActions[i];
+            }
+        }
+
+        // Fallback (should not reach here due to floating-point precision)
+        stateTemperature.updateValue();
+        return state.allowedActions.back();
     }
     
     // Update Q-table using Q-learning update rule
@@ -151,32 +186,32 @@ public:
         getOrCreateParam(key, alphaMap, alphaTemplate).updateValue();
     }
     
-    // Update epsilon for a specific state (decay exploration rate)
-    void updateEpsilon(const State& state) {
+    // Update temperature for a specific state (decay exploration)
+    void updateTemperature(const State& state) {
         StateKey key = stateToKey(state);
-        getOrCreateParam(key, epsilonMap, epsilonTemplate).updateValue();
+        getOrCreateParam(key, temperatureMap, temperatureTemplate).updateValue();
     }
-    
+
     // Get alpha value for a specific state
     double getAlpha(const State& state) {
         StateKey key = stateToKey(state);
         return getOrCreateParam(key, alphaMap, alphaTemplate).getValue();
     }
-    
-    // Get epsilon value for a specific state
-    double getEpsilon(const State& state) {
+
+    // Get temperature value for a specific state
+    double getTemperature(const State& state) {
         StateKey key = stateToKey(state);
-        return getOrCreateParam(key, epsilonMap, epsilonTemplate).getValue();
+        return getOrCreateParam(key, temperatureMap, temperatureTemplate).getValue();
     }
-    
+
     // Get template alpha value (initial value for new states)
     double getTemplateAlpha() const {
         return alphaTemplate->getValue();
     }
-    
-    // Get template epsilon value (initial value for new states)
-    double getTemplateEpsilon() const {
-        return epsilonTemplate->getValue();
+
+    // Get template temperature value (initial value for new states)
+    double getTemplateTemperature() const {
+        return temperatureTemplate->getValue();
     }
     
     // Get Q-table size (for debugging/monitoring)
@@ -188,21 +223,21 @@ public:
     std::unique_ptr<Strategy> clone() const override {
         // Clone with template parameters
         auto cloned = std::make_unique<QLearningStrategy>(
-            alphaTemplate->clone(), epsilonTemplate->clone(), gamma);
-        
+            alphaTemplate->clone(), temperatureTemplate->clone(), gamma);
+
         // Copy the learned Q-table
         cloned->qTable = this->qTable;
-        
+
         // Copy per-state alpha map
         for (const auto& [key, param] : alphaMap) {
             cloned->alphaMap[key] = param->clone();
         }
-        
-        // Copy per-state epsilon map
-        for (const auto& [key, param] : epsilonMap) {
-            cloned->epsilonMap[key] = param->clone();
+
+        // Copy per-state temperature map
+        for (const auto& [key, param] : temperatureMap) {
+            cloned->temperatureMap[key] = param->clone();
         }
-        
+
         return cloned;
     }
     
