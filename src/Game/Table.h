@@ -32,6 +32,9 @@ protected:
 public:
     // Constructor - receives rules, creates shoe, does NOT store rules
     Table(const Rules& gameRules, std::vector<Player*> gamePlayers);
+
+    // Constructor - accepts a pre-built shoe (e.g. DebugShoe for reproducible tests)
+    Table(const Rules& gameRules, std::vector<Player*> gamePlayers, std::unique_ptr<Shoe> customShoe);
     
     // Virtual destructor
     virtual ~Table() = default;

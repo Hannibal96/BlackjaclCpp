@@ -2,6 +2,7 @@
 #include "Strategy.h"
 #include "DecayingParameter.h"
 #include "BasicStrategy.h"
+#include "Utils/GlobalRNG.h"
 #include <map>
 #include <tuple>
 #include <memory>
@@ -15,6 +16,7 @@ private:
     using StateKey = std::tuple<int, HandType, unsigned int, unsigned int>;  // (count, hand_type, player_sum, dealer_hand)
     using QTableKey = std::pair<StateKey, Action>;
     std::map<QTableKey, double> qTable;
+    std::map<QTableKey, int> qTableCount;  // tracks how many threads contributed per entry
     
     // Per-state learning parameters
     std::map<StateKey, std::unique_ptr<DecayingParameter>> alphaMap;    // Per-state learning rate
@@ -29,6 +31,9 @@ private:
     // Random number generator for epsilon-greedy exploration
     mutable std::mt19937 rng;
     mutable std::uniform_real_distribution<double> dist;
+
+    // Optional cross-reproducible RNG (shared with DebugShoe — matches Python)
+    GlobalRNG* externalRng;
     
     // Helper method to convert State to a simplified key for Q-table
     StateKey stateToKey(const State& state) const {
@@ -98,22 +103,32 @@ private:
     
 public:
     // Constructor with learning rate, discount factor, and epsilon (exploration rate)
-    QLearningStrategy(std::unique_ptr<DecayingParameter> alpha_param, 
-                     std::unique_ptr<DecayingParameter> epsilon_param, double discount_factor=1.0)
+    // Pass externalRng to share a single GlobalRNG with the shoe for cross-reproducibility with Python
+    QLearningStrategy(std::unique_ptr<DecayingParameter> alpha_param,
+                      std::unique_ptr<DecayingParameter> epsilon_param,
+                      double discount_factor = 1.0,
+                      GlobalRNG* externalRng = nullptr)
         : alphaTemplate(std::move(alpha_param)), epsilonTemplate(std::move(epsilon_param)),
-          gamma(discount_factor), rng(std::random_device{}()), dist(0.0, 1.0) {}
+          gamma(discount_factor), rng(std::random_device{}()), dist(0.0, 1.0),
+          externalRng(externalRng) {}
     
     // Epsilon-greedy action selection
     Action getAction(const State& state) override {
         StateKey key = stateToKey(state);
         DecayingParameter& stateEpsilon = getOrCreateParam(key, epsilonMap, epsilonTemplate);
-        
-        // Epsilon-greedy: explore with probability epsilon, exploit otherwise
-        if (dist(rng) < stateEpsilon.getValue()) {
+
+        // Draw random value — use shared GlobalRNG if set, else internal mt19937
+        double randVal = externalRng ? externalRng->nextFloat() : dist(rng);
+
+        if (randVal < stateEpsilon.getValue()) {
             // Explore: choose random action from allowed actions
-            std::uniform_int_distribution<size_t> actionDist(0, state.allowedActions.size() - 1);
-            stateEpsilon.updateValue();  // Decay epsilon for this state
-            return state.allowedActions[actionDist(rng)];
+            stateEpsilon.updateValue();
+            if (externalRng) {
+                return externalRng->choice(state.allowedActions);
+            } else {
+                std::uniform_int_distribution<size_t> actionDist(0, state.allowedActions.size() - 1);
+                return state.allowedActions[actionDist(rng)];
+            }
         } else {
             // Exploit: choose greedy action
             return getGreedyAction(state);
@@ -186,9 +201,9 @@ public:
     
     // Clone method for Strategy interface
     std::unique_ptr<Strategy> clone() const override {
-        // Clone with template parameters
+        // Clone with template parameters; clones use internal rng (not shared external one)
         auto cloned = std::make_unique<QLearningStrategy>(
-            alphaTemplate->clone(), epsilonTemplate->clone(), gamma);
+            alphaTemplate->clone(), epsilonTemplate->clone(), gamma, nullptr);
         
         // Copy the learned Q-table
         cloned->qTable = this->qTable;
@@ -260,21 +275,29 @@ public:
 
     // Averaging operators for combining Q-tables from parallel simulations
     Strategy& operator+=(const Strategy& other) override {
-        // Try to cast to QLearningStrategy
         const QLearningStrategy* otherQL = dynamic_cast<const QLearningStrategy*>(&other);
         if (otherQL) {
-            // Sum each entry in the Q-table
             for (const auto& [key, value] : otherQL->qTable) {
                 qTable[key] += value;
+                qTableCount[key]++;  // count only threads that actually saw this state
             }
         }
         return *this;
     }
-    
+
     Strategy& operator*=(double factor) override {
-        // Multiply each entry in the Q-table by the factor
-        for (auto& [key, value] : qTable) {
-            value *= factor;
+        if (!qTableCount.empty()) {
+            // Divide each entry by how many threads contributed to it (like Python)
+            for (auto& [key, value] : qTable) {
+                auto it = qTableCount.find(key);
+                if (it != qTableCount.end() && it->second > 0)
+                    value /= it->second;
+            }
+            qTableCount.clear();
+        } else {
+            for (auto& [key, value] : qTable) {
+                value *= factor;
+            }
         }
         return *this;
     }

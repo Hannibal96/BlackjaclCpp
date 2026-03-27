@@ -1,4 +1,5 @@
 #include "Shoe.h"
+#include "../Utils/GlobalRNG.h"
 #include <algorithm>
 #include <random>
 #include <stdexcept>
@@ -71,9 +72,20 @@ void Shoe::reset() {
 
 
 // DebugShoe methods
+
+// Internal RNG constructor (backward compatible)
 DebugShoe::DebugShoe(int numDecks, double penetration, int seed)
-    : Shoe(numDecks, penetration), state(static_cast<uint32_t>(seed)), initialSeed(static_cast<uint32_t>(seed)) {
+    : Shoe(numDecks, penetration), state(static_cast<uint32_t>(seed)),
+      initialSeed(static_cast<uint32_t>(seed)), externalRng(nullptr) {
     reset();
+}
+
+// External shared RNG constructor — cross-reproducible with Python SeededRNG
+DebugShoe::DebugShoe(int numDecks, double penetration, GlobalRNG* rng)
+    : Shoe(numDecks, penetration), state(0), initialSeed(0), externalRng(rng) {
+    initializeFromDecks();
+    calculatePenetrationThreshold();
+    // No shuffle, rng is not reset — matches Python DebugShoe.__init__
 }
 
 void DebugShoe::shuffle() {
@@ -82,35 +94,37 @@ void DebugShoe::shuffle() {
 
 void DebugShoe::reset() {
     initializeFromDecks();
-    state = initialSeed;
+    calculatePenetrationThreshold();
     currentIndex = 0;
     endShoe = false;
-    calculatePenetrationThreshold();
+    if (externalRng == nullptr) {
+        state = initialSeed;  // Only reset internal state; external rng keeps advancing
+    }
+    // External rng intentionally not reset — matches Python remake()
 }
 
 Card DebugShoe::dealCard() {
     if (cards.empty()) {
         reset();
     }
-    
+
     size_t n = cards.size();
-    size_t index = state % n;
-    
+    size_t index;
+
+    if (externalRng) {
+        index = static_cast<size_t>(externalRng->nextInt(static_cast<int>(n)));
+    } else {
+        index = state % n;
+        state = state * 1664525u + 1013904223u;
+    }
+
     Card card = cards[index];
     cards.erase(cards.begin() + index);
-    
-    // Update state: state = (state * 1664525 + 1013904223) % (2**32)
-    state = state * 1664525 + 1013904223;
-    
-    // Check penetration threshold
-    // Since we remove cards, we need to check if remaining cards <= (Total - Threshold)
-    // Total cards initially = numDecks * 52
-    // penetrationThreshold was calculated as Total * penetration
-    // When cards.size() <= (Total - penetrationThreshold), we've dealt enough cards
+
     size_t totalCards = numDecks * 52;
     if (cards.size() <= totalCards - penetrationThreshold) {
         endShoe = true;
     }
-    
+
     return card;
 }

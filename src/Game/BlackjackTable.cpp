@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <iostream>
 
-// Constructor
+// Constructor - creates shoe based on rules
 BlackjackTable::BlackjackTable(const BlackjackRules& gameRules, std::vector<Player*> gamePlayers)
     : Table(gameRules, std::move(gamePlayers)),
       blackjackPayout(gameRules.blackjackPayout),
@@ -20,6 +20,25 @@ BlackjackTable::BlackjackTable(const BlackjackRules& gameRules, std::vector<Play
       round_number(0ULL)
 {
     // Initialize player slots map
+    for (auto* player : players) {
+        playerSlots[player] = std::vector<Slot>();
+    }
+}
+
+// Constructor - accepts a pre-built shoe
+BlackjackTable::BlackjackTable(const BlackjackRules& gameRules, std::vector<Player*> gamePlayers, std::unique_ptr<Shoe> customShoe)
+    : Table(gameRules, std::move(gamePlayers), std::move(customShoe)),
+      blackjackPayout(gameRules.blackjackPayout),
+      standSoft17(gameRules.standSoft17),
+      peekBlackjack(gameRules.peekBlackjack),
+      maxSplits(gameRules.maxSplits),
+      doubleAfterSplit(gameRules.doubleAfterSplit),
+      resplitAces(gameRules.resplitAces),
+      hitSplitAces(gameRules.hitSplitAces),
+      surrender(gameRules.surrender),
+      doubleDownOn(gameRules.doubleDownOn),
+      round_number(0ULL)
+{
     for (auto* player : players) {
         playerSlots[player] = std::vector<Slot>();
     }

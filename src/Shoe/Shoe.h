@@ -3,6 +3,9 @@
 #include <vector>
 #include <random>
 
+// Forward declaration so GlobalRNG can be used in DebugShoe without circular include
+class GlobalRNG;
+
 // Shoe class for managing multiple decks of cards
 class Shoe {
 protected:
@@ -38,16 +41,25 @@ public:
     
     // Reset the shoe (reshuffle all cards)
     virtual void reset();
+
+    // Direct access to cards vector and index reset (used by GlobalRNG for custom shuffle)
+    std::vector<Card>& getCards() { return cards; }
+    void resetIndex() { currentIndex = 0; endShoe = false; }
 };
 
 class DebugShoe : public Shoe {
 protected:
-    uint32_t state;
-    uint32_t initialSeed;
+    uint32_t state;        // used when externalRng == nullptr
+    uint32_t initialSeed;  // for reset of internal state
+    GlobalRNG* externalRng; // if non-null, all random draws use this
 
 public:
+    // Internal RNG — backward compatible
     DebugShoe(int numDecks, double penetration, int seed = 42);
-    
+
+    // External shared RNG — cross-reproducible with Python SeededRNG
+    DebugShoe(int numDecks, double penetration, GlobalRNG* rng);
+
     void shuffle() override;
     Card dealCard() override;
     void reset() override;

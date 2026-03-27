@@ -33,3 +33,19 @@ target_include_directories(QLearningRegressionTest
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 set_property(TARGET QLearningRegressionTest PROPERTY CXX_STANDARD 20)
+
+# QLearningDebugRegressionTest — single-threaded, reproducible RNG shared between shoe and agent
+add_executable(QLearningDebugRegressionTest
+    ${CMAKE_CURRENT_SOURCE_DIR}/QLearningDebugRegressionTest.cpp
+)
+target_link_libraries(QLearningDebugRegressionTest
+    PRIVATE
+        $<TARGET_OBJECTS:blackjack_objs>
+)
+target_include_directories(QLearningDebugRegressionTest
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+set_property(TARGET QLearningDebugRegressionTest PROPERTY CXX_STANDARD 20)

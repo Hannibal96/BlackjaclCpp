@@ -45,6 +45,9 @@ protected:
 public:
     // Constructor - creates shoe based on rules
     BlackjackTable(const BlackjackRules& gameRules, std::vector<Player*> gamePlayers);
+
+    // Constructor - accepts a pre-built shoe (e.g. DebugShoe for reproducible tests)
+    BlackjackTable(const BlackjackRules& gameRules, std::vector<Player*> gamePlayers, std::unique_ptr<Shoe> customShoe);
     
     // Implement round method
     void round() override;

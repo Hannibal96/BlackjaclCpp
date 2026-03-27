@@ -23,6 +23,7 @@ add_library(blackjack_objs OBJECT
     src/RL/RandomStrategy.cpp
     src/RL/BasicStrategy.cpp
     src/Utils/Utils.cpp
+    src/Utils/GlobalRNG.cpp
 )
 target_include_directories(blackjack_objs
     PUBLIC

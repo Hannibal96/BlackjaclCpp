@@ -9,8 +9,16 @@ Table::Table(const Rules& gameRules, std::vector<Player*> gamePlayers)
     if (players.empty()) {
         throw std::invalid_argument("Table must have at least one player");
     }
-    
-    // Create shoe based on rules (extract what we need)
     shoe = std::make_unique<Shoe>(gameRules.numDecks, gameRules.penetration);
+}
+
+// Constructor - accepts a pre-built shoe (e.g. DebugShoe for reproducible tests)
+Table::Table(const Rules& gameRules, std::vector<Player*> gamePlayers, std::unique_ptr<Shoe> customShoe)
+    : players(std::move(gamePlayers))
+{
+    if (players.empty()) {
+        throw std::invalid_argument("Table must have at least one player");
+    }
+    shoe = std::move(customShoe);
 }
 
