@@ -211,10 +211,11 @@ static std::string actionToString(const ActionWithFallback& action) {
 // Helper function to convert HandType to string for display
 static std::string handTypeToString(HandType handType) {
     switch (handType) {
-        case HandType::HARD: return "Hard";
-        case HandType::SOFT: return "Soft";
-        case HandType::PAIR: return "Pair";
-        default: return "Unknown";
+        case HandType::HARD:      return "Hard";
+        case HandType::SOFT:      return "Soft";
+        case HandType::PAIR:      return "Pair";
+        case HandType::BLACKJACK: return "BlackJack";
+        default:                  return "Unknown";
     }
 }
 

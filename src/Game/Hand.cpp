@@ -138,6 +138,8 @@ Hand Hand::split() {
 HandType Hand::getHandType(bool pairAllowed) const {
     if(cardCount() == 1){
         return HandType::ZOMBIE;
+    } else if (isBlackjack()) {
+        return HandType::BLACKJACK;
     } else if (isPair() and pairAllowed) {
         return HandType::PAIR;
     } else if (isSoft()) {
@@ -145,7 +147,7 @@ HandType Hand::getHandType(bool pairAllowed) const {
     } else if (isHard()) {
         return HandType::HARD;
     }
-    
+
     throw std::logic_error("Unable to determine hand type for hand with " + std::to_string(cardCount()) + " cards");
 }
 

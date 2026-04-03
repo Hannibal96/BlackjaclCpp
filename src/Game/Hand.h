@@ -7,7 +7,8 @@ enum class HandType {
     HARD=0,
     SOFT,
     PAIR,
-    ZOMBIE
+    ZOMBIE,
+    BLACKJACK
 };
 
 // Hand class representing a player's hand in blackjack
