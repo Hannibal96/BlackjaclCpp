@@ -2,6 +2,7 @@
 
 #include "Game/BlackjackRules.h"
 #include "RL/Action.h"
+#include "RL/BasicStrategy.h"
 #include <string>
 #include <sstream>
 #include <tuple>
@@ -80,14 +81,17 @@ inline std::string ToString(const Case& c) {
     return os.str();
 }
 
-// Convert action string from JSON to Action enum
-inline Action stringToAction(const std::string& actionStr) {
-    if (actionStr == "H") return Action::HIT;
-    if (actionStr == "S") return Action::STAND;
-    if (actionStr == "D" || actionStr == "Dh" || actionStr == "Ds") return Action::DOUBLE_DOWN;
-    if (actionStr == "P") return Action::SPLIT;
-    if (actionStr == "X" || actionStr == "Xh" || actionStr == "Xs") return Action::SURRENDER;
-    return Action::HIT;  // Default
+// Convert action string from JSON to ActionWithFallback
+// Format: H, S, Dh=Double/Hit, Ds=Double/Stand, P=Split/Hit, Xh=Surrender/Hit, Xs=Surrender/Stand
+inline ActionWithFallback stringToAction(const std::string& s) {
+    if (s == "H")  return {Action::HIT,        Action::HIT};
+    if (s == "S")  return {Action::STAND,      Action::STAND};
+    if (s == "Dh") return {Action::DOUBLE_DOWN, Action::HIT};
+    if (s == "Ds") return {Action::DOUBLE_DOWN, Action::STAND};
+    if (s == "P")  return {Action::SPLIT,      Action::HIT};
+    if (s == "Xh") return {Action::SURRENDER,  Action::HIT};
+    if (s == "Xs") return {Action::SURRENDER,  Action::STAND};
+    return {Action::HIT, Action::HIT};
 }
 
 // Helper function to convert string to DoubleDownOn enum

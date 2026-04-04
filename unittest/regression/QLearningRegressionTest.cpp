@@ -92,13 +92,12 @@ std::pair<int, int> countStrategyDifferences(const QLearningStrategy& learned, c
 
                 for (auto& [dealerCardStr, actionStr] : dealerCards.items()) {
                     int dealerCard = std::stoi(dealerCardStr);
-                    Action knownAction = stringToAction(actionStr.get<std::string>());
-
-                    // Get learned action from the converted BasicStrategy's lookup table
-                    Action learnedAction = learnedBasic->getActionFromTable(count, handType, playerSum, dealerCard);
+                    ActionWithFallback knownAction   = stringToAction(actionStr.get<std::string>());
+                    ActionWithFallback learnedAction = learnedBasic->getActionFromTable(count, handType, playerSum, dealerCard);
 
                     totalCompared++;
-                    if (learnedAction != knownAction) {
+                    if ((learnedAction.primary != knownAction.primary) || 
+                            (learnedAction.fallback != knownAction.fallback && learnedAction.primary != Action::SPLIT)) {
                         differences++;
                         static const std::pair<Action, const char*> allActions[] = {
                             {Action::HIT,         "HIT"},
@@ -107,10 +106,11 @@ std::pair<int, int> countStrategyDifferences(const QLearningStrategy& learned, c
                             {Action::SPLIT,       "SPLIT"},
                             {Action::SURRENDER,   "SURRENDER"},
                         };
-                        static const char* handTypeStr[] = {"HARD", "SOFT", "PAIR"};
-                        std::cout << "state {count=0, " << handTypeStr[static_cast<int>(handType)]
+                        static const char* handTypeNames[] = {"HARD", "SOFT", "PAIR"};
+                        std::cout << "state {count=0, " << handTypeNames[static_cast<int>(handType)]
                                   << ", player=" << playerSum << ", dealer=" << dealerCard << "}"
-                                  << " [expected=" << actionStr.get<std::string>() << "] :";
+                                  << " [expected=" << actionStr.get<std::string>() << "]"
+                                  << (learnedAction.primary != knownAction.primary ? " PRIMARY_WRONG" : " fallback_wrong") << " :";
                         for (auto& [a, name] : allActions) {
                             double q = learned.getQValueDebug(handType, playerSum, dealerCard, a);
                             std::cout << "  " << name << " (" << std::fixed << std::setprecision(4) << q << ")";

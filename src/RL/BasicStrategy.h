@@ -47,8 +47,8 @@ public:
     // Set action in the lookup table for a specific state
     void setAction(int count, HandType handType, unsigned int playerSum, unsigned int dealerHand, ActionWithFallback action);
     
-    // Get action directly from lookup table by keys (returns HIT if not found)
-    Action getActionFromTable(int count, HandType handType, int playerSum, int dealerCard) const;
+    // Get action directly from lookup table by keys (returns HIT/HIT if not found)
+    ActionWithFallback getActionFromTable(int count, HandType handType, int playerSum, int dealerCard) const;
     
     // Averaging operators (no-op for BasicStrategy since it's read-only)
     Strategy& operator+=(const Strategy& other) override {

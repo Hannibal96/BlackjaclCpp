@@ -168,15 +168,14 @@ void BasicStrategy::setAction(int count, HandType handType, unsigned int playerS
     (*lookupTable)[count][handType][playerSum][dealerHand] = action;
 }
 
-Action BasicStrategy::getActionFromTable(int count, HandType handType, int playerSum, int dealerCard) const {
+ActionWithFallback BasicStrategy::getActionFromTable(int count, HandType handType, int playerSum, int dealerCard) const {
     if (!lookupTable) {
-        return Action::HIT;
+        return {Action::HIT, Action::HIT};
     }
-    
     try {
-        return lookupTable->at(count).at(handType).at(playerSum).at(dealerCard).primary;
+        return lookupTable->at(count).at(handType).at(playerSum).at(dealerCard);
     } catch (const std::out_of_range&) {
-        return Action::HIT;  // Default if not found
+        return {Action::HIT, Action::HIT};
     }
 }
 
