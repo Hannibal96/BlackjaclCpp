@@ -35,9 +35,16 @@ std::vector<std::string> g_surrender = {"no", "yes", "2-10"};
 std::vector<float> g_blackjack_pay = {1.5f};
 
 // Q-learning hyperparameters
+ExplorationMode g_exploration_mode = ExplorationMode::EPSILON_GREEDY;
+
 double g_epsilon_start = 1.0;
-double g_epsilon_min = 0.25;
+double g_epsilon_min = 0.1;
 double g_epsilon_decay = 0.99999;
+
+double g_temperature_start = 1.0;
+double g_temperature_min = 0.1;
+double g_temperature_decay = 0.99999;
+
 double g_alpha_start = 0.01;
 double g_alpha_min = 0.0001;
 double g_alpha_decay_steps = 100.0;
@@ -93,6 +100,22 @@ std::pair<int, int> countStrategyDifferences(const QLearningStrategy& learned, c
                     totalCompared++;
                     if (learnedAction != knownAction) {
                         differences++;
+                        static const std::pair<Action, const char*> allActions[] = {
+                            {Action::HIT,         "HIT"},
+                            {Action::STAND,       "STAND"},
+                            {Action::DOUBLE_DOWN, "DOUBLE_DOWN"},
+                            {Action::SPLIT,       "SPLIT"},
+                            {Action::SURRENDER,   "SURRENDER"},
+                        };
+                        static const char* handTypeStr[] = {"HARD", "SOFT", "PAIR"};
+                        std::cout << "state {count=0, " << handTypeStr[static_cast<int>(handType)]
+                                  << ", player=" << playerSum << ", dealer=" << dealerCard << "}"
+                                  << " [expected=" << actionStr.get<std::string>() << "] :";
+                        for (auto& [a, name] : allActions) {
+                            double q = learned.getQValueDebug(handType, playerSum, dealerCard, a);
+                            std::cout << "  " << name << " (" << std::fixed << std::setprecision(4) << q << ")";
+                        }
+                        std::cout << "\n";
                     }
                 }
             }
@@ -108,8 +131,13 @@ public:
     RegressionResult RunRegression(Case c, double penetration, uint64_t rounds, int num_threads) {
         // Create Q-learning strategy with decaying parameters
         auto alpha = std::make_unique<LinearDecayingParameter>(g_alpha_start, g_alpha_min, g_alpha_decay_steps);
-        auto epsilon = std::make_unique<EpsilonDecayingParameter>(g_epsilon_start, g_epsilon_min, g_epsilon_decay);
-        auto qStrategy = std::make_unique<QLearningStrategy>(std::move(alpha), std::move(epsilon));
+        std::unique_ptr<DecayingParameter> exploration;
+        if (g_exploration_mode == ExplorationMode::EPSILON_GREEDY) {
+            exploration = std::make_unique<EpsilonDecayingParameter>(g_epsilon_start, g_epsilon_min, g_epsilon_decay);
+        } else {
+            exploration = std::make_unique<EpsilonDecayingParameter>(g_temperature_start, g_temperature_min, g_temperature_decay);
+        }
+        auto qStrategy = std::make_unique<QLearningStrategy>(std::move(alpha), std::move(exploration), 1.0, g_exploration_mode);
 
         Player* qPlayer = new Player(0.0, std::move(qStrategy));
         std::vector<Player*> players = {qPlayer};
@@ -211,23 +239,28 @@ void printHelp(const char* program_name) {
     std::cout << "  --bj <list>              Blackjack payout (default: [1.5])\n";
     std::cout << "                           NOTE: Not relevant for strategy calculation\n\n";
     std::cout << "Q-LEARNING HYPERPARAMETERS:\n";
-    std::cout << "  --epsilon-start <val>    Initial epsilon (exploration rate) (default: 1.0)\n";
-    std::cout << "  --epsilon-min <val>      Minimum epsilon (default: 0.25)\n";
-    std::cout << "  --epsilon-decay <val>    Epsilon decay rate per hand (default: 0.99999)\n";
+    std::cout << "  --exploration <mode>     Exploration strategy: epsilon or boltzmann (default: epsilon)\n\n";
+    std::cout << "  EPSILON-GREEDY params (--exploration epsilon):\n";
+    std::cout << "  --epsilon-start <val>    Initial epsilon (default: 1.0)\n";
+    std::cout << "  --epsilon-min <val>      Minimum epsilon (default: 0.1)\n";
+    std::cout << "  --epsilon-decay <val>    Epsilon decay rate per hand (default: 0.99999)\n\n";
+    std::cout << "  BOLTZMANN params (--exploration boltzmann):\n";
+    std::cout << "  --temp-start <val>       Initial temperature (default: 1.0)\n";
+    std::cout << "  --temp-min <val>         Minimum temperature (default: 0.1)\n";
+    std::cout << "  --temp-decay <val>       Temperature decay rate per hand (default: 0.99999)\n\n";
+    std::cout << "  SHARED params:\n";
     std::cout << "  --alpha-start <val>      Initial learning rate (default: 0.01)\n";
     std::cout << "  --alpha-min <val>        Minimum learning rate (default: 0.0001)\n";
     std::cout << "  --alpha-decay <val>      Alpha decay steps (default: 100)\n\n";
     std::cout << "OTHER OPTIONS:\n";
     std::cout << "  --help, -h               Show this help message\n\n";
     std::cout << "EXAMPLES:\n";
-    std::cout << "  # Run with custom rounds and threads\n";
-    std::cout << "  " << program_name << " --num-rounds 100000000 --num-threads 8\n\n";
-    std::cout << "  # Test only 6-deck games with specific rules\n";
-    std::cout << "  " << program_name << " --decks [6] --ss17 [true] --das [true]\n\n";
-    std::cout << "  # Full Q-learning hyperparameter configuration\n";
-    std::cout << "  " << program_name << " --epsilon-start 1.0 --epsilon-min 0.1 --epsilon-decay 0.99999 --alpha-start 0.1 --alpha-min 0.001 --alpha-decay 1000\n\n";
-    std::cout << "  # Quick test with single configuration (only relevant parameters)\n";
-    std::cout << "  " << program_name << " --num-rounds 1000000 --decks [6] --ss17 [false] --das [true] --peek [false] --surr [no]\n\n";
+    std::cout << "  # Epsilon-greedy (default)\n";
+    std::cout << "  " << program_name << " --exploration epsilon --epsilon-start 1.0 --epsilon-min 0.05 --epsilon-decay 0.99999\n\n";
+    std::cout << "  # Boltzmann exploration\n";
+    std::cout << "  " << program_name << " --exploration boltzmann --temp-start 1.0 --temp-min 0.1 --temp-decay 0.99999\n\n";
+    std::cout << "  # Quick single-config test\n";
+    std::cout << "  " << program_name << " --num-rounds 1000000 --decks [6] --ss17 [true] --das [true] --peek [false] --surr [no]\n\n";
     std::cout << "NOTE: List values can be specified with or without brackets: [1,2,3] or 1,2,3\n";
 }
 
@@ -280,6 +313,12 @@ int main(int argc, char** argv) {
         else if (arg == "--bj" && i + 1 < argc) {
             g_blackjack_pay = parseList<float>(argv[++i]);
         }
+        else if (arg == "--exploration" && i + 1 < argc) {
+            std::string mode = argv[++i];
+            if (mode == "boltzmann") g_exploration_mode = ExplorationMode::BOLTZMANN;
+            else if (mode == "epsilon") g_exploration_mode = ExplorationMode::EPSILON_GREEDY;
+            else { std::cerr << "Unknown exploration mode: " << mode << " (use epsilon or boltzmann)\n"; return 1; }
+        }
         else if (arg == "--epsilon-start" && i + 1 < argc) {
             g_epsilon_start = std::stod(argv[++i]);
         }
@@ -288,6 +327,15 @@ int main(int argc, char** argv) {
         }
         else if (arg == "--epsilon-decay" && i + 1 < argc) {
             g_epsilon_decay = std::stod(argv[++i]);
+        }
+        else if (arg == "--temp-start" && i + 1 < argc) {
+            g_temperature_start = std::stod(argv[++i]);
+        }
+        else if (arg == "--temp-min" && i + 1 < argc) {
+            g_temperature_min = std::stod(argv[++i]);
+        }
+        else if (arg == "--temp-decay" && i + 1 < argc) {
+            g_temperature_decay = std::stod(argv[++i]);
         }
         else if (arg == "--alpha-start" && i + 1 < argc) {
             g_alpha_start = std::stod(argv[++i]);
@@ -316,9 +364,14 @@ int main(int argc, char** argv) {
     std::cout << "NUM_ROUNDS:  " << g_num_rounds << std::endl;
     std::cout << "NUM_THREADS: " << g_num_threads << std::endl;
     std::cout << "Total test cases: " << allCases.size() << std::endl;
-    std::cout << "\nQ-Learning Hyperparameters:" << std::endl;
-    std::cout << "  Epsilon: " << g_epsilon_start << " -> " << g_epsilon_min << " (decay: " << g_epsilon_decay << ")" << std::endl;
-    std::cout << "  Alpha:   " << g_alpha_start << " -> " << g_alpha_min << " (steps: " << g_alpha_decay_steps << ")" << std::endl;
+    if (g_exploration_mode == ExplorationMode::EPSILON_GREEDY) {
+        std::cout << "\nQ-Learning Hyperparameters (Epsilon-Greedy):" << std::endl;
+        std::cout << "  Epsilon: " << g_epsilon_start << " -> " << g_epsilon_min << " (decay: " << g_epsilon_decay << ")" << std::endl;
+    } else {
+        std::cout << "\nQ-Learning Hyperparameters (Boltzmann):" << std::endl;
+        std::cout << "  Temperature: " << g_temperature_start << " -> " << g_temperature_min << " (decay: " << g_temperature_decay << ")" << std::endl;
+    }
+    std::cout << "  Alpha:       " << g_alpha_start << " -> " << g_alpha_min << " (steps: " << g_alpha_decay_steps << ")" << std::endl;
     std::cout << "============================\n" << std::endl;
 
     // Run all test cases
