@@ -45,6 +45,7 @@ void Shoe::shuffle() {
     std::shuffle(cards.begin(), cards.end(), rng);
     currentIndex = 0;
     endShoe = false;
+    removedCards.fill(0);
 }
 
 Card Shoe::dealCard() {
@@ -54,7 +55,8 @@ Card Shoe::dealCard() {
     }
     
     Card card = cards[currentIndex++];
-    
+    removedCards[static_cast<int>(card.rank) - 2]++;
+
     // Check if we've reached the penetration threshold
     if (currentIndex >= penetrationThreshold) {
         endShoe = true;

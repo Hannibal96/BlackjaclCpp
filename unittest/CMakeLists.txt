@@ -53,4 +53,5 @@ add_custom_target(tests ALL
     DebugShoeTest
     BasicStrategyRegressionTest
     QLearningRegressionTest
+    FindDeviations
 )

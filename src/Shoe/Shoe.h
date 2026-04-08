@@ -1,6 +1,7 @@
 #pragma once
 #include "Deck.h"
 #include <vector>
+#include <array>
 #include <random>
 
 // Shoe class for managing multiple decks of cards
@@ -12,6 +13,7 @@ protected:
     double penetration;  // Percentage (0.0 to 1.0)
     size_t penetrationThreshold;  // Card index where penetration is reached
     bool endShoe;
+    std::array<int, 13> removedCards{};  // Count of dealt cards per rank (index 0=TWO ... 12=ACE)
     std::mt19937 rng;  // Persistent RNG for shuffling (seeded once)
     
     void initializeFromDecks();
@@ -35,6 +37,9 @@ public:
     
     // Get total number of cards in the shoe
     size_t totalCards() const { return cards.size(); }
+
+    // Get the count of dealt cards per rank (index 0=TWO ... 12=ACE)
+    const std::array<int, 13>& getRemovedCards() const { return removedCards; }
     
     // Reset the shoe (reshuffle all cards)
     virtual void reset();

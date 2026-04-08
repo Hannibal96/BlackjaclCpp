@@ -82,56 +82,42 @@ bool BasicStrategy::loadFromJson(const std::string& filepath) {
     }
 }
 
-Action BasicStrategy::getAction(const State& state) {
-    // Get hand type
-    bool splitAllowed = std::find(state.allowedActions.begin(), state.allowedActions.end(), Action::SPLIT) != state.allowedActions.end();
-    HandType handType = state.playerHand.getHandType(splitAllowed);
+Action BasicStrategy::getAction(const StateKey& key, const std::vector<Action>& allowedActions) {
+    const auto& [count, handType, playerSum, dealerValue] = key;
+
+    if(handType == HandType::BLACKJACK)
+        return Action::STAND;
+
     if (handType == HandType::ZOMBIE) {
         return Action::HIT;
     }
-    if(state.allowedActions.size() == 1){
-        return state.allowedActions[0];
+    if (allowedActions.size() == 1) {
+        return allowedActions[0];
     }
-    
-    // Get player sum - for pairs, use the value of one card, not the total
-    int playerSum;
-    if (handType == HandType::PAIR) {
-        // For pairs, use the value of one card (not the total), this is for the case of 66 and AA which can cause confustions 
-        playerSum = state.playerHand[0].getValue();
-    } else {
-        playerSum = state.playerHand.getValue();
-    }
-    
-    // Get dealer card value
-    int dealerValue = state.dealerCard.getValue();
-    
-    // Use count from state
-    int count = state.count;
-    
+
     // Lookup action in table
     try {
         ActionWithFallback actionEntry = lookupTable->at(count).at(handType).at(playerSum).at(dealerValue);
-        
+
         // Check if the primary action is allowed
-        const auto& allowed = state.allowedActions;
-        if (std::find(allowed.begin(), allowed.end(), actionEntry.primary) != allowed.end()) {
+        if (std::find(allowedActions.begin(), allowedActions.end(), actionEntry.primary) != allowedActions.end()) {
             return actionEntry.primary;
         }
-        
+
         // Primary action not allowed, try fallback
-        if (std::find(allowed.begin(), allowed.end(), actionEntry.fallback) != allowed.end()) {
+        if (std::find(allowedActions.begin(), allowedActions.end(), actionEntry.fallback) != allowedActions.end()) {
             return actionEntry.fallback;
         }
-        
+
         throw std::logic_error("No intersection between allowed Actions and Strategy Actions");
-        
-    } catch (const std::out_of_range& e) {
+
+    } catch (const std::out_of_range&) {
         std::ostringstream oss;
-        oss << "Error: No strategy entry found for count=" << count 
-                  << ", handType=" << static_cast<int>(handType)
-                  << ", playerSum=" << playerSum 
-                  << ", dealerValue=" << dealerValue << std::endl;
-        
+        oss << "Error: No strategy entry found for count=" << count
+            << ", handType=" << static_cast<int>(handType)
+            << ", playerSum=" << playerSum
+            << ", dealerValue=" << dealerValue << std::endl;
+
         throw std::logic_error(oss.str());
     }
 }
@@ -215,6 +201,52 @@ static std::string handTypeToString(HandType handType) {
         case HandType::PAIR:      return "Pair";
         case HandType::BLACKJACK: return "BlackJack";
         default:                  return "Unknown";
+    }
+}
+
+// Serialize lookup table to JSON (same format as basic_strategy_tables/*.json)
+json BasicStrategy::toJson() const {
+    json result;
+    if (!lookupTable) return result;
+
+    for (const auto& [count, handTypes] : *lookupTable) {
+        std::string countStr = std::to_string(count);
+        for (const auto& [handType, playerSums] : handTypes) {
+            if (handType == HandType::ZOMBIE || handType == HandType::BLACKJACK) continue;
+            std::string handTypeStr;
+            switch (handType) {
+                case HandType::HARD: handTypeStr = "HandType.HARD"; break;
+                case HandType::SOFT: handTypeStr = "HandType.SOFT"; break;
+                case HandType::PAIR: handTypeStr = "HandType.PAIR"; break;
+                default: continue;
+            }
+            for (const auto& [playerSum, dealerCards] : playerSums) {
+                std::string playerSumStr = std::to_string(playerSum);
+                for (const auto& [dealerCard, action] : dealerCards) {
+                    result[countStr][handTypeStr][playerSumStr][std::to_string(dealerCard)] =
+                        actionToString(action);
+                }
+            }
+        }
+    }
+    return result;
+}
+
+bool BasicStrategy::saveToJson(const std::string& filepath) const {
+    try {
+        namespace fs = std::filesystem;
+        fs::path full_path = fs::path(PROJECT_ROOT) / filepath;
+        fs::create_directories(full_path.parent_path());
+        std::ofstream file(full_path);
+        if (!file.is_open()) {
+            std::cerr << "Error: Could not open file for writing: " << full_path << std::endl;
+            return false;
+        }
+        file << toJson().dump(2);
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "Error saving strategy: " << e.what() << std::endl;
+        return false;
     }
 }
 

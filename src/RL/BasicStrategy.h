@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <memory>
+#include <nlohmann/json.hpp>
 
 // Struct to hold an action and its fallback
 struct ActionWithFallback {
@@ -35,8 +36,8 @@ public:
     // Load strategy from JSON file
     bool loadFromJson(const std::string& filepath);
     
-    // Get action based on state (implements pure virtual from Strategy)
-    Action getAction(const State& state) override;
+    // Get action based on state key and allowed actions (implements pure virtual from Strategy)
+    Action getAction(const StateKey& key, const std::vector<Action>& allowedActions) override;
     
     // Clone the strategy
     std::unique_ptr<Strategy> clone() const override;
@@ -49,6 +50,12 @@ public:
     
     // Get action directly from lookup table by keys (returns HIT/HIT if not found)
     ActionWithFallback getActionFromTable(int count, HandType handType, int playerSum, int dealerCard) const;
+
+    // Serialize the lookup table to a JSON object (same format as basic_strategy_tables/*.json)
+    nlohmann::json toJson() const;
+
+    // Save the lookup table to a JSON file (path is relative to PROJECT_ROOT)
+    bool saveToJson(const std::string& filepath) const;
     
     // Averaging operators (no-op for BasicStrategy since it's read-only)
     Strategy& operator+=(const Strategy& other) override {

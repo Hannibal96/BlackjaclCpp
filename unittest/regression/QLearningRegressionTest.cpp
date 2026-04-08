@@ -90,6 +90,10 @@ std::pair<int, int> countStrategyDifferences(const QLearningStrategy& learned, c
             for (auto& [playerSumStr, dealerCards] : playerSums.items()) {
                 int playerSum = std::stoi(playerSumStr);
 
+                // HARD 4 and SOFT 12 have no reference label in basic strategy tables
+                if ((handType == HandType::HARD && playerSum == 4) ||
+                    (handType == HandType::SOFT && playerSum == 12)) continue;
+
                 for (auto& [dealerCardStr, actionStr] : dealerCards.items()) {
                     int dealerCard = std::stoi(dealerCardStr);
                     ActionWithFallback knownAction   = stringToAction(actionStr.get<std::string>());
