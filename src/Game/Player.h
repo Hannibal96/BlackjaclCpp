@@ -41,6 +41,11 @@ public:
 
     // Update the player's money with SARS parameters for learning strategies
     void updateMoney(double reward, const State& state, Action action, const State& nextState);
+
+    // Update money only — no Q-table update. Use when the player made no decision
+    // (e.g. dealer blackjack resolved before player acts in a peek game).
+    void addReward(double reward) { money += reward; }
+
     void resetPlayer(double money = 0);
 
     // Get current money

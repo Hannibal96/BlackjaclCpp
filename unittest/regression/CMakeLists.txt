@@ -34,18 +34,3 @@ target_include_directories(QLearningRegressionTest
 )
 set_property(TARGET QLearningRegressionTest PROPERTY CXX_STANDARD 20)
 
-# FindDeviations — Q-learning with Hi-Lo card counting
-add_executable(FindDeviations
-    ${CMAKE_CURRENT_SOURCE_DIR}/FindDeviations.cpp
-)
-target_link_libraries(FindDeviations
-    PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
-)
-target_include_directories(FindDeviations
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}
-)
-set_property(TARGET FindDeviations PROPERTY CXX_STANDARD 20)

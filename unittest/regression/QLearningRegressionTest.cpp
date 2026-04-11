@@ -18,9 +18,11 @@ using json = nlohmann::json;
 
 
 // Global configuration variables (can be overridden via command-line)
-uint64_t g_num_rounds = 1'000'000'000ULL;
-int g_num_threads = 16;
-double g_penetration = 75.0;
+uint64_t     g_num_rounds = 1'000'000'000ULL;
+int          g_num_threads = 16;
+double       g_penetration = 75.0;
+unsigned int g_seed        = 1234;
+size_t       g_max_cases   = 0;   // 0 = run all
 
 // Game configuration parameters (defaults match all combinations)
 std::vector<int> g_deck_sizes = {6, 2, 1};
@@ -75,6 +77,51 @@ std::pair<int, int> countStrategyDifferences(const QLearningStrategy& learned, c
     // Convert learned Q-learning strategy to BasicStrategy to get its lookup table
     auto learnedBasic = learned.toBasicStrategy();
 
+    // --- formatting helpers ---
+    static constexpr Action kAllActions[] = {
+        Action::HIT, Action::STAND, Action::DOUBLE_DOWN, Action::SPLIT, Action::SURRENDER
+    };
+    auto shortName = [](Action a) -> std::string {
+        switch (a) {
+            case Action::HIT:         return "HIT";
+            case Action::STAND:       return "STAND";
+            case Action::DOUBLE_DOWN: return "DD";
+            case Action::SPLIT:       return "SPLIT";
+            case Action::SURRENDER:   return "SURR";
+            default:                  return "?";
+        }
+    };
+    // Format an ActionWithFallback: "PRIMARY" or "PRIMARY/FALLBACK" when they differ
+    auto fmtAction = [&](ActionWithFallback a) -> std::string {
+        std::string s = shortName(a.primary);
+        if (a.fallback != a.primary)
+            s += "/" + shortName(a.fallback);
+        return s;
+    };
+    static const char* htNames[] = {"HARD", "SOFT", "PAIR"};
+
+    // Column widths
+    static constexpr int W_STATE = 22;   // "SOFT p=21 d=11 c=-5"
+    static constexpr int W_ACT   = 17;   // "DOUBLE_DOWN/STAND"
+    static constexpr int W_DELTA = 18;   // "PRIMARY  +0.3871"
+    static const std::string kSep = " | ";
+
+    // Lazy header — printed only when the first error is found
+    bool headerPrinted = false;
+    auto printHeader = [&]() {
+        if (headerPrinted) return;
+        headerPrinted = true;
+        int totalW = W_STATE + (int)kSep.size() + W_ACT + (int)kSep.size()
+                   + W_ACT + (int)kSep.size() + W_DELTA + (int)kSep.size();
+        std::cout << "\n"
+                  << std::left << std::setw(W_STATE) << " State"
+                  << kSep << std::setw(W_ACT) << "Chosen"
+                  << kSep << std::setw(W_ACT) << "Expected"
+                  << kSep << std::setw(W_DELTA) << "Type / Delta"
+                  << kSep << "Q-values\n"
+                  << std::string(totalW + 30, '-') << "\n";
+    };
+
     // Iterate through the JSON structure and compare
     // JSON structure: count -> hand_type -> player_sum -> dealer_card -> action
     for (auto& [countStr, handTypes] : strategyJson.items()) {
@@ -100,26 +147,50 @@ std::pair<int, int> countStrategyDifferences(const QLearningStrategy& learned, c
                     ActionWithFallback learnedAction = learnedBasic->getActionFromTable(count, handType, playerSum, dealerCard);
 
                     totalCompared++;
-                    if ((learnedAction.primary != knownAction.primary) || 
+                    if ((learnedAction.primary != knownAction.primary) ||
                             (learnedAction.fallback != knownAction.fallback && learnedAction.primary != Action::SPLIT)) {
                         differences++;
-                        static const std::pair<Action, const char*> allActions[] = {
-                            {Action::HIT,         "HIT"},
-                            {Action::STAND,       "STAND"},
-                            {Action::DOUBLE_DOWN, "DOUBLE_DOWN"},
-                            {Action::SPLIT,       "SPLIT"},
-                            {Action::SURRENDER,   "SURRENDER"},
-                        };
-                        static const char* handTypeNames[] = {"HARD", "SOFT", "PAIR"};
-                        std::cout << "state {count=0, " << handTypeNames[static_cast<int>(handType)]
-                                  << ", player=" << playerSum << ", dealer=" << dealerCard << "}"
-                                  << " [expected=" << actionStr.get<std::string>() << "]"
-                                  << (learnedAction.primary != knownAction.primary ? " PRIMARY_WRONG" : " fallback_wrong") << " :";
-                        for (auto& [a, name] : allActions) {
+
+                        bool primaryWrong = learnedAction.primary != knownAction.primary;
+                        // For a primary mismatch compare primary Q-values.
+                        // For a fallback-only mismatch the primaries are identical so delta would
+                        // trivially be 0 — compare the fallback Q-values instead.
+                        Action deltaChosen   = primaryWrong ? learnedAction.primary : learnedAction.fallback;
+                        Action deltaExpected = primaryWrong ? knownAction.primary   : knownAction.fallback;
+                        double q_chosen   = learned.getQValueDebug(handType, playerSum, dealerCard, deltaChosen);
+                        double q_expected = learned.getQValueDebug(handType, playerSum, dealerCard, deltaExpected);
+                        double delta      = q_chosen - q_expected;
+                        // delta > 0: agent genuinely prefers the wrong action (algorithmic issue)
+                        // delta ≈ 0: two actions have similar Q-values (likely noise)
+
+                        printHeader();
+
+                        // State column: "HARD p=17 d=11" or "HARD p=17 d=11 c=-5"
+                        std::ostringstream stateSS;
+                        stateSS << htNames[static_cast<int>(handType)]
+                                << " p=" << playerSum << " d=" << dealerCard;
+                        if (count != 0) stateSS << " c=" << count;
+
+                        // Delta column: "PRIMARY  +0.3871" or "fallback +0.0012"
+                        std::ostringstream deltaSS;
+                        deltaSS << (primaryWrong ? "PRIMARY " : "fallback ")
+                                << std::showpos << std::fixed << std::setprecision(4) << delta
+                                << std::noshowpos;
+
+                        // Q-values column: one entry per action
+                        std::ostringstream qSS;
+                        for (Action a : kAllActions) {
                             double q = learned.getQValueDebug(handType, playerSum, dealerCard, a);
-                            std::cout << "  " << name << " (" << std::fixed << std::setprecision(4) << q << ")";
+                            qSS << shortName(a) << "=" << std::fixed << std::setprecision(3)
+                                << std::showpos << q << std::noshowpos << " ";
                         }
-                        std::cout << "\n";
+
+                        std::cout << std::left
+                                  << std::setw(W_STATE) << stateSS.str()
+                                  << kSep << std::setw(W_ACT) << fmtAction(learnedAction)
+                                  << kSep << std::setw(W_ACT) << fmtAction(knownAction)
+                                  << kSep << std::setw(W_DELTA) << deltaSS.str()
+                                  << kSep << qSS.str() << "\n";
                     }
                 }
             }
@@ -130,9 +201,16 @@ std::pair<int, int> countStrategyDifferences(const QLearningStrategy& learned, c
 }
 
 
+struct QLearningResult {
+    double  empiric_edge;
+    double  time_sec;
+    int     strategy_differences = 0;
+    int     strategy_total       = 0;
+};
+
 class QLearningRegressionTest {
 public:
-    RegressionResult RunRegression(Case c, double penetration, uint64_t rounds, int num_threads) {
+    QLearningResult RunRegression(Case c, double penetration, uint64_t rounds, int num_threads) {
         // Create Q-learning strategy with decaying parameters
         auto alpha = std::make_unique<LinearDecayingParameter>(g_alpha_start, g_alpha_min, g_alpha_decay_steps);
         std::unique_ptr<DecayingParameter> exploration;
@@ -167,13 +245,14 @@ public:
         const Strategy* trainedStrategy = resultPlayers[0]->getStrategy();
         const QLearningStrategy* qLearningStrat = dynamic_cast<const QLearningStrategy*>(trainedStrategy);
 
+        int differences = 0, totalStates = 0;
         if (qLearningStrat) {
             std::cout << "Final Q-Learning Strategy (averaged across threads):" << std::endl;
             std::cout << *qLearningStrat << std::endl;
 
             // Compare with known basic strategy
             std::string jsonFile = ToStringTableName(c);
-            auto [differences, totalStates] = countStrategyDifferences(*qLearningStrat, jsonFile);
+            std::tie(differences, totalStates) = countStrategyDifferences(*qLearningStrat, jsonFile);
 
             if (totalStates > 0) {
                 double accuracy = 100.0 * (totalStates - differences) / totalStates;
@@ -189,8 +268,13 @@ public:
             delete player;
         }
 
-        return {edgePerHand, elapsedSec};
+        return {edgePerHand, elapsedSec, differences, totalStates};
     }
+
+    // Maximum allowed strategy differences vs reference basic strategy table.
+    // Q-learning with sufficient rounds (1B default) should converge to near-optimal
+    // play. Fewer than 10 deviations from reference is a practical convergence check.
+    static constexpr int MAX_STRATEGY_DIFFERENCES = 10;
 
     void RunTest(const Case& c) {
         std::string scenario = ToString(c);
@@ -200,15 +284,20 @@ public:
         std::cout << "Scenario:    " << scenario << std::endl;
         std::cout << "===============================\n" << std::endl;
 
-        // Run Q-learning with specified penetration
         std::cout << "Training Q-Learning Agent (Penetration: " << g_penetration << "%)..." << std::endl;
-        RegressionResult result = RunRegression(c, g_penetration, g_num_rounds, g_num_threads);
+        QLearningResult result = RunRegression(c, g_penetration, g_num_rounds, g_num_threads);
 
         std::cout << "\n=== Summary ===" << std::endl;
         std::cout << "Edge per Hand: " << std::fixed << std::setprecision(6) << result.empiric_edge << std::endl;
         std::cout << "Edge %: " << std::fixed << std::setprecision(4) << (result.empiric_edge * 100) << "%" << std::endl;
         std::cout << "Training Time: " << std::fixed << std::setprecision(2) << result.time_sec << " seconds" << std::endl;
         std::cout << "Speed: " << std::fixed << std::setprecision(0) << (g_num_rounds / result.time_sec) << " hands/sec" << std::endl;
+
+        if (result.strategy_total > 0 && result.strategy_differences >= MAX_STRATEGY_DIFFERENCES)
+            throw std::runtime_error(
+                "Q-learning strategy has " + std::to_string(result.strategy_differences) +
+                " differences from reference (threshold: " +
+                std::to_string(MAX_STRATEGY_DIFFERENCES) + ")");
     }
 };
 
@@ -257,6 +346,8 @@ void printHelp(const char* program_name) {
     std::cout << "  --alpha-min <val>        Minimum learning rate (default: 0.0001)\n";
     std::cout << "  --alpha-decay <val>      Alpha decay steps (default: 100)\n\n";
     std::cout << "OTHER OPTIONS:\n";
+    std::cout << "  --seed <N>               Random seed for test-case ordering (default: 1234)\n";
+    std::cout << "  --max-cases <N>          Max number of cases to run (default: 0 = all)\n";
     std::cout << "  --help, -h               Show this help message\n\n";
     std::cout << "EXAMPLES:\n";
     std::cout << "  # Epsilon-greedy (default)\n";
@@ -350,6 +441,12 @@ int main(int argc, char** argv) {
         else if (arg == "--alpha-decay" && i + 1 < argc) {
             g_alpha_decay_steps = std::stod(argv[++i]);
         }
+        else if (arg == "--seed" && i + 1 < argc) {
+            g_seed = static_cast<unsigned int>(std::stoul(argv[++i]));
+        }
+        else if (arg == "--max-cases" && i + 1 < argc) {
+            g_max_cases = std::stoull(argv[++i]);
+        }
         else {
             std::cerr << "Unknown argument: " << arg << std::endl;
             std::cerr << "Use --help for usage information" << std::endl;
@@ -360,13 +457,17 @@ int main(int argc, char** argv) {
     // Generate test cases based on configuration
     std::vector<Case> allCases = generateTestCases(
         g_deck_sizes, g_stand_soft17, g_double_after_split, g_split_after_split,
-        g_double_on, g_resplit_aces, g_hit_split_aces, g_peek, g_surrender, g_blackjack_pay
+        g_double_on, g_resplit_aces, g_hit_split_aces, g_peek, g_surrender, g_blackjack_pay,
+        g_seed
     );
+    if (g_max_cases > 0 && allCases.size() > g_max_cases)
+        allCases.resize(g_max_cases);
 
     // Print configuration
     std::cout << "=== Global Configuration ===" << std::endl;
     std::cout << "NUM_ROUNDS:  " << g_num_rounds << std::endl;
     std::cout << "NUM_THREADS: " << g_num_threads << std::endl;
+    std::cout << "Seed:        " << g_seed << std::endl;
     std::cout << "Total test cases: " << allCases.size() << std::endl;
     if (g_exploration_mode == ExplorationMode::EPSILON_GREEDY) {
         std::cout << "\nQ-Learning Hyperparameters (Epsilon-Greedy):" << std::endl;

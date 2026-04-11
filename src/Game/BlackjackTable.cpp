@@ -46,19 +46,18 @@ void BlackjackTable::round() {
     if (!delaer_bj) {
         aliveHands = playersPlay();
     } else {
-        // Dealer has blackjack - all hands are evaluated immediately
-        Card dealerUpCard = dealerHand[0];
+        // Dealer has blackjack (peek already resolved before players act).
+        // Players never made a decision, so we update money only — no Q-table update.
+        // Player BJ vs dealer BJ is a push; all other hands lose their bet.
         for (auto* player : players) {
             for (auto& slot : playerSlots[player]) {
                 for (auto& hand : slot.getHands()) {
-                    // Create initial state for hands that didn't get to play
-                    std::vector<Action> allowedActions = getAllowedActions(hand, slot.getHands().size());
-                    State state(hand, dealerUpCard, allowedActions, shoe->getRemovedCards());
-                    Action action = Action::STAND;  // Default action when dealer has blackjack
-                    aliveHands.push_back({player, &hand, state, action});
+                    double reward = hand.isBlackjack() ? 0.0 : -hand.getBet();
+                    player->addReward(reward);
                 }
             }
         }
+        // aliveHands stays empty → dealerPlays will DealerAction::SKIP
     }
 
     bool all_players_bj = std::all_of(aliveHands.begin(), aliveHands.end(), [](auto& h) { return std::get<1>(h)->isBlackjack(); });

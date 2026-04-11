@@ -39,3 +39,6 @@ enable_testing()
 # NOTE: your tests dir is named 'unittest'
 add_subdirectory(unittest)
 
+# Standalone training/analysis apps
+add_subdirectory(apps)
+
