@@ -119,9 +119,10 @@ bool BlackjackTable::dealInitialCards() {
         }
     }
     
-    // American vs European blackjack
+    // American style: deal the dealer's hole card face-down so card counters
+    // cannot observe it. uncoverCard() is called at the start of dealerPlays().
     if (peekBlackjack) {
-        dealerHand.addCard(shoe->dealCard());
+        dealerHand.addCard(shoe->dealCard(/*covered=*/true));
     }
 
     // TODO: Implement Insurance logic
@@ -225,6 +226,11 @@ std::vector<std::tuple<Player*, Hand*, State, Action>> BlackjackTable::playersPl
 
 // Dealer plays according to rules
 void BlackjackTable::dealerPlays(DealerAction dealer_action) {
+    // In peek games the hole card was dealt covered. Reveal it now — regardless of
+    // dealer_action — so the running count is accurate for all subsequent rounds.
+    if (peekBlackjack)
+        shoe->uncoverCard(dealerHand[1]);
+
     if(dealer_action == DealerAction::SKIP)
         return;
     while (shouldDealerHit()) {

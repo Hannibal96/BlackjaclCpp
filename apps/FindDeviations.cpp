@@ -208,7 +208,40 @@ Case loadCheckpointFolder(const std::string& folderName) {
         g_agents.push_back(ag);
     }
 
-    std::cout << "Resuming from checkpoint: checkpoints/" << folderName << "/\n";
+    // Print everything that was loaded so there is no confusion about what is
+    // actually being used (all game + counting + training params come from meta.json,
+    // not from the CLI when --load-checkpoint is active).
+    std::cout << "\n=== Loaded checkpoint: checkpoints/" << folderName << "/ ===\n";
+    std::cout << "Game config:\n";
+    std::cout << "  decks=" << c.deckSize
+              << "  ss17=" << (c.standSoft17 ? "true" : "false")
+              << "  das=" << (c.doubleAfterSplit ? "true" : "false")
+              << "  sas=" << c.splitAfterSplit << "\n";
+    std::cout << "  don=" << doubleOnToString(c.doubleOn)
+              << "  rsa=" << (c.reSplitAces ? "true" : "false")
+              << "  hsa=" << (c.hitSplitAces ? "true" : "false")
+              << "  peek=" << (c.peek ? "true" : "false") << "\n";
+    std::cout << "  surr=" << surrenderToString(c.surrender)
+              << "  bj_pay=" << c.blackJackPay
+              << "  penetration=" << g_penetration << "%\n";
+    for (const auto& ag : g_agents) {
+        std::cout << "Agent '" << ag.name << "':\n";
+        std::cout << "  counting: resolution=" << ag.countResolution
+                  << "  count=[" << ag.minCount << "," << ag.maxCount << "]\n";
+        std::string mode = (ag.explorationMode == ExplorationMode::BOLTZMANN)
+                           ? "boltzmann" : "epsilon";
+        std::cout << "  training: mode=" << mode;
+        if (ag.explorationMode == ExplorationMode::EPSILON_GREEDY)
+            std::cout << "  eps=[" << ag.epsilonStart << "->" << ag.epsilonMin
+                      << " decay=" << ag.epsilonDecay << "]";
+        else
+            std::cout << "  temp=[" << ag.tempStart << "->" << ag.tempMin
+                      << " decay=" << ag.tempDecay << "]";
+        std::cout << "  alpha=[" << ag.alphaStart << "->" << ag.alphaMin
+                  << " steps=" << ag.alphaDecaySteps << "]\n";
+    }
+    std::cout << "=== (CLI game/agent flags are ignored) ===\n\n";
+
     return c;
 }
 

@@ -48,21 +48,23 @@ void Shoe::shuffle() {
     removedCards.fill(0);
 }
 
-Card Shoe::dealCard() {
+Card Shoe::dealCard(bool covered) {
     if (currentIndex >= cards.size()) {
         reset();
-        // throw std::runtime_error("No more cards in the shoe");
     }
-    
-    Card card = cards[currentIndex++];
-    removedCards[static_cast<int>(card.rank) - 2]++;
 
-    // Check if we've reached the penetration threshold
-    if (currentIndex >= penetrationThreshold) {
+    Card card = cards[currentIndex++];
+    if (!covered)
+        removedCards[static_cast<int>(card.rank) - 2]++;
+
+    if (currentIndex >= penetrationThreshold)
         endShoe = true;
-    }
-    
+
     return card;
+}
+
+void Shoe::uncoverCard(const Card& card) {
+    removedCards[static_cast<int>(card.rank) - 2]++;
 }
 
 void Shoe::reset() {
@@ -90,29 +92,25 @@ void DebugShoe::reset() {
     calculatePenetrationThreshold();
 }
 
-Card DebugShoe::dealCard() {
+Card DebugShoe::dealCard(bool covered) {
     if (cards.empty()) {
         reset();
     }
-    
+
     size_t n = cards.size();
     size_t index = state % n;
-    
+
     Card card = cards[index];
     cards.erase(cards.begin() + index);
-    
-    // Update state: state = (state * 1664525 + 1013904223) % (2**32)
+
     state = state * 1664525 + 1013904223;
-    
-    // Check penetration threshold
-    // Since we remove cards, we need to check if remaining cards <= (Total - Threshold)
-    // Total cards initially = numDecks * 52
-    // penetrationThreshold was calculated as Total * penetration
-    // When cards.size() <= (Total - penetrationThreshold), we've dealt enough cards
-    size_t totalCards = numDecks * 52;
-    if (cards.size() <= totalCards - penetrationThreshold) {
+
+    if (!covered)
+        removedCards[static_cast<int>(card.rank) - 2]++;
+
+    size_t total = numDecks * 52;
+    if (cards.size() <= total - penetrationThreshold)
         endShoe = true;
-    }
-    
+
     return card;
 }

@@ -26,15 +26,22 @@ public:
     // Shuffle the shoe
     virtual void shuffle();
     
-    // Deal a card from the shoe
-    virtual Card dealCard();
-    
+    // Deal a card from the shoe.
+    // Pass covered=true for a face-down card (e.g. dealer hole card in peek games):
+    // the card is physically removed but NOT added to removedCards so card counters
+    // cannot observe it. Call uncoverCard() later when the card becomes visible.
+    virtual Card dealCard(bool covered = false);
+
+    // Reveal a previously covered card — adds it to removedCards so the running
+    // count reflects the card from this point forward.
+    virtual void uncoverCard(const Card& card);
+
     // Check if the penetration threshold has been reached
     bool isEndShoe() const { return endShoe; }
-    
+
     // Get number of cards remaining in the shoe
     size_t cardsRemaining() const { return cards.size() - currentIndex; }
-    
+
     // Get total number of cards in the shoe
     size_t totalCards() const { return cards.size(); }
 
@@ -54,7 +61,7 @@ public:
     DebugShoe(int numDecks, double penetration, int seed = 42);
     
     void shuffle() override;
-    Card dealCard() override;
+    Card dealCard(bool covered = false) override;
     void reset() override;
 };
 
