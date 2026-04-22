@@ -22,6 +22,16 @@ protected:
     int maxCount = 0;                       // Upper clamp bound for the discretized count
     int numDecks = 1;                       // Total decks in the shoe (needed to compute remaining decks)
 
+    // OLS regression accumulation:  w = (X^T X)^-1 X^T y
+    // X row: [removedCards[i]/remainingDecks (13-dim), 1.0 bias]  (14-dim total)
+    // y: net outcome of the round summed over all hands
+    bool regressionEnabled = false;
+    std::array<std::array<double, 14>, 14> XtX{};  // accumulated X^T X  (14×14, last = bias)
+    std::array<double, 14> Xty{};                   // accumulated X^T y  (14×1)
+    uint64_t regressionRounds = 0;
+    uint64_t regressionSampleEvery = 1;             // collect every N-th round
+    uint64_t regressionSampleCounter = 0;
+
 public:
     // Constructor
     Player(double initialMoney, std::unique_ptr<Strategy> strat, std::string name = "Uzan");
@@ -70,6 +80,18 @@ public:
 
     // Set the total number of decks in the shoe (needed for true-count normalization)
     void setNumDecks(int decks);
+
+    // --- Regression ---
+    void enableRegression() { regressionEnabled = true; }
+    bool isRegressionEnabled() const { return regressionEnabled; }
+
+    // Accumulate one round: x = pre-round normalized removed-cards, y = round net outcome
+    void recordRound(const std::array<double, 13>& x, double y);
+
+    const std::array<std::array<double, 14>, 14>& getXtX() const { return XtX; }
+    const std::array<double, 14>& getXty() const { return Xty; }
+    void setRegressionSampleEvery(uint64_t n) { regressionSampleEvery = (n < 1 ? 1 : n); }
+    uint64_t getRegressionRounds() const { return regressionRounds; }
 
     // Averaging operators for combining players from parallel simulations
     Player& operator+=(const Player& other);

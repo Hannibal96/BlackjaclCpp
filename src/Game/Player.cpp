@@ -90,11 +90,36 @@ void Player::setNumDecks(int decks) {
     numDecks = decks;
 }
 
+void Player::recordRound(const std::array<double, 13>& x, double y) {
+    if (!regressionEnabled) return;
+    ++regressionSampleCounter;
+    if (regressionSampleCounter % regressionSampleEvery != 0) return;
+
+    std::array<double, 14> xb;
+    for (int i = 0; i < 13; ++i) xb[i] = x[i];
+    xb[13] = 1.0;  // bias term
+
+    for (int i = 0; i < 14; ++i) {
+        for (int j = 0; j < 14; ++j)
+            XtX[i][j] += xb[i] * xb[j];
+        Xty[i] += xb[i] * y;
+    }
+    ++regressionRounds;
+}
+
 // Averaging operators for combining players from parallel simulations
 Player& Player::operator+=(const Player& other) {
     money += other.money;
     if (strategy && other.strategy) {
         *strategy += *other.strategy;
+    }
+    if (regressionEnabled) {
+        for (int i = 0; i < 14; ++i) {
+            for (int j = 0; j < 14; ++j)
+                XtX[i][j] += other.XtX[i][j];
+            Xty[i] += other.Xty[i];
+        }
+        regressionRounds += other.regressionRounds;
     }
     return *this;
 }
@@ -104,6 +129,9 @@ Player& Player::operator*=(double factor) {
     if (strategy) {
         *strategy *= factor;
     }
+    // Do NOT scale XtX, Xty, or regressionRounds — they accumulate absolute totals,
+    // not per-thread averages. After runParallelSimulation the matrices already hold
+    // the correct sum across all threads.
     return *this;
 }
 
@@ -118,5 +146,11 @@ Player* Player::clone() const {
     p->minCount = minCount;
     p->maxCount = maxCount;
     p->numDecks = numDecks;
+    p->regressionEnabled = regressionEnabled;
+    p->XtX = XtX;
+    p->Xty = Xty;
+    p->regressionRounds = regressionRounds;
+    p->regressionSampleEvery = regressionSampleEvery;
+    p->regressionSampleCounter = regressionSampleCounter;
     return p;
 }

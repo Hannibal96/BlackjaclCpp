@@ -29,11 +29,24 @@ BlackjackTable::BlackjackTable(const BlackjackRules& gameRules, std::vector<Play
 // Main round flow
 void BlackjackTable::round() {
     round_number++;
-    // Check if shoe needs reshuffle
-    if (shoe->isEndShoe()) {
-        shoe->reset();
+    if (shoe->isEndShoe()) shoe->reset();
+
+    // Capture pre-round state for regression (must happen after a potential reset
+    // so the shoe state is fresh/accurate, and before any cards are dealt).
+    bool anyRegression = false;
+    for (auto* p : players) if (p->isRegressionEnabled()) { anyRegression = true; break; }
+
+    std::array<int, 13> removedBefore{};
+    double remainingDecksBefore = 0.0;
+    std::vector<double> moneyBefore;
+    if (anyRegression) {
+        removedBefore = shoe->getRemovedCards();
+        remainingDecksBefore = shoe->cardsRemaining() / 52.0;
+        moneyBefore.resize(players.size());
+        for (size_t i = 0; i < players.size(); ++i)
+            moneyBefore[i] = players[i]->getMoney();
     }
-    
+
     clearHands();
     collectBets();
     
@@ -77,9 +90,20 @@ void BlackjackTable::round() {
     }
 
     dealerPlays(dealer_action);
-    
+
     // Evaluate alive hands and process payments
     evaluate(aliveHands);
+
+    // Update regression accumulators with this round's outcome
+    if (anyRegression) {
+        std::array<double, 13> x;
+        for (int i = 0; i < 13; ++i)
+            x[i] = (remainingDecksBefore > 0.0)
+                    ? static_cast<double>(removedBefore[i]) / remainingDecksBefore
+                    : 0.0;
+        for (size_t i = 0; i < players.size(); ++i)
+            players[i]->recordRound(x, players[i]->getMoney() - moneyBefore[i]);
+    }
 }
 
 // Clear all hands from previous round
