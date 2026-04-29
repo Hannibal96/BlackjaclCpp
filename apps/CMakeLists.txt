@@ -16,6 +16,22 @@ target_include_directories(FindDeviations
 )
 set_property(TARGET FindDeviations PROPERTY CXX_STANDARD 20)
 
+# MeasureEdge — measure the edge of a card counter under a fixed BasicStrategy
+add_executable(MeasureEdge
+    ${CMAKE_CURRENT_SOURCE_DIR}/MeasureEdge.cpp
+)
+target_link_libraries(MeasureEdge
+    PRIVATE
+        $<TARGET_OBJECTS:blackjack_objs>
+)
+target_include_directories(MeasureEdge
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/unittest/regression   # RegressionTestUtils.h
+)
+set_property(TARGET MeasureEdge PROPERTY CXX_STANDARD 20)
+
 # FindOptimalCount — OLS regression to derive optimal card counting weights
 add_executable(FindOptimalCount
     ${CMAKE_CURRENT_SOURCE_DIR}/FindOptimalCount.cpp

@@ -23,6 +23,8 @@ private:
     bool hitSplitAces;
     Surrender surrender;
     DoubleDownOn doubleDownOn;
+    double minBet;
+    double maxBet;
     uint64_t round_number;
     
     // Game state

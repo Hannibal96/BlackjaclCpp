@@ -38,6 +38,8 @@ public:
     
     // Get action based on state key and allowed actions (implements pure virtual from Strategy)
     Action getAction(const StateKey& key, const std::vector<Action>& allowedActions) override;
+
+    void printTo(std::ostream& os) const override;
     
     // Clone the strategy
     std::unique_ptr<Strategy> clone() const override;
@@ -71,4 +73,3 @@ public:
     // Friend function for printing the strategy table
     friend std::ostream& operator<<(std::ostream& os, const BasicStrategy& strategy);
 };
-

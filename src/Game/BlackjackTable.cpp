@@ -18,6 +18,8 @@ BlackjackTable::BlackjackTable(const BlackjackRules& gameRules, std::vector<Play
       hitSplitAces(gameRules.hitSplitAces),
       surrender(gameRules.surrender),
       doubleDownOn(gameRules.doubleDownOn),
+      minBet(gameRules.minBet),
+      maxBet(gameRules.maxBet),
       round_number(0ULL)
 {
     // Initialize player slots map
@@ -31,10 +33,11 @@ void BlackjackTable::round() {
     round_number++;
     if (shoe->isEndShoe()) shoe->reset();
 
-    // Capture pre-round state for regression (must happen after a potential reset
-    // so the shoe state is fresh/accurate, and before any cards are dealt).
+    // Capture pre-round state for regression tracking (after reset, before dealing).
     bool anyRegression = false;
-    for (auto* p : players) if (p->isRegressionEnabled()) { anyRegression = true; break; }
+    for (auto* p : players) {
+        if (p->isRegressionEnabled()) anyRegression = true;
+    }
 
     std::array<int, 13> removedBefore{};
     double remainingDecksBefore = 0.0;
@@ -117,7 +120,7 @@ void BlackjackTable::clearHands() {
 // Collect bets from all players
 void BlackjackTable::collectBets() {
     for (auto* player : players) {
-        double bet = player->getBet(shoe->getRemovedCards());
+        double bet = std::clamp(player->getBet(shoe->getRemovedCards()), minBet, maxBet);
         playerSlots[player].emplace_back(bet, maxSplits);
     }
 }

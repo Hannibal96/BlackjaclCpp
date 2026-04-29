@@ -190,6 +190,11 @@ public:
         return qTable.size();
     }
 
+    void printTo(std::ostream& os) const override {
+        auto basicStrategy = toBasicStrategy();
+        os << *basicStrategy;
+    }
+
     std::unique_ptr<Strategy> clone() const override {
         auto cloned = std::make_unique<QLearningStrategy>(
             alphaTemplate->clone(), explorationTemplate->clone(), gamma, explorationMode);

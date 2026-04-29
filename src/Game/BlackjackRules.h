@@ -1,5 +1,6 @@
 #pragma once
 #include "Rules.h"
+#include <limits>
 
 // Allowed cards for double down
 enum class DoubleDownOn {
@@ -24,7 +25,9 @@ struct BlackjackRules : public Rules {
     bool hitSplitAces;          // Can player hit split aces
     Surrender surrender;        // Surrender options
     DoubleDownOn doubleDownOn;  // What totals allow double down
-    
+    double minBet = 0.0;        // Table minimum bet (enforced by table after getBet)
+    double maxBet = std::numeric_limits<double>::max(); // Table maximum bet
+
     // Default constructor with classic blackjack rules (European style)
     BlackjackRules()
         : Rules(1.5, true, 6, 75.0),  // 3:2 payout, stand soft 17, 6 decks, 75% penetration

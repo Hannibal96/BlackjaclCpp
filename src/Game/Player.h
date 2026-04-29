@@ -3,6 +3,8 @@
 #include "RL/Action.h"
 #include "RL/Strategy.h"
 #include "RL/StateKey.h"
+#include "BettingStrategy.h"
+#include "CountingMethods.h"
 #include <array>
 #include <memory>
 #include <algorithm>
@@ -21,6 +23,15 @@ protected:
     int minCount = 0;                       // Lower clamp bound for the discretized count
     int maxCount = 0;                       // Upper clamp bound for the discretized count
     int numDecks = 1;                       // Total decks in the shoe (needed to compute remaining decks)
+
+    // Betting strategy — nullptr means fixed unit bet of 1.0
+    std::unique_ptr<BettingStrategy> bettingStrategy;
+
+    // E[game] model parameters: E[game] = countBias + countFactor * trueCount
+    // For OLS-derived systems: countFactor=1.0, countBias=w[13] (weights already in EV units).
+    // For traditional systems (Hi-Lo etc.): countFactor≈0.005, countBias≈-(house edge).
+    double countFactor = 1.0;
+    double countBias   = 0.0;
 
     // OLS regression accumulation:  w = (X^T X)^-1 X^T y
     // X row: [removedCards[i]/remainingDecks (13-dim), 1.0 bias]  (14-dim total)
@@ -72,8 +83,24 @@ public:
     // Get mutable strategy access (for averaging operations)
     Strategy* getMutableStrategy() { return strategy.get(); }
 
-    // Set card counting weights and resolution
-    void setCountWeights(const std::array<double, 13>& weights, double resolution = 1.0);
+    // --- Betting strategy ---
+    void setBettingStrategy(std::unique_ptr<BettingStrategy> bs);
+    bool hasBettingStrategy() const { return bettingStrategy != nullptr; }
+
+    // Set E[game] model parameters individually or from a CountingSystem.
+    void setCountFactor(double f) { countFactor = f; }
+    void setCountBias(double b)   { countBias   = b; }
+    void setCountSystem(const CountingSystem& cs) {
+        setCountWeights(cs.weights);
+        setCountFactor(cs.factor);
+        setCountBias(cs.bias);
+    }
+
+    // Set card counting weights (rank tags only; resolution is separate)
+    void setCountWeights(const std::array<double, 13>& weights);
+
+    // Set true-count discretization step (used both for strategy lookup and bet sizing)
+    void setCountResolution(double resolution) { countResolution = resolution; }
 
     // Set the count range — the discretized count is clamped to [min, max]
     void setCountRange(int min, int max);

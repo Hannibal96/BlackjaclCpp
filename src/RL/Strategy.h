@@ -2,6 +2,7 @@
 #include "StateKey.h"
 #include "Action.h"
 #include <memory>
+#include <ostream>
 #include <vector>
 
 // Strategy class for decision-making.
@@ -15,6 +16,11 @@ public:
 
     // Pure virtual method to clone the strategy
     virtual std::unique_ptr<Strategy> clone() const = 0;
+
+    // Print a human-readable representation of the strategy.
+    virtual void printTo(std::ostream& os) const {
+        os << "Strategy printing is not implemented for this strategy type.\n";
+    }
 
     // Virtual method to update strategy table (for learning strategies).
     // nextAllowedActions is needed to compute max Q-value for the next state.
@@ -32,3 +38,8 @@ public:
         return *this;
     }
 };
+
+inline std::ostream& operator<<(std::ostream& os, const Strategy& strategy) {
+    strategy.printTo(os);
+    return os;
+}

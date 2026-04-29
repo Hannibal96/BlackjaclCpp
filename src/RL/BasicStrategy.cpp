@@ -144,6 +144,10 @@ std::unique_ptr<Strategy> BasicStrategy::clone() const {
     return cloned;
 }
 
+void BasicStrategy::printTo(std::ostream& os) const {
+    os << *this;
+}
+
 void BasicStrategy::setAction(int count, HandType handType, unsigned int playerSum, unsigned int dealerHand, ActionWithFallback action) {
     // Initialize lookup table if it doesn't exist
     if (!lookupTable) {
@@ -305,4 +309,3 @@ std::ostream& operator<<(std::ostream& os, const BasicStrategy& strategy) {
     
     return os;
 }
-

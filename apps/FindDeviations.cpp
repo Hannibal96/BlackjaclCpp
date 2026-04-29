@@ -276,7 +276,8 @@ Player* buildPlayer(const AgentConfig& ag, int deckSize, bool warnOnMissing = fa
     }
 
     auto* p = new Player(0.0, std::move(qStrat));
-    p->setCountWeights(HI_LO_WEIGHTS, ag.countResolution);
+    p->setCountWeights(HI_LO_WEIGHTS);
+    p->setCountResolution(ag.countResolution);
     p->setCountRange(ag.minCount, ag.maxCount);
     p->setNumDecks(deckSize);
     return p;

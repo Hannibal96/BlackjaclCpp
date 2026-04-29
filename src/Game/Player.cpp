@@ -49,9 +49,36 @@ Action Player::getAction(const State& state) {
     return strategy->getAction(stateToKey(state), state.allowedActions);
 }
 
-// Get bet amount
-double Player::getBet(const std::array<int, 13>& /*removedCards*/) {
-    return 1.0;
+// Get bet amount — computes BettingContext and delegates to bettingStrategy
+double Player::getBet(const std::array<int, 13>& removedCards) {
+    if (!bettingStrategy) return 1.0;
+
+    int totalRemoved = 0;
+    for (int c : removedCards) totalRemoved += c;
+    double remainingDecks = static_cast<double>(numDecks * 52 - totalRemoved) / 52.0;
+
+    BettingContext ctx;
+    ctx.bankroll = money;
+
+    if (remainingDecks > 0.0) {
+        double rawCount = 0.0;
+        for (int i = 0; i < 13; ++i)
+            rawCount += countWeights[i] * static_cast<double>(removedCards[i]);
+        double tc = rawCount / remainingDecks;
+        // Discretize to the same resolution used for strategy state keys
+        if (countResolution > 0.0)
+            tc = std::round(tc / countResolution) * countResolution;
+        ctx.trueCount = tc;
+    } else {
+        ctx.trueCount = 0.0;
+    }
+    ctx.expectedValue = countBias + countFactor * ctx.trueCount;
+
+    return bettingStrategy->getBet(ctx);
+}
+
+void Player::setBettingStrategy(std::unique_ptr<BettingStrategy> bs) {
+    bettingStrategy = std::move(bs);
 }
 
 // Update the player's money with SARS parameters for learning strategies
@@ -73,10 +100,8 @@ void Player::setStrategy(std::unique_ptr<Strategy> strat) {
     strategy = std::move(strat);
 }
 
-// Set card counting weights and resolution
-void Player::setCountWeights(const std::array<double, 13>& weights, double resolution) {
+void Player::setCountWeights(const std::array<double, 13>& weights) {
     countWeights = weights;
-    countResolution = resolution;
 }
 
 // Set the count range — the discretized count is clamped to [min, max]
@@ -129,9 +154,7 @@ Player& Player::operator*=(double factor) {
     if (strategy) {
         *strategy *= factor;
     }
-    // Do NOT scale XtX, Xty, or regressionRounds — they accumulate absolute totals,
-    // not per-thread averages. After runParallelSimulation the matrices already hold
-    // the correct sum across all threads.
+    // Do NOT scale XtX/Xty/regressionRounds — they accumulate absolute totals, not per-thread averages.
     return *this;
 }
 
@@ -152,5 +175,8 @@ Player* Player::clone() const {
     p->regressionRounds = regressionRounds;
     p->regressionSampleEvery = regressionSampleEvery;
     p->regressionSampleCounter = regressionSampleCounter;
+    if (bettingStrategy) p->bettingStrategy = std::unique_ptr<BettingStrategy>(bettingStrategy->clone());
+    p->countFactor = countFactor;
+    p->countBias   = countBias;
     return p;
 }
