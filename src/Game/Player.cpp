@@ -1,4 +1,5 @@
 #include "Player.h"
+#include <limits>
 #include <stdexcept>
 
 // Constructor
@@ -77,6 +78,16 @@ double Player::getBet(const std::array<int, 13>& removedCards) {
     return bettingStrategy->getBet(ctx);
 }
 
+double Player::getLogMoney() const {
+    if (logMoneyDirty) {
+        logMoney = (money > 0.0)
+            ? std::log(money)
+            : -std::numeric_limits<double>::infinity();
+        logMoneyDirty = false;
+    }
+    return logMoney;
+}
+
 void Player::setBettingStrategy(std::unique_ptr<BettingStrategy> bs) {
     bettingStrategy = std::move(bs);
 }
@@ -84,12 +95,14 @@ void Player::setBettingStrategy(std::unique_ptr<BettingStrategy> bs) {
 // Update the player's money with SARS parameters for learning strategies
 void Player::updateMoney(double reward, const State& state, Action action, const State& nextState) {
     money += reward;
+    logMoneyDirty = true;
     strategy->updateTable(stateToKey(state), action, reward,
                           stateToKey(nextState), nextState.allowedActions);
 }
 
 void Player::resetPlayer(double m) {
     money = m;
+    logMoneyDirty = true;
 }
 
 // Set strategy
@@ -116,6 +129,19 @@ void Player::setNumDecks(int decks) {
 }
 
 void Player::recordRound(const std::array<double, 13>& x, double y) {
+    if (countGraphEnabled) {
+        double trueCount = 0.0;
+        for (int i = 0; i < 13; ++i)
+            trueCount += countWeights[i] * x[i];
+        int binIndex = (countGraphResolution > 0.0)
+            ? static_cast<int>(std::llround(trueCount / countGraphResolution))
+            : static_cast<int>(std::llround(trueCount / 0.25));
+        auto& bin = countGraphBins[binIndex];
+        ++bin.n;
+        bin.sumReward += y;
+        bin.sumRewardSq += y * y;
+    }
+
     if (!regressionEnabled) return;
     ++regressionSampleCounter;
     if (regressionSampleCounter % regressionSampleEvery != 0) return;
@@ -134,7 +160,11 @@ void Player::recordRound(const std::array<double, 13>& x, double y) {
 
 // Averaging operators for combining players from parallel simulations
 Player& Player::operator+=(const Player& other) {
+    const double thisLog = getLogMoney();
+    const double otherLog = other.getLogMoney();
     money += other.money;
+    logMoney = thisLog + otherLog;
+    logMoneyDirty = false;
     if (strategy && other.strategy) {
         *strategy += *other.strategy;
     }
@@ -146,15 +176,28 @@ Player& Player::operator+=(const Player& other) {
         }
         regressionRounds += other.regressionRounds;
     }
+    if (countGraphEnabled || other.countGraphEnabled) {
+        countGraphEnabled = countGraphEnabled || other.countGraphEnabled;
+        if (other.countGraphEnabled) countGraphResolution = other.countGraphResolution;
+        for (const auto& [binIndex, stats] : other.countGraphBins) {
+            auto& dst = countGraphBins[binIndex];
+            dst.n += stats.n;
+            dst.sumReward += stats.sumReward;
+            dst.sumRewardSq += stats.sumRewardSq;
+        }
+    }
     return *this;
 }
 
 Player& Player::operator*=(double factor) {
+    const double currentLog = getLogMoney();
     money *= factor;
+    logMoney = currentLog * factor;
+    logMoneyDirty = false;
     if (strategy) {
         *strategy *= factor;
     }
-    // Do NOT scale XtX/Xty/regressionRounds — they accumulate absolute totals, not per-thread averages.
+    // Do NOT scale XtX/Xty/regressionRounds/countGraphBins — they accumulate absolute totals, not per-thread averages.
     return *this;
 }
 
@@ -164,6 +207,8 @@ Player* Player::clone() const {
         throw std::logic_error("Cannot clone player without strategy");
     }
     auto* p = new Player(money, strategy->clone(), name);
+    p->logMoney = logMoney;
+    p->logMoneyDirty = logMoneyDirty;
     p->countWeights = countWeights;
     p->countResolution = countResolution;
     p->minCount = minCount;
@@ -175,6 +220,9 @@ Player* Player::clone() const {
     p->regressionRounds = regressionRounds;
     p->regressionSampleEvery = regressionSampleEvery;
     p->regressionSampleCounter = regressionSampleCounter;
+    p->countGraphEnabled = countGraphEnabled;
+    p->countGraphResolution = countGraphResolution;
+    p->countGraphBins = countGraphBins;
     if (bettingStrategy) p->bettingStrategy = std::unique_ptr<BettingStrategy>(bettingStrategy->clone());
     p->countFactor = countFactor;
     p->countBias   = countBias;

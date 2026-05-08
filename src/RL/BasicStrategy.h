@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <memory>
+#include <utility>
 #include <nlohmann/json.hpp>
 
 // Struct to hold an action and its fallback
@@ -35,6 +36,9 @@ public:
     
     // Load strategy from JSON file
     bool loadFromJson(const std::string& filepath);
+
+    // Load strategy from a project-relative file path.
+    bool loadFromFile(const std::string& filepath);
     
     // Get action based on state key and allowed actions (implements pure virtual from Strategy)
     Action getAction(const StateKey& key, const std::vector<Action>& allowedActions) override;
@@ -52,6 +56,9 @@ public:
     
     // Get action directly from lookup table by keys (returns HIT/HIT if not found)
     ActionWithFallback getActionFromTable(int count, HandType handType, int playerSum, int dealerCard) const;
+
+    // Return the minimum and maximum count keys currently present in the table.
+    std::pair<int, int> getCountRange() const;
 
     // Serialize the lookup table to a JSON object (same format as basic_strategy_tables/*.json)
     nlohmann::json toJson() const;

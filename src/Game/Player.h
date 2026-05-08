@@ -6,6 +6,8 @@
 #include "BettingStrategy.h"
 #include "CountingMethods.h"
 #include <array>
+#include <cstdint>
+#include <map>
 #include <memory>
 #include <algorithm>
 #include <cmath>
@@ -14,6 +16,8 @@
 class Player {
 protected:
     double money;
+    mutable double logMoney = 0.0;
+    mutable bool logMoneyDirty = true;
     std::string name;
     std::unique_ptr<Strategy> strategy;
 
@@ -43,6 +47,15 @@ protected:
     uint64_t regressionSampleEvery = 1;             // collect every N-th round
     uint64_t regressionSampleCounter = 0;
 
+    struct CountGraphBinStats {
+        uint64_t n = 0;
+        double sumReward = 0.0;
+        double sumRewardSq = 0.0;
+    };
+    bool countGraphEnabled = false;
+    double countGraphResolution = 0.25;
+    std::map<int, CountGraphBinStats> countGraphBins;
+
 public:
     // Constructor
     Player(double initialMoney, std::unique_ptr<Strategy> strat, std::string name = "Uzan");
@@ -65,12 +78,13 @@ public:
 
     // Update money only — no Q-table update. Use when the player made no decision
     // (e.g. dealer blackjack resolved before player acts in a peek game).
-    void addReward(double reward) { money += reward; }
+    void addReward(double reward) { money += reward; logMoneyDirty = true; }
 
     void resetPlayer(double money = 0);
 
     // Get current money
     double getMoney() const { return money; }
+    double getLogMoney() const;
 
     std::string getName() const { return name; }
 
@@ -111,12 +125,19 @@ public:
     // --- Regression ---
     void enableRegression() { regressionEnabled = true; }
     bool isRegressionEnabled() const { return regressionEnabled; }
+    void enableCountGraph(double resolution) {
+        countGraphEnabled = true;
+        countGraphResolution = (resolution > 0.0 ? resolution : 0.25);
+    }
+    bool isCountGraphEnabled() const { return countGraphEnabled; }
+    double getCountGraphResolution() const { return countGraphResolution; }
 
     // Accumulate one round: x = pre-round normalized removed-cards, y = round net outcome
     void recordRound(const std::array<double, 13>& x, double y);
 
     const std::array<std::array<double, 14>, 14>& getXtX() const { return XtX; }
     const std::array<double, 14>& getXty() const { return Xty; }
+    const std::map<int, CountGraphBinStats>& getCountGraphBins() const { return countGraphBins; }
     void setRegressionSampleEvery(uint64_t n) { regressionSampleEvery = (n < 1 ? 1 : n); }
     uint64_t getRegressionRounds() const { return regressionRounds; }
 

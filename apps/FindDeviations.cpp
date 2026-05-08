@@ -17,6 +17,10 @@
 
 using json = nlohmann::json;
 
+namespace {
+constexpr const char* kQlearningCheckpointRoot = "checkpoints/checkpoints_QLearning";
+}
+
 // ---------------------------------------------------------------------------
 // Hi-Lo weights  (index 0=TWO … 12=ACE)
 // ---------------------------------------------------------------------------
@@ -152,7 +156,7 @@ json buildMetaJson(const Case& c, const std::vector<AgentConfig>& agents,
 // ---------------------------------------------------------------------------
 Case loadCheckpointFolder(const std::string& folderName) {
     namespace fs = std::filesystem;
-    fs::path metaPath = fs::path(PROJECT_ROOT) / "checkpoints" / folderName / "meta.json";
+    fs::path metaPath = fs::path(PROJECT_ROOT) / kQlearningCheckpointRoot / folderName / "meta.json";
     if (!fs::exists(metaPath))
         throw std::runtime_error(
             "Checkpoint folder '" + folderName + "' not found or missing meta.json");
@@ -211,7 +215,7 @@ Case loadCheckpointFolder(const std::string& folderName) {
     // Print everything that was loaded so there is no confusion about what is
     // actually being used (all game + counting + training params come from meta.json,
     // not from the CLI when --load-checkpoint is active).
-    std::cout << "\n=== Loaded checkpoint: checkpoints/" << folderName << "/ ===\n";
+    std::cout << "\n=== Loaded checkpoint: " << kQlearningCheckpointRoot << "/" << folderName << "/ ===\n";
     std::cout << "Game config:\n";
     std::cout << "  decks=" << c.deckSize
               << "  ss17=" << (c.standSoft17 ? "true" : "false")
@@ -323,7 +327,7 @@ std::vector<AgentConfig> loadAgentConfigs(const std::string& path) {
 // ---------------------------------------------------------------------------
 static void saveMeta(const std::string& ckptFolder, const json& meta) {
     namespace fs = std::filesystem;
-    fs::path full = fs::path(PROJECT_ROOT) / "checkpoints" / ckptFolder / "meta.json";
+    fs::path full = fs::path(PROJECT_ROOT) / kQlearningCheckpointRoot / ckptFolder / "meta.json";
     std::ofstream f(full);
     if (f.is_open()) f << meta.dump(2);
 }
@@ -347,13 +351,13 @@ void runCase(const Case& c) {
     if (g_checkpoint_interval > 0)
         std::cout << "Checkpoint every " << g_checkpoint_interval << " rounds\n";
     std::cout << "Agents:     " << g_agents.size() << "\n";
-    std::cout << "Folder:     checkpoints/" << ckptFolder << "/\n";
+    std::cout << "Folder:     " << kQlearningCheckpointRoot << "/" << ckptFolder << "/\n";
     std::cout << "======================\n";
 
     // Create the checkpoint folder up front
     if (!g_no_save) {
         namespace fs = std::filesystem;
-        fs::create_directories(fs::path(PROJECT_ROOT) / "checkpoints" / ckptFolder);
+        fs::create_directories(fs::path(PROJECT_ROOT) / kQlearningCheckpointRoot / ckptFolder);
     }
 
     BlackjackRules rules(c.blackJackPay, c.standSoft17, c.deckSize, g_penetration, c.peek,
@@ -365,7 +369,7 @@ void runCase(const Case& c) {
     std::vector<Player*> players;
     for (auto ag : g_agents) {
         if (resuming) {
-            ag.loadFrom = "checkpoints/" + ckptFolder + "/" + ag.name + "_agent.json";
+            ag.loadFrom = std::string(kQlearningCheckpointRoot) + "/" + ckptFolder + "/" + ag.name + "_agent.json";
         }
         players.push_back(buildPlayer(ag, c.deckSize, /*warnOnMissing=*/resuming));
     }
@@ -375,7 +379,7 @@ void runCase(const Case& c) {
     if (resuming) {
         namespace fs = std::filesystem;
         for (const auto& ag : g_agents) {
-            fs::path full = fs::path(PROJECT_ROOT) / "checkpoints" / ckptFolder
+            fs::path full = fs::path(PROJECT_ROOT) / kQlearningCheckpointRoot / ckptFolder
                             / (ag.name + "_agent.json");
             if (fs::exists(full)) {
                 try {
@@ -432,8 +436,8 @@ void runCase(const Case& c) {
 
             // --- save ---
             if (!g_no_save) {
-                std::string agentFile  = "checkpoints/" + ckptFolder + "/" + ag.name + "_agent.json";
-                std::string stratFile  = "checkpoints/" + ckptFolder + "/" + ag.name + "_strategy.json";
+                std::string agentFile  = std::string(kQlearningCheckpointRoot) + "/" + ckptFolder + "/" + ag.name + "_agent.json";
+                std::string stratFile  = std::string(kQlearningCheckpointRoot) + "/" + ckptFolder + "/" + ag.name + "_strategy.json";
 
                 qStrat->saveToFile(agentFile, completed);
 
@@ -446,7 +450,7 @@ void runCase(const Case& c) {
         if (!g_no_save) {
             json meta = buildMetaJson(c, g_agents, completed, g_num_threads, g_checkpoint_interval);
             saveMeta(ckptFolder, meta);
-            std::cout << "Checkpoint saved to: checkpoints/" << ckptFolder << "/\n";
+            std::cout << "Checkpoint saved to: " << kQlearningCheckpointRoot << "/" << ckptFolder << "/\n";
         }
     }
 
@@ -477,8 +481,8 @@ void printHelp(const char* prog) {
     std::cout << "Find count-dependent deviations using Q-learning + Hi-Lo count.\n\n";
 
     std::cout << "CHECKPOINT FOLDER STRUCTURE:\n";
-    std::cout << "  Each training session saves to one folder under checkpoints/:\n";
-    std::cout << "    checkpoints/<folder>/\n";
+    std::cout << "  Each training session saves to one folder under checkpoints/checkpoints_QLearning/:\n";
+    std::cout << "    checkpoints/checkpoints_QLearning/<folder>/\n";
     std::cout << "      meta.json               Game config + counting + training params for all agents\n";
     std::cout << "      <agentname>_agent.json  Full Q-table and per-state alpha/epsilon state\n";
     std::cout << "      <agentname>_strategy.json  Argmax policy table (ready to play)\n";
@@ -494,7 +498,7 @@ void printHelp(const char* prog) {
     std::cout << "  --no-save                     Disable all checkpoint saving\n\n";
 
     std::cout << "CHECKPOINT RESUME:\n";
-    std::cout << "  --load-checkpoint <folder>    Resume from checkpoints/<folder>/\n";
+    std::cout << "  --load-checkpoint <folder>    Resume from checkpoints/checkpoints_QLearning/<folder>/\n";
     std::cout << "                                Reads meta.json for game config (overrides all game\n";
     std::cout << "                                flags), loads each agent's Q-table and training state.\n";
     std::cout << "                                Subsequent saves go back to the same folder.\n\n";

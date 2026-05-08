@@ -15,6 +15,65 @@ BasicStrategy::BasicStrategy() {
     lookupTable = std::make_shared<std::map<int, std::map<HandType, std::map<int, std::map<int, ActionWithFallback>>>>>();
 }
 
+static HandType parseHandType(const std::string& handTypeStr) {
+    if (handTypeStr == "HandType.HARD") {
+        return HandType::HARD;
+    } else if (handTypeStr == "HandType.SOFT") {
+        return HandType::SOFT;
+    } else if (handTypeStr == "HandType.PAIR") {
+        return HandType::PAIR;
+    } else {
+        std::cerr << "Warning: Unknown HandType string '" << handTypeStr << "', defaulting to HARD" << std::endl;
+        return HandType::HARD;
+    }
+}
+
+static bool loadStrategyData(
+    const json& jsonData,
+    std::shared_ptr<std::map<int, std::map<HandType, std::map<int, std::map<int, ActionWithFallback>>>>>& lookupTable) {
+    lookupTable->clear();
+
+    for (auto& [countStr, handTypes] : jsonData.items()) {
+        int count = std::stoi(countStr);
+
+        for (auto& [handTypeStr, playerSums] : handTypes.items()) {
+            HandType handType = parseHandType(handTypeStr);
+
+            for (auto& [playerSumStr, dealerCards] : playerSums.items()) {
+                int playerSum = std::stoi(playerSumStr);
+
+                for (auto& [dealerCardStr, actionStr] : dealerCards.items()) {
+                    int dealerCard = std::stoi(dealerCardStr);
+                    std::string actionString = actionStr.get<std::string>();
+
+                    ActionWithFallback action;
+                    if (actionString == "H") {
+                        action = ActionWithFallback(Action::HIT);
+                    } else if (actionString == "S") {
+                        action = ActionWithFallback(Action::STAND);
+                    } else if (actionString == "Dh") {
+                        action = ActionWithFallback(Action::DOUBLE_DOWN, Action::HIT);
+                    } else if (actionString == "Ds") {
+                        action = ActionWithFallback(Action::DOUBLE_DOWN, Action::STAND);
+                    } else if (actionString == "P") {
+                        action = ActionWithFallback(Action::SPLIT, Action::HIT);
+                    } else if (actionString == "Xh") {
+                        action = ActionWithFallback(Action::SURRENDER, Action::HIT);
+                    } else if (actionString == "Xs") {
+                        action = ActionWithFallback(Action::SURRENDER, Action::STAND);
+                    } else {
+                        std::cerr << "Warning: Unknown action string '" << actionString << "'" << std::endl;
+                        action = ActionWithFallback(Action::HIT);
+                    }
+
+                    (*lookupTable)[count][handType][playerSum][dealerCard] = action;
+                }
+            }
+        }
+    }
+    return true;
+}
+
 bool BasicStrategy::loadFromJson(const std::string& filepath) {
     try {
         namespace fs = std::filesystem;
@@ -29,55 +88,31 @@ bool BasicStrategy::loadFromJson(const std::string& filepath) {
         json jsonData;
         file >> jsonData;
         file.close();
-        
-        // Clear existing lookup table
-        lookupTable->clear();
-        
-        // Parse the JSON structure: count -> hand_type -> player_sum -> dealer_card -> action
-        for (auto& [countStr, handTypes] : jsonData.items()) {
-            int count = std::stoi(countStr);
-            
-            for (auto& [handTypeStr, playerSums] : handTypes.items()) {
-                HandType handType = stringToHandType(handTypeStr);
-                
-                for (auto& [playerSumStr, dealerCards] : playerSums.items()) {
-                    int playerSum = std::stoi(playerSumStr);
-                    
-                    for (auto& [dealerCardStr, actionStr] : dealerCards.items()) {
-                        int dealerCard = std::stoi(dealerCardStr);
-                        std::string actionString = actionStr.get<std::string>();
-                        
-                        // Convert action string to ActionWithFallback
-                        ActionWithFallback action;
-                        if (actionString == "H") {
-                            action = ActionWithFallback(Action::HIT);
-                        } else if (actionString == "S") {
-                            action = ActionWithFallback(Action::STAND);
-                        } else if (actionString == "Dh") {
-                            action = ActionWithFallback(Action::DOUBLE_DOWN, Action::HIT);
-                        } else if (actionString == "Ds") {
-                            action = ActionWithFallback(Action::DOUBLE_DOWN, Action::STAND);
-                        } else if (actionString == "P") {
-                            action = ActionWithFallback(Action::SPLIT, Action::HIT);
-                        } else if (actionString == "Xh") {
-                            action = ActionWithFallback(Action::SURRENDER, Action::HIT);
-                        } else if (actionString == "Xs") {
-                            action = ActionWithFallback(Action::SURRENDER, Action::STAND);
-                        } else {
-                            std::cerr << "Warning: Unknown action string '" << actionString << "'" << std::endl;
-                            action = ActionWithFallback(Action::HIT);
-                        }
-                        
-                        (*lookupTable)[count][handType][playerSum][dealerCard] = action;
-                    }
-                }
-            }
-        }
-        
-        return true;
+
+        return loadStrategyData(jsonData, lookupTable);
         
     } catch (const std::exception& e) {
         std::cerr << "Error loading strategy: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+bool BasicStrategy::loadFromFile(const std::string& filepath) {
+    try {
+        namespace fs = std::filesystem;
+        fs::path full_path = fs::path(PROJECT_ROOT) / filepath;
+        std::ifstream file(full_path);
+        if (!file.is_open()) {
+            std::cerr << "Error: Could not open file " << full_path << std::endl;
+            return false;
+        }
+
+        json jsonData;
+        file >> jsonData;
+        file.close();
+        return loadStrategyData(jsonData, lookupTable);
+    } catch (const std::exception& e) {
+        std::cerr << "Error loading strategy file: " << e.what() << std::endl;
         return false;
     }
 }
@@ -112,6 +147,16 @@ Action BasicStrategy::getAction(const StateKey& key, const std::vector<Action>& 
         throw std::logic_error("No intersection between allowed Actions and Strategy Actions");
 
     } catch (const std::out_of_range&) {
+        // Rare post-split edge case:
+        // after repeated splits we can end up with hands like 2,2 that are no longer
+        // allowed to split, so the state is encoded as HARD 4 instead of PAIR 2.
+        // These states are extremely rare and may never be visited during training,
+        // so it is reasonable for the strategy table to miss them. In that case we
+        // default to HIT, which is a safe fallback and has negligible practical impact.
+        if (handType == HandType::HARD && playerSum == 4) {
+            return Action::HIT;
+        }
+
         std::ostringstream oss;
         oss << "Error: No strategy entry found for count=" << count
             << ", handType=" << static_cast<int>(handType)
@@ -167,6 +212,13 @@ ActionWithFallback BasicStrategy::getActionFromTable(int count, HandType handTyp
     } catch (const std::out_of_range&) {
         return {Action::HIT, Action::HIT};
     }
+}
+
+std::pair<int, int> BasicStrategy::getCountRange() const {
+    if (!lookupTable || lookupTable->empty()) {
+        return {0, 0};
+    }
+    return {lookupTable->begin()->first, lookupTable->rbegin()->first};
 }
 
 // Helper function to convert action to string for display

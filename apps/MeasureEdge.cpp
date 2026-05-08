@@ -20,6 +20,12 @@
 
 using json = nlohmann::json;
 
+namespace {
+constexpr const char* kQlearningCheckpointRoot = "checkpoints/checkpoints_QLearning";
+constexpr const char* kOlsCheckpointRoot = "checkpoints/checkpoints_ols";
+constexpr uint64_t kKellyMeasurementRounds = 1'000'000ULL;
+}
+
 // ---------------------------------------------------------------------------
 // Simulation parameters
 // ---------------------------------------------------------------------------
@@ -28,11 +34,12 @@ int         g_num_threads  = 16;
 double      g_penetration  = 75.0;
 std::string g_mode         = "spread"; // "spread" or "kelly"
 bool        g_mode_explicit = false;
+int         g_kelly_measurements = 100;
 
 // Count specification — exactly one of these should be set
 std::string g_count_name;        // named system (none, hilo, ko, …)
 std::string g_count_weights_str; // explicit "w0,…,w12"
-std::string g_count_ols;         // folder under checkpoints_ols/ — loads OLS solution
+std::string g_count_ols;         // folder under checkpoints/checkpoints_ols/ — loads OLS solution
 
 // E[game] model overrides (NaN = use count system default)
 double g_factor = std::numeric_limits<double>::quiet_NaN();
@@ -48,10 +55,11 @@ double      g_kelly_fraction = 1.0;
 // Table parameters
 double g_min_bet      = 1.0;
 double g_max_bet      = std::numeric_limits<double>::max();
+bool   g_min_bet_explicit = false;
 double g_initial_money = std::numeric_limits<double>::quiet_NaN(); // NaN = auto by mode
 
 // Strategy selection
-std::string g_strategy_checkpoint; // folder under checkpoints/ (empty = use BasicStrategy)
+std::string g_strategy_checkpoint; // folder under checkpoints/checkpoints_QLearning/ (empty = use BasicStrategy)
 std::string g_strategy_agent;      // agent name within checkpoint (empty = first in meta.json)
 bool        g_strategy_verbose = false;
 
@@ -116,7 +124,7 @@ static std::array<double, 13> parseWeights13(const std::string& s) {
 
 static std::array<double, 14> loadOlsFromCheckpoint(const std::string& folder) {
     namespace fs = std::filesystem;
-    fs::path root = fs::path(PROJECT_ROOT) / "checkpoints_ols" / folder;
+    fs::path root = fs::path(PROJECT_ROOT) / kOlsCheckpointRoot / folder;
     fs::path dataPath = root / "data.json";
     if (!fs::exists(dataPath))
         throw std::runtime_error("OLS checkpoint missing data.json: " + root.string());
@@ -237,7 +245,7 @@ static std::unique_ptr<Strategy> loadStrategyFromCheckpoint(
     const Case& c, CheckpointCountConfig& outCount)
 {
     namespace fs = std::filesystem;
-    fs::path ckptRoot = fs::path(PROJECT_ROOT) / "checkpoints" / folder;
+    fs::path ckptRoot = fs::path(PROJECT_ROOT) / kQlearningCheckpointRoot / folder;
     fs::path metaPath = ckptRoot / "meta.json";
     if (!fs::exists(metaPath))
         throw std::runtime_error(
@@ -328,7 +336,7 @@ static std::unique_ptr<Strategy> loadStrategyFromCheckpoint(
     }
 
     // Load the agent file — pass relative path so loadFromFile prepends PROJECT_ROOT correctly
-    std::string relPath = "checkpoints/" + folder + "/" + agentName + "_agent.json";
+    std::string relPath = std::string(kQlearningCheckpointRoot) + "/" + folder + "/" + agentName + "_agent.json";
     auto qstrat = QLearningStrategy::loadFromFile(relPath);
     if (!qstrat)
         throw std::runtime_error("Failed to load agent file: " + relPath);
@@ -351,15 +359,21 @@ static void runCase(const Case& c) {
     bool noModeFlatBet = (!g_mode_explicit && g_mode == "spread" && g_spread_str.empty());
     std::cout << "Mode:        " << (noModeFlatBet ? "none (flat unit betting)" : g_mode) << "\n";
     std::cout << "Scenario:    " << ToString(c) << "\n";
-    std::cout << "Rounds:      " << g_num_rounds
-              << "  Threads: " << g_num_threads << "\n";
+    if (g_mode == "kelly") {
+        std::cout << "Kelly eval:  " << g_kelly_measurements
+                  << " x " << kKellyMeasurementRounds
+                  << " rounds  Threads: " << g_num_threads << "\n";
+    } else {
+        std::cout << "Rounds:      " << g_num_rounds
+                  << "  Threads: " << g_num_threads << "\n";
+    }
     std::cout << "Penetration: " << g_penetration << "%\n";
 
     CountingSystem sys = resolveCountingSystem();
 
     if (!g_count_name.empty())        std::cout << "Count:       " << g_count_name << "\n";
     else if (!g_count_weights_str.empty()) std::cout << "Count:       custom weights\n";
-    else if (!g_count_ols.empty())    std::cout << "Count:       OLS from checkpoints_ols/" << g_count_ols << "/\n";
+    else if (!g_count_ols.empty())    std::cout << "Count:       OLS from " << kOlsCheckpointRoot << "/" << g_count_ols << "/\n";
 
     std::cout << "Factor:      " << sys.factor << "\n";
     std::cout << "Bias:        " << sys.bias   << "\n";
@@ -389,24 +403,40 @@ static void runCase(const Case& c) {
     }
 
     double startMoney = std::isnan(g_initial_money)
-                        ? (g_mode == "kelly" ? 100.0 : 0.0)
+                        ? (g_mode == "kelly" ? 1.0 : 0.0)
                         : g_initial_money;
 
-    auto* player = new Player(startMoney, std::move(strat));
-    player->setNumDecks(c.deckSize);
+    auto makeConfiguredPlayer = [&](double initialMoney) -> Player* {
+        auto* player = new Player(initialMoney, strat->clone());
+        player->setNumDecks(c.deckSize);
 
-    if (!g_strategy_checkpoint.empty()) {
-        // Count weights/resolution/range MUST match training or state key lookups will miss.
-        // Apply checkpoint config first, then override factor/bias from CLI for E[game] model.
-        player->setCountWeights(ckptCount.weights);
-        player->setCountResolution(ckptCount.resolution);
-        player->setCountRange(ckptCount.minCount, ckptCount.maxCount);
-        player->setCountFactor(sys.factor);
-        player->setCountBias(sys.bias);
-    } else {
-        player->setCountSystem(sys);
-        player->setCountResolution(g_count_resolution);
-    }
+        if (!g_strategy_checkpoint.empty()) {
+            // Count weights/resolution/range MUST match training or state key lookups will miss.
+            // Apply checkpoint config first, then override factor/bias from CLI for E[game] model.
+            player->setCountWeights(ckptCount.weights);
+            player->setCountResolution(ckptCount.resolution);
+            player->setCountRange(ckptCount.minCount, ckptCount.maxCount);
+            player->setCountFactor(sys.factor);
+            player->setCountBias(sys.bias);
+        } else {
+            player->setCountSystem(sys);
+            player->setCountResolution(g_count_resolution);
+        }
+
+        if (g_mode == "spread") {
+            if (!g_spread_str.empty()) {
+                player->setBettingStrategy(
+                    std::make_unique<SpreadBetting>(SpreadBetting::fromString(g_spread_str)));
+            }
+        } else if (g_mode == "kelly") {
+            player->setBettingStrategy(std::make_unique<KellyBetting>(g_kelly_fraction));
+        } else {
+            delete player;
+            throw std::invalid_argument("Unknown mode '" + g_mode + "': use spread or kelly");
+        }
+
+        return player;
+    };
 
     if (g_mode == "spread") {
         if (g_spread_str.empty()) {
@@ -417,13 +447,10 @@ static void runCase(const Case& c) {
             }
         } else {
             std::cout << "Spread:      " << g_spread_str << "\n";
-            player->setBettingStrategy(
-                std::make_unique<SpreadBetting>(SpreadBetting::fromString(g_spread_str)));
         }
     } else if (g_mode == "kelly") {
         std::cout << "Kelly frac:  " << g_kelly_fraction << "\n";
         std::cout << "Start money: " << startMoney << "\n";
-        player->setBettingStrategy(std::make_unique<KellyBetting>(g_kelly_fraction));
     } else {
         throw std::invalid_argument("Unknown mode '" + g_mode + "': use spread or kelly");
     }
@@ -433,42 +460,76 @@ static void runCase(const Case& c) {
     BlackjackRules rules(c.blackJackPay, c.standSoft17, c.deckSize, g_penetration,
                          c.peek, c.splitAfterSplit, c.doubleAfterSplit,
                          c.reSplitAces, c.hitSplitAces, c.surrender, c.doubleOn);
-    rules.minBet = g_min_bet;
+    rules.minBet = (g_mode == "kelly" && !g_min_bet_explicit) ? 0.0 : g_min_bet;
     rules.maxBet = g_max_bet;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    std::vector<Player*> results =
-        runParallelSimulation(rules, {player}, g_num_rounds, g_num_threads);
-    double secs = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::high_resolution_clock::now() - t0).count() / 1000.0;
-
-    delete player;
-    Player* result = results[0];
-
-    std::cout << "\n=== Results (" << g_num_rounds << " rounds, "
-              << std::fixed << std::setprecision(0)
-              << (g_num_rounds / secs) << " hands/sec) ===\n";
-    std::cout << std::setprecision(6);
-
-    // result->getMoney() is already the per-thread average (runParallelSimulation divides by numThreads).
-    // Each thread played roundsPerThread = numRounds / numThreads rounds.
-    uint64_t roundsPerThread = g_num_rounds / static_cast<uint64_t>(g_num_threads);
 
     if (g_mode == "spread") {
+        auto* player = makeConfiguredPlayer(startMoney);
+        std::vector<Player*> results =
+            runParallelSimulation(rules, {player}, g_num_rounds, g_num_threads);
+        double secs = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::high_resolution_clock::now() - t0).count() / 1000.0;
+
+        delete player;
+        Player* result = results[0];
+
+        std::cout << "\n=== Results (" << g_num_rounds << " rounds, "
+                  << std::fixed << std::setprecision(0)
+                  << (g_num_rounds / secs) << " hands/sec) ===\n";
+        std::cout << std::setprecision(6);
+
+        uint64_t roundsPerThread = g_num_rounds / static_cast<uint64_t>(g_num_threads);
         double netPerRound = result->getMoney() / static_cast<double>(roundsPerThread);
         std::cout << "Average net per round: " << netPerRound << "\n";
         std::cout << "  (positive = player edge per unit bet)\n";
-    } else {
-        double avgFinal  = result->getMoney();
-        double growthRate = (startMoney > 0.0 && avgFinal > 0.0)
-            ? std::exp(std::log(avgFinal / startMoney) / static_cast<double>(roundsPerThread))
-            : 0.0;
-        std::cout << "Average final bankroll: " << avgFinal << "\n";
-        std::cout << "Growth rate per round:  " << growthRate << "\n";
-        std::cout << "  (>1.0 = bankroll grows; <1.0 = bankroll shrinks)\n";
+
+        delete result;
+        return;
     }
 
-    delete result;
+    double growthSum = 0.0;
+    double avgFinalSum = 0.0;
+    double avgLogFinalSum = 0.0;
+    for (int rep = 0; rep < g_kelly_measurements; ++rep) {
+        auto* player = makeConfiguredPlayer(startMoney);
+        std::vector<Player*> results =
+            runParallelSimulation(rules, {player}, kKellyMeasurementRounds, g_num_threads);
+        delete player;
+        if (results.empty())
+            throw std::runtime_error("Kelly measurement failed: no result players");
+
+        Player* result = results[0];
+        uint64_t roundsPerThread = kKellyMeasurementRounds / static_cast<uint64_t>(g_num_threads);
+        double avgFinal = result->getMoney();
+        double avgLogFinal = result->getLogMoney();
+        double growthRate = (startMoney > 0.0 && std::isfinite(avgLogFinal))
+            ? std::exp((avgLogFinal - std::log(startMoney)) / static_cast<double>(roundsPerThread))
+            : 0.0;
+
+        growthSum += growthRate;
+        avgFinalSum += avgFinal;
+        avgLogFinalSum += avgLogFinal;
+        delete result;
+    }
+
+    double secs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::high_resolution_clock::now() - t0).count() / 1000.0;
+
+    uint64_t totalKellyRounds = kKellyMeasurementRounds * static_cast<uint64_t>(g_kelly_measurements);
+    std::cout << "\n=== Results (" << g_kelly_measurements
+              << " experiments x " << kKellyMeasurementRounds << " rounds, "
+              << std::fixed << std::setprecision(0)
+              << (totalKellyRounds / secs) << " hands/sec) ===\n";
+    std::cout << std::setprecision(6);
+    std::cout << "Average final bankroll: "
+              << (avgFinalSum / static_cast<double>(g_kelly_measurements)) << "\n";
+    std::cout << "Average log bankroll:   "
+              << (avgLogFinalSum / static_cast<double>(g_kelly_measurements)) << "\n";
+    std::cout << "Growth rate per round:  "
+              << (growthSum / static_cast<double>(g_kelly_measurements)) << "\n";
+    std::cout << "  (>1.0 = bankroll grows; <1.0 = bankroll shrinks)\n";
 }
 
 // ---------------------------------------------------------------------------
@@ -482,17 +543,18 @@ static void printHelp(const char* prog) {
     std::cout << "  spread   Step-function bet sizing keyed on true count.\n";
     std::cout << "           Metric: average net profit per round.\n";
     std::cout << "  kelly    Bet a fraction of bankroll proportional to E[game].\n";
-    std::cout << "           Metric: geometric growth rate per round.\n\n";
+    std::cout << "           Metric: average growth rate per round across 100 experiments of 1,000,000 rounds each.\n\n";
 
     std::cout << "SIMULATION:\n";
     std::cout << "  --num-rounds <N>       (default: 1000000000)\n";
     std::cout << "  --num-threads <N>      (default: 16)\n";
-    std::cout << "  --penetration <val>    (default: 75.0)\n\n";
+    std::cout << "  --penetration <val>    (default: 75.0)\n";
+    std::cout << "  --kelly-measurements <N>  Number of Kelly experiments of 1,000,000 rounds each (default: 100)\n\n";
 
     std::cout << "COUNT SPECIFICATION (pick one):\n";
     std::cout << "  --count <name>         Named system: none, hilo, ko, hiopt1, hiopt2, omega2, zen, halves\n";
     std::cout << "  --count-weights <csv>  Explicit 13 weights: \"1,1,1,1,1,0,0,0,-1,-1,-1,-1,-1\"\n";
-    std::cout << "  --count-ols <dir>      Load OLS weights from checkpoints_ols/<dir>/data.json\n";
+    std::cout << "  --count-ols <dir>      Load OLS weights from checkpoints/checkpoints_ols/<dir>/data.json\n";
     std::cout << "                         (sets factor=1.0, bias=w[13] automatically)\n\n";
 
     std::cout << "COUNT MODEL OVERRIDES:\n";
@@ -501,9 +563,9 @@ static void printHelp(const char* prog) {
     std::cout << "  --count-resolution <v> True-count discretization step (default: 1.0)\n\n";
 
     std::cout << "TABLE PARAMETERS:\n";
-    std::cout << "  --min-bet <val>        Table minimum bet (default: 1.0)\n";
+    std::cout << "  --min-bet <val>        Table minimum bet (default: 1.0, or 0.0 in kelly mode)\n";
     std::cout << "  --max-bet <val>        Table maximum bet (default: unlimited)\n";
-    std::cout << "  --initial-money <val>  Starting bankroll (default: 0 for spread, 100 for kelly)\n\n";
+    std::cout << "  --initial-money <val>  Starting bankroll (default: 0 for spread, 1 for kelly)\n\n";
 
     std::cout << "MODE OPTIONS:\n";
     std::cout << "  --spread <map>         Spread map: \"1:1,2:4,3:8,4:12\"  (threshold:bet,...)\n";
@@ -513,7 +575,7 @@ static void printHelp(const char* prog) {
     std::cout << "  --kelly-fraction <val> Scale applied to Kelly fraction (default: 1.0)\n\n";
 
     std::cout << "STRATEGY (default: BasicStrategy):\n";
-    std::cout << "  --strategy <dir>         Load a learned policy from checkpoints/<dir>/\n";
+    std::cout << "  --strategy <dir>         Load a learned policy from checkpoints/checkpoints_QLearning/<dir>/\n";
     std::cout << "                           The checkpoint is converted to a fixed greedy strategy table\n";
     std::cout << "                           before simulation; no exploration is used in MeasureEdge.\n";
     std::cout << "                           A warning is printed if the checkpoint's training rules\n";
@@ -560,6 +622,7 @@ int main(int argc, char** argv) {
         else if (arg == "--num-rounds"       && i+1<argc) g_num_rounds       = std::stoull(argv[++i]);
         else if (arg == "--num-threads"      && i+1<argc) g_num_threads      = std::stoi(argv[++i]);
         else if (arg == "--penetration"      && i+1<argc) g_penetration      = std::stod(argv[++i]);
+        else if (arg == "--kelly-measurements" && i+1<argc) g_kelly_measurements = std::stoi(argv[++i]);
 
         else if (arg == "--count"            && i+1<argc) g_count_name       = argv[++i];
         else if (arg == "--count-weights"    && i+1<argc) g_count_weights_str= argv[++i];
@@ -568,7 +631,7 @@ int main(int argc, char** argv) {
         else if (arg == "--bias"             && i+1<argc) g_bias             = std::stod(argv[++i]);
         else if (arg == "--count-resolution" && i+1<argc) g_count_resolution = std::stod(argv[++i]);
 
-        else if (arg == "--min-bet"          && i+1<argc) g_min_bet          = std::stod(argv[++i]);
+        else if (arg == "--min-bet"          && i+1<argc) { g_min_bet = std::stod(argv[++i]); g_min_bet_explicit = true; }
         else if (arg == "--max-bet"          && i+1<argc) g_max_bet          = std::stod(argv[++i]);
         else if (arg == "--initial-money"    && i+1<argc) g_initial_money    = std::stod(argv[++i]);
 
@@ -595,6 +658,10 @@ int main(int argc, char** argv) {
 
     if (!g_strategy_agent.empty() && g_strategy_checkpoint.empty()) {
         std::cerr << "Error: --strategy-agent requires --strategy.\n";
+        return 1;
+    }
+    if (g_kelly_measurements < 1) {
+        std::cerr << "Error: --kelly-measurements must be >= 1.\n";
         return 1;
     }
 

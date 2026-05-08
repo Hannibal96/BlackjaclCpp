@@ -34,15 +34,15 @@ void BlackjackTable::round() {
     if (shoe->isEndShoe()) shoe->reset();
 
     // Capture pre-round state for regression tracking (after reset, before dealing).
-    bool anyRegression = false;
+    bool anyRoundTracking = false;
     for (auto* p : players) {
-        if (p->isRegressionEnabled()) anyRegression = true;
+        if (p->isRegressionEnabled() || p->isCountGraphEnabled()) anyRoundTracking = true;
     }
 
     std::array<int, 13> removedBefore{};
     double remainingDecksBefore = 0.0;
     std::vector<double> moneyBefore;
-    if (anyRegression) {
+    if (anyRoundTracking) {
         removedBefore = shoe->getRemovedCards();
         remainingDecksBefore = shoe->cardsRemaining() / 52.0;
         moneyBefore.resize(players.size());
@@ -98,7 +98,7 @@ void BlackjackTable::round() {
     evaluate(aliveHands);
 
     // Update regression accumulators with this round's outcome
-    if (anyRegression) {
+    if (anyRoundTracking) {
         std::array<double, 13> x;
         for (int i = 0; i < 13; ++i)
             x[i] = (remainingDecksBefore > 0.0)

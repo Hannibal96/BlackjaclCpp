@@ -19,6 +19,10 @@
 
 using json = nlohmann::json;
 
+namespace {
+constexpr const char* kOlsCheckpointRoot = "checkpoints/checkpoints_ols";
+}
+
 // ---------------------------------------------------------------------------
 // Simulation parameters
 // ---------------------------------------------------------------------------
@@ -92,7 +96,7 @@ static json buildMeta(const Case& c, uint64_t totalRounds, int numThreads,
 static void saveCheckpoint(const std::string& folder, const Player& player,
                            const Case& c, uint64_t roundsPlayed, uint64_t roundsRecorded) {
     namespace fs = std::filesystem;
-    fs::path root = fs::path(PROJECT_ROOT) / "checkpoints_ols" / folder;
+    fs::path root = fs::path(PROJECT_ROOT) / kOlsCheckpointRoot / folder;
     fs::create_directories(root);
 
     // meta.json
@@ -289,7 +293,7 @@ static void runCase(const Case& c, const std::string& ckptFolder,
               << "  Threads: " << g_num_threads << "\n";
     std::cout << "Penetration: " << g_penetration << "%\n";
     std::cout << "Sample-every: " << g_sample_every << "\n";
-    std::cout << "Folder:      checkpoints_ols/" << ckptFolder << "/\n";
+    std::cout << "Folder:      " << kOlsCheckpointRoot << "/" << ckptFolder << "/\n";
     if (prevRecordedRounds > 0)
         std::cout << "Resuming from " << prevRecordedRounds << " recorded rounds ("
                   << prevPlayedRounds << " played).\n";
@@ -369,8 +373,8 @@ static void printHelp(const char* prog) {
     std::cout << "  and y = net outcome.  Solves w = (X^T X)^-1 X^T y via Gauss-Jordan.\n";
     std::cout << "  w[0..12] = card counting weights, w[13] = bias (expected ≈ house edge).\n\n";
     std::cout << "CHECKPOINT STRUCTURE:\n";
-    std::cout << "    checkpoints_ols/<folder>/meta.json     Game + sim config\n";
-    std::cout << "    checkpoints_ols/<folder>/data.json     XtX (14x14), Xty (14), rounds\n\n";
+    std::cout << "    checkpoints/checkpoints_ols/<folder>/meta.json     Game + sim config\n";
+    std::cout << "    checkpoints/checkpoints_ols/<folder>/data.json     XtX (14x14), Xty (14), rounds\n\n";
     std::cout << "SIMULATION:\n";
     std::cout << "  --num-rounds <N>              Rounds to run (default: 1000000000)\n";
     std::cout << "  --num-threads <N>             Threads (default: 16)\n";
@@ -381,7 +385,7 @@ static void printHelp(const char* prog) {
     std::cout << "  --checkpoint-name <name>      Name the folder (default: timestamp)\n";
     std::cout << "  --no-save                     Disable checkpoint saving\n\n";
     std::cout << "CHECKPOINT RESUME:\n";
-    std::cout << "  --load-checkpoint <folder>    Resume from checkpoints_ols/<folder>/\n";
+    std::cout << "  --load-checkpoint <folder>    Resume from checkpoints/checkpoints_ols/<folder>/\n";
     std::cout << "                                All game flags are ignored; config comes from meta.json\n\n";
     std::cout << "GAME CONFIG (ignored when --load-checkpoint is used):\n";
     std::cout << "  --decks, --ss17, --das, --sas, --don, --rsa, --hsa,\n";
@@ -429,7 +433,7 @@ int main(int argc, char** argv) {
     if (!g_load_checkpoint.empty()) {
         Case c;
         namespace fs = std::filesystem;
-        fs::path root = fs::path(PROJECT_ROOT) / "checkpoints_ols" / g_load_checkpoint;
+        fs::path root = fs::path(PROJECT_ROOT) / kOlsCheckpointRoot / g_load_checkpoint;
         fs::path metaPath = root / "meta.json";
         fs::path dataPath = root / "data.json";
         if (!fs::exists(metaPath))
@@ -472,7 +476,7 @@ int main(int argc, char** argv) {
             prevXty[i] = data["Xty"][i].get<double>();
         }
 
-        std::cout << "\n=== Loaded OLS checkpoint: checkpoints_ols/" << g_load_checkpoint << "/ ===\n";
+        std::cout << "\n=== Loaded OLS checkpoint: " << kOlsCheckpointRoot << "/" << g_load_checkpoint << "/ ===\n";
         std::cout << "  decks=" << c.deckSize << "  ss17=" << (c.standSoft17?"true":"false")
                   << "  das=" << (c.doubleAfterSplit?"true":"false")
                   << "  sas=" << c.splitAfterSplit << "\n"
