@@ -14,11 +14,16 @@
 #include <memory>
 #include <array>
 #include <filesystem>
+#include <sstream>
+#include <limits>
+#include <cstdlib>
+#include <unistd.h>
 
 using json = nlohmann::json;
 
 namespace {
 constexpr const char* kQlearningCheckpointRoot = "checkpoints/checkpoints_QLearning";
+enum class TrainingStopMode { FIXED_ROUNDS, TABLE_DIFF };
 }
 
 // ---------------------------------------------------------------------------
@@ -56,6 +61,10 @@ uint64_t    g_num_rounds          = 1'000'000'000ULL;
 int         g_num_threads         = 16;
 double      g_penetration         = 75.0;
 uint64_t    g_checkpoint_interval = 0;        // 0 = checkpoint only at end
+uint64_t    g_sample_rounds       = 100'000'000ULL;
+double      g_diff_threshold      = 0.001;
+TrainingStopMode g_training_stop_mode = TrainingStopMode::FIXED_ROUNDS;
+bool        g_full_verbose        = false;
 bool        g_no_save             = false;
 std::string g_checkpoint_name;               // custom folder name (empty = timestamp)
 std::string g_load_checkpoint;              // folder name to resume from (empty = fresh)
@@ -96,6 +105,32 @@ static std::string surrenderToString(Surrender s) {
     if (s == Surrender::NO_SURRENDER)  return "no";
     if (s == Surrender::SURRENDER_ANY) return "yes";
     return "2-10";
+}
+
+static const char* stopModeToString(TrainingStopMode mode) {
+    return (mode == TrainingStopMode::TABLE_DIFF) ? "diff" : "rounds";
+}
+
+static void saveMeta(const std::string& ckptFolder, const json& meta);
+
+std::string buildRunHeader(const Case& c, const std::string& ckptFolder) {
+    std::ostringstream os;
+    os << "\n=== FindDeviations ===\n";
+    os << "Scenario:   " << ToString(c) << "\n";
+    if (g_training_stop_mode == TrainingStopMode::FIXED_ROUNDS) {
+        os << "Rounds:     " << g_num_rounds << "  Threads: " << g_num_threads << "\n";
+    } else {
+        os << "Stop mode:  diff  sample=" << g_sample_rounds
+           << "  threshold=" << g_diff_threshold
+           << "  Threads: " << g_num_threads << "\n";
+    }
+    os << "Penetration:" << g_penetration << "%\n";
+    if (g_checkpoint_interval > 0)
+        os << "Checkpoint every " << g_checkpoint_interval << " rounds\n";
+    os << "Agents:     " << g_agents.size() << "\n";
+    os << "Folder:     " << kQlearningCheckpointRoot << "/" << ckptFolder << "/\n";
+    os << "======================\n";
+    return os.str();
 }
 
 // ---------------------------------------------------------------------------
@@ -144,6 +179,9 @@ json buildMetaJson(const Case& c, const std::vector<AgentConfig>& agents,
         a["training"]["total_rounds"]        = totalRounds;
         a["training"]["num_threads"]         = numThreads;
         a["training"]["checkpoint_interval"] = checkpointInterval;
+        a["training"]["stop_mode"]           = stopModeToString(g_training_stop_mode);
+        a["training"]["sample_rounds"]       = g_sample_rounds;
+        a["training"]["diff_threshold"]      = g_diff_threshold;
 
         meta["agents"].push_back(a);
     }
@@ -244,6 +282,18 @@ Case loadCheckpointFolder(const std::string& folderName) {
         std::cout << "  alpha=[" << ag.alphaStart << "->" << ag.alphaMin
                   << " steps=" << ag.alphaDecaySteps << "]\n";
     }
+    const auto& firstTraining = j["agents"].at(0).at("training");
+    std::string stopMode = firstTraining.value("stop_mode", std::string("rounds"));
+    g_training_stop_mode = (stopMode == "diff") ? TrainingStopMode::TABLE_DIFF
+                                                : TrainingStopMode::FIXED_ROUNDS;
+    g_sample_rounds = firstTraining.value("sample_rounds", 100'000'000ULL);
+    g_diff_threshold = firstTraining.value("diff_threshold", 0.001);
+    std::cout << "Stop mode: " << stopModeToString(g_training_stop_mode);
+    if (g_training_stop_mode == TrainingStopMode::TABLE_DIFF) {
+        std::cout << "  sample_rounds=" << g_sample_rounds
+                  << "  diff_threshold=" << g_diff_threshold;
+    }
+    std::cout << "\n";
     std::cout << "=== (CLI game/agent flags are ignored) ===\n\n";
 
     return c;
@@ -285,6 +335,70 @@ Player* buildPlayer(const AgentConfig& ag, int deckSize, bool warnOnMissing = fa
     p->setCountRange(ag.minCount, ag.maxCount);
     p->setNumDecks(deckSize);
     return p;
+}
+
+void beginLiveProgressFrame(const std::string& header) {
+    if (g_training_stop_mode == TrainingStopMode::TABLE_DIFF && !g_full_verbose) {
+        if (::isatty(STDOUT_FILENO)) {
+            int rc = std::system("clear");
+            if (rc != 0) {
+                std::cout << "\x1b[2J\x1b[H";
+            }
+        } else {
+            std::cout << "\x1b[2J\x1b[H";
+        }
+        std::cout << header << std::flush;
+    }
+}
+
+void printAgentProgress(const AgentConfig& ag,
+                        const QLearningStrategy& qStrat,
+                        uint64_t completed,
+                        double handsPerSec,
+                        double avgDiff,
+                        bool showDiff) {
+    std::cout << "\n--- Agent: " << ag.name
+              << "  checkpoint at " << completed << " rounds"
+              << "  (count [" << ag.minCount << "," << ag.maxCount
+              << "]  res=" << ag.countResolution << ")"
+              << "  speed: " << std::fixed << std::setprecision(0)
+              << handsPerSec << " hands/sec";
+    if (showDiff) {
+        std::cout << "  avg|ΔQ|=" << std::setprecision(6) << avgDiff
+                  << "  threshold=" << g_diff_threshold;
+    }
+    std::cout << " ---\n";
+    std::cout << qStrat << "\n";
+}
+
+bool shouldSaveCheckpoint(uint64_t completed, uint64_t lastSavedAt) {
+    if (g_no_save) return false;
+    if (lastSavedAt == 0) return true;
+    if (g_checkpoint_interval == 0) return true;
+    return (completed - lastSavedAt) >= g_checkpoint_interval;
+}
+
+void saveCheckpointBatch(const Case& c,
+                         const std::string& ckptFolder,
+                         const std::vector<Player*>& players,
+                         uint64_t completed) {
+    for (size_t i = 0; i < players.size(); ++i) {
+        const auto& ag = g_agents[i];
+        const auto* qStrat = dynamic_cast<const QLearningStrategy*>(players[i]->getStrategy());
+        if (!qStrat) continue;
+
+        std::string agentFile  = std::string(kQlearningCheckpointRoot) + "/" + ckptFolder + "/" + ag.name + "_agent.json";
+        std::string stratFile  = std::string(kQlearningCheckpointRoot) + "/" + ckptFolder + "/" + ag.name + "_strategy.json";
+
+        qStrat->saveToFile(agentFile, completed);
+
+        auto policy = qStrat->toBasicStrategy();
+        policy->saveToJson(stratFile);
+    }
+
+    json meta = buildMetaJson(c, g_agents, completed, g_num_threads, g_checkpoint_interval);
+    saveMeta(ckptFolder, meta);
+    std::cout << "Checkpoint saved to: " << kQlearningCheckpointRoot << "/" << ckptFolder << "/\n";
 }
 
 // ---------------------------------------------------------------------------
@@ -344,15 +458,8 @@ void runCase(const Case& c) {
         ckptFolder = g_checkpoint_name.empty() ? currentTimestamp() : g_checkpoint_name;
     }
 
-    std::cout << "\n=== FindDeviations ===\n";
-    std::cout << "Scenario:   " << ToString(c) << "\n";
-    std::cout << "Rounds:     " << g_num_rounds << "  Threads: " << g_num_threads << "\n";
-    std::cout << "Penetration:" << g_penetration << "%\n";
-    if (g_checkpoint_interval > 0)
-        std::cout << "Checkpoint every " << g_checkpoint_interval << " rounds\n";
-    std::cout << "Agents:     " << g_agents.size() << "\n";
-    std::cout << "Folder:     " << kQlearningCheckpointRoot << "/" << ckptFolder << "/\n";
-    std::cout << "======================\n";
+    const std::string runHeader = buildRunHeader(c, ckptFolder);
+    std::cout << runHeader;
 
     // Create the checkpoint folder up front
     if (!g_no_save) {
@@ -392,14 +499,27 @@ void runCase(const Case& c) {
         }
     }
 
-    uint64_t remaining = g_num_rounds;
     uint64_t completed = completedOffset;
-    uint64_t batchSize = (g_checkpoint_interval > 0) ? g_checkpoint_interval : g_num_rounds;
+    uint64_t trainedThisRun = 0;
+    uint64_t lastSavedAt = completedOffset;
+    uint64_t batchSize = 0;
+    if (g_training_stop_mode == TrainingStopMode::FIXED_ROUNDS) {
+        batchSize = (g_checkpoint_interval > 0) ? g_checkpoint_interval : g_num_rounds;
+    } else {
+        batchSize = g_sample_rounds;
+    }
+    uint64_t remaining = (g_training_stop_mode == TrainingStopMode::FIXED_ROUNDS) ? g_num_rounds : 0;
+    std::vector<QLearningStrategy::QTableSnapshot> previousTables(players.size());
+    std::vector<double> lastDiffs(players.size(), std::numeric_limits<double>::infinity());
 
     auto wallStart = std::chrono::high_resolution_clock::now();
 
-    while (remaining > 0) {
-        uint64_t batch = std::min(batchSize, remaining);
+    while (g_training_stop_mode == TrainingStopMode::TABLE_DIFF || remaining > 0) {
+        uint64_t batch = batchSize;
+        if (g_training_stop_mode == TrainingStopMode::FIXED_ROUNDS)
+            batch = std::min(batchSize, remaining);
+        if (batch == 0)
+            break;
 
         auto batchStart = std::chrono::high_resolution_clock::now();
         std::vector<Player*> results =
@@ -410,13 +530,18 @@ void runCase(const Case& c) {
         double handsPerSec = (batchSecs > 0) ? batch / batchSecs : 0.0;
 
         completed += batch;
-        remaining -= batch;
+        trainedThisRun += batch;
+        if (g_training_stop_mode == TrainingStopMode::FIXED_ROUNDS)
+            remaining -= batch;
 
         // Replace each player with the averaged result from this batch
         for (size_t i = 0; i < players.size(); ++i) {
             delete players[i];
             players[i] = results[i];
         }
+
+        bool allDiffsBelowThreshold = true;
+        beginLiveProgressFrame(runHeader);
 
         // Per-agent: print strategy table + save checkpoint
         for (size_t i = 0; i < players.size(); ++i) {
@@ -425,33 +550,38 @@ void runCase(const Case& c) {
                 players[i]->getStrategy());
             if (!qStrat) continue;
 
-            // --- print ---
-            std::cout << "\n--- Agent: " << ag.name
-                      << "  checkpoint at " << completed << " rounds"
-                      << "  (count [" << ag.minCount << "," << ag.maxCount
-                      << "]  res=" << ag.countResolution << ")"
-                      << "  speed: " << std::fixed << std::setprecision(0)
-                      << handsPerSec << " hands/sec ---\n";
-            std::cout << *qStrat << "\n";
-
-            // --- save ---
-            if (!g_no_save) {
-                std::string agentFile  = std::string(kQlearningCheckpointRoot) + "/" + ckptFolder + "/" + ag.name + "_agent.json";
-                std::string stratFile  = std::string(kQlearningCheckpointRoot) + "/" + ckptFolder + "/" + ag.name + "_strategy.json";
-
-                qStrat->saveToFile(agentFile, completed);
-
-                auto policy = qStrat->toBasicStrategy();
-                policy->saveToJson(stratFile);
+            double avgDiff = std::numeric_limits<double>::infinity();
+            if (g_training_stop_mode == TrainingStopMode::TABLE_DIFF) {
+                auto currentSnapshot = qStrat->snapshotQTable();
+                avgDiff = QLearningStrategy::averageAbsDifference(currentSnapshot, previousTables[i]);
+                previousTables[i] = std::move(currentSnapshot);
+                lastDiffs[i] = avgDiff;
+                if (!(avgDiff <= g_diff_threshold))
+                    allDiffsBelowThreshold = false;
             }
+            printAgentProgress(ag, *qStrat, completed, handsPerSec, avgDiff,
+                               g_training_stop_mode == TrainingStopMode::TABLE_DIFF);
         }
 
-        // Save meta.json once per checkpoint (shared across all agents)
-        if (!g_no_save) {
-            json meta = buildMetaJson(c, g_agents, completed, g_num_threads, g_checkpoint_interval);
-            saveMeta(ckptFolder, meta);
-            std::cout << "Checkpoint saved to: " << kQlearningCheckpointRoot << "/" << ckptFolder << "/\n";
+        if (shouldSaveCheckpoint(completed, lastSavedAt)) {
+            saveCheckpointBatch(c, ckptFolder, players, completed);
+            lastSavedAt = completed;
         }
+
+        if (g_training_stop_mode == TrainingStopMode::TABLE_DIFF && allDiffsBelowThreshold) {
+            if (!g_no_save && lastSavedAt != completed) {
+                saveCheckpointBatch(c, ckptFolder, players, completed);
+                lastSavedAt = completed;
+            }
+            std::cout << "\nConverged: average absolute Q-table change is below threshold for all agents.\n";
+            std::cout << std::flush;
+            break;
+        }
+        std::cout << std::flush;
+    }
+
+    if (!g_no_save && lastSavedAt != completed) {
+        saveCheckpointBatch(c, ckptFolder, players, completed);
     }
 
     auto wallEnd = std::chrono::high_resolution_clock::now();
@@ -459,15 +589,22 @@ void runCase(const Case& c) {
         wallEnd - wallStart).count() / 1000.0;
 
     std::cout << "\nTotal time: " << std::fixed << std::setprecision(2) << elapsed << "s  ("
-              << std::setprecision(0) << (g_num_rounds / elapsed) << " hands/sec)\n";
+              << std::setprecision(0) << ((elapsed > 0.0 ? trainedThisRun / elapsed : 0.0)) << " hands/sec)\n";
 
     for (size_t i = 0; i < players.size(); ++i) {
         const auto& ag = g_agents[i];
-        double edge = players[i]->getMoney() /
-                      (static_cast<double>(g_num_rounds) / g_num_threads);
+        double edge = 0.0;
+        if (trainedThisRun > 0) {
+            edge = players[i]->getMoney() /
+                   (static_cast<double>(trainedThisRun) / g_num_threads);
+        }
         std::cout << "Agent: " << ag.name
                   << "  edge: " << std::fixed << std::setprecision(6)
                   << edge << "  (" << std::setprecision(4) << (edge * 100.0) << "%)\n";
+        if (g_training_stop_mode == TrainingStopMode::TABLE_DIFF) {
+            std::cout << "         final avg|ΔQ|: " << std::setprecision(6)
+                      << lastDiffs[i] << "\n";
+        }
     }
 
     for (auto* p : players) delete p;
@@ -491,10 +628,14 @@ void printHelp(const char* prog) {
 
     std::cout << "SIMULATION:\n";
     std::cout << "  --num-rounds <N>              Training rounds (default: 1000000000)\n";
+    std::cout << "  --stop-mode <rounds|diff>     Stop after fixed rounds or by table-diff convergence (default: rounds)\n";
+    std::cout << "  --sample-rounds <N>           In diff mode, compare Q-tables every N rounds (default: 100000000)\n";
+    std::cout << "  --diff-threshold <val>        Stop diff mode when avg abs table change is <= threshold (default: 0.001)\n";
     std::cout << "  --num-threads <N>             Threads (default: 16)\n";
     std::cout << "  --penetration <val>           Shoe penetration % (default: 75.0)\n";
     std::cout << "  --checkpoint-interval <N>     Save every N rounds (0=end only, default: 0)\n";
     std::cout << "  --checkpoint-name <name>      Name the checkpoint folder (default: timestamp)\n";
+    std::cout << "  --full-verbose                Keep every sampled table in the console instead of live-refreshing it\n";
     std::cout << "  --no-save                     Disable all checkpoint saving\n\n";
 
     std::cout << "CHECKPOINT RESUME:\n";
@@ -566,10 +707,18 @@ int main(int argc, char** argv) {
 
         // Simulation
         else if (arg == "--num-rounds"          && i+1<argc) g_num_rounds           = std::stoull(argv[++i]);
+        else if (arg == "--stop-mode"           && i+1<argc) {
+            std::string mode = argv[++i];
+            g_training_stop_mode = (mode == "diff") ? TrainingStopMode::TABLE_DIFF
+                                                    : TrainingStopMode::FIXED_ROUNDS;
+        }
+        else if (arg == "--sample-rounds"       && i+1<argc) g_sample_rounds        = std::stoull(argv[++i]);
+        else if (arg == "--diff-threshold"      && i+1<argc) g_diff_threshold       = std::stod(argv[++i]);
         else if (arg == "--num-threads"         && i+1<argc) g_num_threads          = std::stoi(argv[++i]);
         else if (arg == "--penetration"         && i+1<argc) g_penetration          = std::stod(argv[++i]);
         else if (arg == "--checkpoint-interval" && i+1<argc) g_checkpoint_interval  = std::stoull(argv[++i]);
         else if (arg == "--checkpoint-name"     && i+1<argc) g_checkpoint_name      = argv[++i];
+        else if (arg == "--full-verbose")                    g_full_verbose         = true;
         else if (arg == "--no-save")                         g_no_save              = true;
 
         // Resume from checkpoint folder
@@ -632,6 +781,10 @@ int main(int argc, char** argv) {
             std::cerr << "Error: min-count > max-count for agent '" << ag.name << "'\n";
             return 1;
         }
+    if (g_training_stop_mode == TrainingStopMode::TABLE_DIFF && g_sample_rounds == 0) {
+        std::cerr << "Error: --sample-rounds must be >= 1 in diff mode\n";
+        return 1;
+    }
 
     // Build case list — load from folder if resuming, otherwise from CLI game config
     std::vector<Case> cases;

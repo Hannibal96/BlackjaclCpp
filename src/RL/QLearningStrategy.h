@@ -83,6 +83,8 @@ private:
     }
 
 public:
+    using QTableSnapshot = std::map<QTableKey, double>;
+
     __attribute__((noinline)) double getQValueDebug(const HandType handType, int playerSum, int dealerHand, Action action) const;
 
     // Constructor — exploration_param is epsilon for EPSILON_GREEDY, temperature for BOLTZMANN
@@ -188,6 +190,36 @@ public:
 
     size_t getTableSize() const {
         return qTable.size();
+    }
+
+    QTableSnapshot snapshotQTable() const {
+        return qTable;
+    }
+
+    static double averageAbsDifference(const QTableSnapshot& lhs, const QTableSnapshot& rhs) {
+        auto itL = lhs.begin();
+        auto itR = rhs.begin();
+        double sumAbs = 0.0;
+        size_t count = 0;
+
+        while (itL != lhs.end() || itR != rhs.end()) {
+            if (itR == rhs.end() || (itL != lhs.end() && itL->first < itR->first)) {
+                sumAbs += std::abs(itL->second);
+                ++itL;
+                ++count;
+            } else if (itL == lhs.end() || itR->first < itL->first) {
+                sumAbs += std::abs(itR->second);
+                ++itR;
+                ++count;
+            } else {
+                sumAbs += std::abs(itL->second - itR->second);
+                ++itL;
+                ++itR;
+                ++count;
+            }
+        }
+
+        return (count == 0) ? 0.0 : (sumAbs / static_cast<double>(count));
     }
 
     void printTo(std::ostream& os) const override {

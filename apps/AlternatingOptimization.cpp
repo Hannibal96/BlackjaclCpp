@@ -21,6 +21,8 @@
 #include <limits>
 #include <cmath>
 #include <algorithm>
+#include <cstdlib>
+#include <unistd.h>
 
 using json = nlohmann::json;
 
@@ -33,6 +35,7 @@ constexpr double kLearnedCountFactorMultiplier = 180.0;
 constexpr double kKellyInitialMoney = 1.0;
 constexpr double kKellyFraction = 1.0;
 constexpr uint64_t kKellyMeasurementRounds = 1'000'000ULL;
+enum class TrainingStopMode { FIXED_ROUNDS, TABLE_DIFF };
 
 struct AgentConfig {
     ExplorationMode explorationMode = ExplorationMode::EPSILON_GREEDY;
@@ -63,6 +66,7 @@ struct PolicyArtifact {
     double trainingEdge = 0.0;
     double evaluationEdge = 0.0;
     double handsPerSec = 0.0;
+    uint64_t trainingRounds = 0;
 };
 
 struct CountArtifact {
@@ -120,8 +124,12 @@ uint64_t    g_iterations          = 5;   // number of loop iterations k producin
 int         g_num_threads         = 16;
 double      g_penetration         = 75.0;
 uint64_t    g_sample_every        = 1;
+uint64_t    g_sample_rounds       = 100'000'000ULL;
+double      g_diff_threshold      = 0.001;
+TrainingStopMode g_training_stop_mode = TrainingStopMode::FIXED_ROUNDS;
 int         g_kelly_measurements  = 100;
 bool        g_verbose             = false;
+bool        g_full_verbose        = false;
 bool        g_no_save             = false;
 std::string g_checkpoint_name;
 std::string g_load_checkpoint;
@@ -158,6 +166,37 @@ std::string surrenderToString(Surrender s) {
     return "2-10";
 }
 
+const char* stopModeToString(TrainingStopMode mode) {
+    return (mode == TrainingStopMode::TABLE_DIFF) ? "diff" : "rounds";
+}
+
+uint64_t countPhasePlayedRounds();
+
+std::string buildRunHeader(const Case& c, const std::string& folder, uint64_t evalRounds) {
+    std::ostringstream os;
+    os << "\n=== AlternatingOptimization ===\n";
+    os << "Scenario:      " << ToString(c) << "\n";
+    if (g_training_stop_mode == TrainingStopMode::FIXED_ROUNDS) {
+        os << "Train rounds:  " << g_num_rounds << "  Threads: " << g_num_threads << "\n";
+    } else {
+        os << "Policy stop:   diff  sample=" << g_sample_rounds
+           << "  threshold=" << g_diff_threshold
+           << "  Threads: " << g_num_threads << "\n";
+    }
+    os << "Count rounds:  " << countPhasePlayedRounds()
+       << "  (record every " << g_sample_every << " => target "
+       << g_num_rounds << " recorded samples)\n";
+    os << "Eval rounds:   " << evalRounds << "\n";
+    os << "Iterations:    " << g_iterations << "  (each iteration learns P_k then W_{k+1})\n";
+    os << "Penetration:   " << g_penetration << "%\n";
+    os << "Sample-every:  " << g_sample_every << "\n";
+    os << "Folder:        " << kAlternatingCheckpointRoot << "/" << folder << "/\n";
+    os << "Initial count: none (all zeros)\n";
+    os << "Count factor x:" << kLearnedCountFactorMultiplier << "\n";
+    os << "===============================\n";
+    return os.str();
+}
+
 json buildMetaJson(const Case& c) {
     json meta;
     meta["algorithm"] = "alternating_optimization";
@@ -180,6 +219,9 @@ json buildMetaJson(const Case& c) {
     meta["algorithm_config"]["iterations"]           = g_iterations;
     meta["algorithm_config"]["sample_every"]         = g_sample_every;
     meta["algorithm_config"]["num_threads"]          = g_num_threads;
+    meta["algorithm_config"]["policy_stop_mode"]     = stopModeToString(g_training_stop_mode);
+    meta["algorithm_config"]["policy_sample_rounds"] = g_sample_rounds;
+    meta["algorithm_config"]["policy_diff_threshold"] = g_diff_threshold;
     meta["algorithm_config"]["initial_count"]["weights"] = ZERO_WEIGHTS;
     meta["algorithm_config"]["initial_count"]["factor"]  = 1.0;
     meta["algorithm_config"]["initial_count"]["bias"]    = 0.0;
@@ -996,6 +1038,11 @@ Case loadCheckpointFolder(const std::string& folder) {
     g_iterations = a.at("iterations").get<uint64_t>();
     g_sample_every = a.at("sample_every").get<uint64_t>();
     g_num_threads = a.at("num_threads").get<int>();
+    std::string stopMode = a.value("policy_stop_mode", std::string("rounds"));
+    g_training_stop_mode = (stopMode == "diff") ? TrainingStopMode::TABLE_DIFF
+                                                : TrainingStopMode::FIXED_ROUNDS;
+    g_sample_rounds = a.value("policy_sample_rounds", 100'000'000ULL);
+    g_diff_threshold = a.value("policy_diff_threshold", 0.001);
 
     auto& rl = meta.at("rl");
     std::string mode = rl.at("exploration_mode").get<std::string>();
@@ -1022,6 +1069,12 @@ Case loadCheckpointFolder(const std::string& folder) {
     std::cout << "Iterations:    " << g_iterations << "\n";
     std::cout << "Penetration:   " << g_penetration << "%\n";
     std::cout << "Sample-every:  " << g_sample_every << "\n";
+    std::cout << "Policy stop:   " << stopModeToString(g_training_stop_mode);
+    if (g_training_stop_mode == TrainingStopMode::TABLE_DIFF) {
+        std::cout << "  sample=" << g_sample_rounds
+                  << "  threshold=" << g_diff_threshold;
+    }
+    std::cout << "\n";
     std::cout << "RL mode:       " << (g_agent.explorationMode == ExplorationMode::BOLTZMANN ? "boltzmann" : "epsilon") << "\n";
     std::cout << "Count grid:    res=" << g_agent.countResolution
               << "  range=[" << g_agent.minCount << "," << g_agent.maxCount << "]\n";
@@ -1032,22 +1085,21 @@ Case loadCheckpointFolder(const std::string& folder) {
 void savePolicyArtifact(const std::string& folder,
                         const std::string& label,
                         const PolicyArtifact& artifact,
-                        const CountConfig& count,
-                        uint64_t rounds) {
+                        const CountConfig& count) {
     namespace fs = std::filesystem;
     fs::path root = fs::path(PROJECT_ROOT) / kAlternatingCheckpointRoot / folder;
     fs::create_directories(root);
 
     artifact.qStrategy->saveToFile(
         (std::string(kAlternatingCheckpointRoot) + "/" + folder + "/" + label + "_agent.json"),
-        rounds);
+        artifact.trainingRounds);
     artifact.policy->saveToJson(
         (std::string(kAlternatingCheckpointRoot) + "/" + folder + "/" + label + "_strategy.json"));
 
     json summary;
     summary["label"] = label;
     summary["type"] = "policy";
-    summary["training_rounds"] = rounds;
+    summary["training_rounds"] = artifact.trainingRounds;
     summary["training_edge_flat"] = artifact.trainingEdge;
     summary["evaluation_edge_flat"] = artifact.evaluationEdge;
     summary["hands_per_sec"] = artifact.handsPerSec;
@@ -1134,25 +1186,73 @@ void saveCumulativeEvCountGraphArtifact(const std::string& folder,
     if (sf.is_open()) sf << evCountOverlaySvg("W1..W" + std::to_string(upToWeightIndex), graphs);
 }
 
-PolicyArtifact learnPolicy(const Case& c, const CountConfig& count, uint64_t rounds) {
-    auto qStrategy = makeQStrategy();
-    auto* player = new Player(0.0, std::move(qStrategy));
+PolicyArtifact learnPolicy(const Case& c,
+                           const CountConfig& count,
+                           uint64_t rounds,
+                           const std::string& label,
+                           const std::string& runHeader) {
+    (void)runHeader;
+    auto* player = new Player(0.0, makeQStrategy());
     player->setNumDecks(c.deckSize);
     player->setCountSystem(count.system);
     player->setCountResolution(count.resolution);
     player->setCountRange(count.minCount, count.maxCount);
 
     BlackjackRules rules = buildRules(c, 1.0, 1.0);
-    auto start = std::chrono::high_resolution_clock::now();
-    std::vector<Player*> results = runParallelSimulation(rules, {player}, rounds, g_num_threads);
+    Player* result = nullptr;
+    uint64_t trainedRounds = 0;
+    auto wallStart = std::chrono::high_resolution_clock::now();
+    std::vector<QLearningStrategy::QTableSnapshot> previousTables(1);
+
+    while (true) {
+        uint64_t batch = rounds;
+        if (g_training_stop_mode == TrainingStopMode::TABLE_DIFF) {
+            batch = g_sample_rounds;
+        } else if (trainedRounds >= rounds) {
+            break;
+        } else {
+            batch = std::min(rounds - trainedRounds, rounds);
+        }
+
+        std::vector<Player*> results = runParallelSimulation(rules, {player}, batch, g_num_threads);
+        delete player;
+        if (results.empty())
+            throw std::runtime_error("Policy learning failed: no result players");
+        player = results[0];
+        trainedRounds += batch;
+
+        const auto* sampled = dynamic_cast<const QLearningStrategy*>(player->getStrategy());
+        if (!sampled)
+            throw std::runtime_error("Policy learning failed: result strategy is not QLearningStrategy");
+
+        double avgDiff = std::numeric_limits<double>::infinity();
+        if (g_training_stop_mode == TrainingStopMode::TABLE_DIFF) {
+            auto currentSnapshot = sampled->snapshotQTable();
+            avgDiff = QLearningStrategy::averageAbsDifference(currentSnapshot, previousTables[0]);
+            previousTables[0] = std::move(currentSnapshot);
+        }
+
+        if (g_training_stop_mode == TrainingStopMode::TABLE_DIFF) {
+            double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::high_resolution_clock::now() - wallStart).count() / 1000.0;
+            double handsPerSec = (elapsed > 0.0 ? trainedRounds / elapsed : 0.0);
+            std::cout << label
+                      << " sample rounds=" << trainedRounds
+                      << "  speed=" << std::fixed << std::setprecision(0) << handsPerSec << " hands/sec"
+                      << "  avg|ΔQ|=" << std::setprecision(6) << avgDiff
+                      << "  threshold=" << g_diff_threshold << "\n";
+        }
+
+        if (g_training_stop_mode == TrainingStopMode::FIXED_ROUNDS) {
+            if (trainedRounds >= rounds) break;
+        } else if (avgDiff <= g_diff_threshold) {
+            break;
+        }
+    }
+
+    result = player;
     double secs = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::high_resolution_clock::now() - start).count() / 1000.0;
-
-    delete player;
-    if (results.empty())
-        throw std::runtime_error("Policy learning failed: no result players");
-
-    Player* result = results[0];
+        std::chrono::high_resolution_clock::now() - wallStart).count() / 1000.0;
     const auto* learned = dynamic_cast<const QLearningStrategy*>(result->getStrategy());
     if (!learned) {
         delete result;
@@ -1169,10 +1269,11 @@ PolicyArtifact learnPolicy(const Case& c, const CountConfig& count, uint64_t rou
     }
 
     PolicyArtifact artifact;
-    artifact.trainingEdge = netPerRoundFromPlayer(*result, rounds, g_num_threads);
-    artifact.handsPerSec  = (secs > 0.0 ? rounds / secs : 0.0);
+    artifact.trainingRounds = trainedRounds;
+    artifact.trainingEdge = netPerRoundFromPlayer(*result, trainedRounds, g_num_threads);
+    artifact.handsPerSec  = (secs > 0.0 ? trainedRounds / secs : 0.0);
     artifact.evaluationEdge = evaluateEdge(c, *policy, count, nullptr, 1.0, 1.0,
-                                           (g_eval_rounds == 0 ? rounds : g_eval_rounds));
+                                           (g_eval_rounds == 0 ? trainedRounds : g_eval_rounds));
     artifact.qStrategy = std::move(clonedQ);
     artifact.policy = std::move(policy);
 
@@ -1345,6 +1446,7 @@ void printEvCountGraphSummary(const std::string& label, const EvCountGraphArtifa
 
 void printPolicySummary(const std::string& label, const PolicyArtifact& artifact) {
     std::cout << "\n--- " << label << " ---\n";
+    std::cout << "Training rounds: " << artifact.trainingRounds << "\n";
     std::cout << "Training speed: " << std::fixed << std::setprecision(0)
               << artifact.handsPerSec << " hands/sec\n";
     std::cout << std::setprecision(6);
@@ -1360,21 +1462,9 @@ void runCase(const Case& c) {
             ? currentTimestamp() + "_" + ToStringTableName(c)
             : g_checkpoint_name + "_" + ToStringTableName(c));
     const uint64_t evalRounds = (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds);
+    const std::string runHeader = buildRunHeader(c, folder, evalRounds);
 
-    std::cout << "\n=== AlternatingOptimization ===\n";
-    std::cout << "Scenario:      " << ToString(c) << "\n";
-    std::cout << "Train rounds:  " << g_num_rounds << "  Threads: " << g_num_threads << "\n";
-    std::cout << "Count rounds:  " << countPhasePlayedRounds()
-              << "  (record every " << g_sample_every << " => target "
-              << g_num_rounds << " recorded samples)\n";
-    std::cout << "Eval rounds:   " << evalRounds << "\n";
-    std::cout << "Iterations:    " << g_iterations << "  (each iteration learns P_k then W_{k+1})\n";
-    std::cout << "Penetration:   " << g_penetration << "%\n";
-    std::cout << "Sample-every:  " << g_sample_every << "\n";
-    std::cout << "Folder:        " << kAlternatingCheckpointRoot << "/" << folder << "/\n";
-    std::cout << "Initial count: none (all zeros)\n";
-    std::cout << "Count factor x:" << kLearnedCountFactorMultiplier << "\n";
-    std::cout << "===============================\n";
+    std::cout << runHeader;
 
     ResumeState state = resuming ? loadState(folder) : ResumeState{};
     if (!resuming) {
@@ -1395,7 +1485,7 @@ void runCase(const Case& c) {
             }
 
             std::string pLabel = "P" + std::to_string(state.nextPolicyIndex);
-            PolicyArtifact learnedPolicy = learnPolicy(c, state.currentCount, g_num_rounds);
+            PolicyArtifact learnedPolicy = learnPolicy(c, state.currentCount, g_num_rounds, pLabel, runHeader);
             printPolicySummary(pLabel, learnedPolicy);
             if (g_verbose) {
                 std::cout << "\n=== " << pLabel << " Strategy ===\n";
@@ -1403,7 +1493,7 @@ void runCase(const Case& c) {
                 std::cout << "========================\n";
             }
             if (!g_no_save)
-                savePolicyArtifact(folder, pLabel, learnedPolicy, state.currentCount, g_num_rounds);
+                savePolicyArtifact(folder, pLabel, learnedPolicy, state.currentCount);
 
             currentPolicy = std::move(learnedPolicy.policy);
             state.currentPolicyLabel = pLabel;
@@ -1458,6 +1548,13 @@ void printHelp(const char* prog) {
     std::cout << "  1. Start from implicit W0 = zero count.\n";
     std::cout << "  2. For each loop index k = 0,1,2,... : learn Pk from fixed Wk, then learn W{k+1} from fixed Pk.\n\n";
 
+    std::cout << "POLICY RL STOP MODES:\n";
+    std::cout << "  rounds : learn each policy Pk for exactly --num-rounds hands.\n";
+    std::cout << "  diff   : learn each policy Pk in chunks of --sample-rounds hands, compare the\n";
+    std::cout << "           sampled Q-table against the previous sampled table, and stop when the\n";
+    std::cout << "           average absolute entry change is <= --diff-threshold.\n";
+    std::cout << "           Missing Q-table entries are treated as 0 in the comparison.\n\n";
+
     std::cout << "CHECKPOINT STRUCTURE:\n";
     std::cout << "    checkpoints/alternating-checkpoints/<folder>/meta.json      Run config\n";
     std::cout << "    checkpoints/alternating-checkpoints/<folder>/state.json     Resume state\n";
@@ -1471,6 +1568,9 @@ void printHelp(const char* prog) {
 
     std::cout << "SIMULATION:\n";
     std::cout << "  --num-rounds <N>      Rounds used in each policy/count phase (default: 1000000000)\n";
+    std::cout << "  --stop-mode <rounds|diff>  Policy RL stopping rule (default: rounds)\n";
+    std::cout << "  --sample-rounds <N>   In diff mode, compare policy Q-tables every N rounds (default: 100000000)\n";
+    std::cout << "  --diff-threshold <v>  In diff mode, stop when avg abs Q-table change <= v (default: 0.001)\n";
     std::cout << "  --eval-rounds <N>     Edge evaluation rounds after each step (default: num-rounds)\n";
     std::cout << "                        Policy steps report flat edge; count steps report spread edge and Kelly growth.\n";
     std::cout << "  --iterations <N>      Number of loop iterations k (default: 5)\n";
@@ -1481,7 +1581,8 @@ void printHelp(const char* prog) {
     std::cout << "  --kelly-measurements <N>  Number of Kelly experiments of 1,000,000 rounds each (default: 100)\n";
     std::cout << "  --checkpoint-name <name>  Folder prefix under checkpoints/alternating-checkpoints/ (default: timestamp)\n";
     std::cout << "  --load-checkpoint <name>  Resume from checkpoints/alternating-checkpoints/<name>/\n";
-    std::cout << "  --verbose             Print each learned policy table after it is learned\n";
+    std::cout << "  --verbose             Print the final learned policy table after each policy step completes\n";
+    std::cout << "  --full-verbose        Alias for --verbose\n";
     std::cout << "  --no-save             Disable artifact saving\n\n";
 
     std::cout << "RL PARAMETERS:\n";
@@ -1518,6 +1619,13 @@ int main(int argc, char** argv) {
         if (arg == "--help" || arg == "-h") { printHelp(argv[0]); return 0; }
 
         else if (arg == "--num-rounds"       && i + 1 < argc) g_num_rounds = std::stoull(argv[++i]);
+        else if (arg == "--stop-mode"        && i + 1 < argc) {
+            std::string mode = argv[++i];
+            g_training_stop_mode = (mode == "diff") ? TrainingStopMode::TABLE_DIFF
+                                                    : TrainingStopMode::FIXED_ROUNDS;
+        }
+        else if (arg == "--sample-rounds"    && i + 1 < argc) g_sample_rounds = std::stoull(argv[++i]);
+        else if (arg == "--diff-threshold"   && i + 1 < argc) g_diff_threshold = std::stod(argv[++i]);
         else if (arg == "--eval-rounds"      && i + 1 < argc) g_eval_rounds = std::stoull(argv[++i]);
         else if (arg == "--iterations"       && i + 1 < argc) g_iterations = std::stoull(argv[++i]);
         else if (arg == "--num-threads"      && i + 1 < argc) g_num_threads = std::stoi(argv[++i]);
@@ -1527,6 +1635,7 @@ int main(int argc, char** argv) {
         else if (arg == "--checkpoint-name"  && i + 1 < argc) g_checkpoint_name = argv[++i];
         else if (arg == "--load-checkpoint"  && i + 1 < argc) g_load_checkpoint = argv[++i];
         else if (arg == "--verbose")                       g_verbose = true;
+        else if (arg == "--full-verbose")                  { g_full_verbose = true; g_verbose = true; }
         else if (arg == "--no-save")                         g_no_save = true;
 
         else if (arg == "--count-resolution" && i + 1 < argc) g_agent.countResolution = std::stod(argv[++i]);
@@ -1567,6 +1676,10 @@ int main(int argc, char** argv) {
     std::vector<Case> cases;
     if (g_kelly_measurements < 1) {
         std::cerr << "Error: --kelly-measurements must be >= 1.\n";
+        return 1;
+    }
+    if (g_training_stop_mode == TrainingStopMode::TABLE_DIFF && g_sample_rounds == 0) {
+        std::cerr << "Error: --sample-rounds must be >= 1 in diff mode.\n";
         return 1;
     }
     if (!g_load_checkpoint.empty()) {
