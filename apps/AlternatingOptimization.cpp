@@ -72,6 +72,7 @@ struct PolicyArtifact {
 struct CountArtifact {
     CountConfig count;
     std::array<double, 14> rawSolution{};
+    std::array<double, 13> rawNormalizedWeights{};
     std::array<std::array<double, 14>, 14> XtX{};
     std::array<double, 14> Xty{};
     uint64_t recordedRounds = 0;
@@ -400,8 +401,21 @@ CountArtifact normalizeCount(const std::array<double, 14>& raw) {
     CountArtifact artifact;
     artifact.rawSolution = raw;
 
-    for (int i = 0; i < 13; ++i)
-        artifact.count.system.weights[i] = raw[i] * kLearnedCountFactorMultiplier;
+    for (int i = 0; i < 13; ++i) {
+        artifact.rawNormalizedWeights[i] = raw[i] * kLearnedCountFactorMultiplier;
+        artifact.count.system.weights[i] = artifact.rawNormalizedWeights[i];
+    }
+
+    // By symmetry, 10/J/Q/K should share the same tag. Keep the original fitted
+    // values for reporting, but use their average in the learned count.
+    double tenValueAverage =
+        (artifact.rawNormalizedWeights[8] + artifact.rawNormalizedWeights[9] +
+         artifact.rawNormalizedWeights[10] + artifact.rawNormalizedWeights[11]) / 4.0;
+    artifact.count.system.weights[8] = tenValueAverage;
+    artifact.count.system.weights[9] = tenValueAverage;
+    artifact.count.system.weights[10] = tenValueAverage;
+    artifact.count.system.weights[11] = tenValueAverage;
+
     artifact.count.system.factor = 1.0 / kLearnedCountFactorMultiplier;
     artifact.count.system.bias   = raw[13];
     artifact.count.resolution    = g_agent.countResolution;
@@ -1273,7 +1287,7 @@ PolicyArtifact learnPolicy(const Case& c,
     artifact.trainingEdge = netPerRoundFromPlayer(*result, trainedRounds, g_num_threads);
     artifact.handsPerSec  = (secs > 0.0 ? trainedRounds / secs : 0.0);
     artifact.evaluationEdge = evaluateEdge(c, *policy, count, nullptr, 1.0, 1.0,
-                                           (g_eval_rounds == 0 ? trainedRounds : g_eval_rounds));
+                                           (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds));
     artifact.qStrategy = std::move(clonedQ);
     artifact.policy = std::move(policy);
 
@@ -1385,18 +1399,19 @@ void printCountSummary(const std::string& label, const CountArtifact& artifact) 
         "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"
     };
 
-    double tenMean = (artifact.count.system.weights[8] + artifact.count.system.weights[9]
-                    + artifact.count.system.weights[10] + artifact.count.system.weights[11]) / 4.0;
+    double tenMean = (artifact.rawNormalizedWeights[8] + artifact.rawNormalizedWeights[9]
+                    + artifact.rawNormalizedWeights[10] + artifact.rawNormalizedWeights[11]) / 4.0;
     double tenMaxDev = std::max({
-        std::abs(artifact.count.system.weights[8]  - tenMean),
-        std::abs(artifact.count.system.weights[9]  - tenMean),
-        std::abs(artifact.count.system.weights[10] - tenMean),
-        std::abs(artifact.count.system.weights[11] - tenMean)
+        std::abs(artifact.rawNormalizedWeights[8]  - tenMean),
+        std::abs(artifact.rawNormalizedWeights[9]  - tenMean),
+        std::abs(artifact.rawNormalizedWeights[10] - tenMean),
+        std::abs(artifact.rawNormalizedWeights[11] - tenMean)
     });
     double tenRelDev = (std::abs(tenMean) > kEps) ? tenMaxDev / std::abs(tenMean) : tenMaxDev;
 
     double sumWeights = 0.0;
     for (double w : artifact.count.system.weights) sumWeights += w;
+    const uint64_t evalRounds = (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds);
 
     std::cout << "\n--- " << label << " ---\n";
     std::cout << "Recorded rounds: " << artifact.recordedRounds
@@ -1405,12 +1420,14 @@ void printCountSummary(const std::string& label, const CountArtifact& artifact) 
     std::cout << std::setprecision(6);
     std::cout << "Count table:\n";
     std::cout << "  " << std::left << std::setw(10) << "Card"
-              << std::setw(12) << "Value" << "\n";
-    std::cout << "  " << std::string(22, '-') << "\n";
+              << std::setw(14) << "Original"
+              << std::setw(14) << "Used" << "\n";
+    std::cout << "  " << std::string(38, '-') << "\n";
     for (size_t i = 0; i < artifact.count.system.weights.size(); ++i) {
         std::cout << "  " << std::left << std::setw(10) << kRankNames[i]
-                  << std::setw(12) << std::fixed << std::setprecision(4)
-                  << artifact.count.system.weights[i] << "\n";
+                  << std::setw(14) << std::fixed << std::setprecision(4)
+                  << artifact.rawNormalizedWeights[i]
+                  << std::setw(14) << artifact.count.system.weights[i] << "\n";
     }
     std::cout << "  " << std::left << std::setw(10) << "Bias"
               << std::setw(12) << std::fixed << std::setprecision(6)
@@ -1422,7 +1439,8 @@ void printCountSummary(const std::string& label, const CountArtifact& artifact) 
               << std::setw(12) << std::fixed << std::setprecision(6)
               << artifact.count.system.factor << "\n";
     std::cout << std::setprecision(6);
-    std::cout << "\nSpread 1:10 evaluation edge: " << artifact.evaluationEdge << "\n";
+    std::cout << "\nSpread 1:10 evaluation edge (" << evalRounds << " rounds): "
+              << artifact.evaluationEdge << "\n";
     std::cout << "Kelly growth per round:      " << artifact.evaluationKellyGrowth << "\n";
     std::cout << "Sanity checks:\n";
     std::cout << "  Sum(weights): " << sumWeights
@@ -1445,13 +1463,15 @@ void printEvCountGraphSummary(const std::string& label, const EvCountGraphArtifa
 }
 
 void printPolicySummary(const std::string& label, const PolicyArtifact& artifact) {
+    const uint64_t evalRounds = (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds);
     std::cout << "\n--- " << label << " ---\n";
     std::cout << "Training rounds: " << artifact.trainingRounds << "\n";
     std::cout << "Training speed: " << std::fixed << std::setprecision(0)
               << artifact.handsPerSec << " hands/sec\n";
     std::cout << std::setprecision(6);
     std::cout << "Training flat edge:   " << artifact.trainingEdge << "\n";
-    std::cout << "Evaluation flat edge: " << artifact.evaluationEdge << "\n";
+    std::cout << "Evaluation flat edge (" << evalRounds << " rounds): "
+              << artifact.evaluationEdge << "\n";
 }
 
 void runCase(const Case& c) {
