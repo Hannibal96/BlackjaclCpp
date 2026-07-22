@@ -63,3 +63,19 @@ target_include_directories(AlternatingOptimization
         ${CMAKE_SOURCE_DIR}/unittest/regression
 )
 set_property(TARGET AlternatingOptimization PROPERTY CXX_STANDARD 20)
+
+# CompareCountStrategies — compare basic strategy, Illustrious 18, and full deviations for a count
+add_executable(CompareCountStrategies
+    ${CMAKE_CURRENT_SOURCE_DIR}/CompareCountStrategies.cpp
+)
+target_link_libraries(CompareCountStrategies
+    PRIVATE
+        $<TARGET_OBJECTS:blackjack_objs>
+)
+target_include_directories(CompareCountStrategies
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/unittest/regression
+)
+set_property(TARGET CompareCountStrategies PROPERTY CXX_STANDARD 20)

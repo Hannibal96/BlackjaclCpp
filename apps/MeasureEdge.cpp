@@ -5,6 +5,7 @@
 #include "Game/CountingMethods.h"
 #include "RL/BasicStrategy.h"
 #include "RL/QLearningStrategy.h"
+#include "Utils/RunLogger.h"
 #include "Utils/Utils.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -12,18 +13,28 @@
 #include <fstream>
 #include <filesystem>
 #include <chrono>
+#include <ctime>
 #include <array>
 #include <stdexcept>
 #include <cmath>
 #include <sstream>
 #include <limits>
+#include <algorithm>
 
 using json = nlohmann::json;
 
 namespace {
 constexpr const char* kQlearningCheckpointRoot = "checkpoints/checkpoints_QLearning";
 constexpr const char* kOlsCheckpointRoot = "checkpoints/checkpoints_ols";
+constexpr const char* kMeasureEdgeLogRoot = "checkpoints/MeasureEdge";
 constexpr uint64_t kKellyMeasurementRounds = 1'000'000ULL;
+}
+
+static std::string currentTimestamp() {
+    time_t t = time(nullptr);
+    char buf[20];
+    strftime(buf, sizeof(buf), "%Y%m%d_%H%M%S", localtime(&t));
+    return buf;
 }
 
 // ---------------------------------------------------------------------------
@@ -35,6 +46,7 @@ double      g_penetration  = 75.0;
 std::string g_mode         = "spread"; // "spread" or "kelly"
 bool        g_mode_explicit = false;
 int         g_kelly_measurements = 100;
+std::string g_command_line;
 
 // Count specification — exactly one of these should be set
 std::string g_count_name;        // named system (none, hilo, ko, …)
@@ -355,10 +367,14 @@ static std::unique_ptr<Strategy> loadStrategyFromCheckpoint(
 // Run one case
 // ---------------------------------------------------------------------------
 static void runCase(const Case& c) {
+    RunLogger logger(std::filesystem::path(PROJECT_ROOT) / kMeasureEdgeLogRoot,
+                     currentTimestamp() + "_" + ToStringTableName(c));
     std::cout << "\n=== MeasureEdge ===\n";
+    std::cout << "Command:     " << g_command_line << "\n";
     bool noModeFlatBet = (!g_mode_explicit && g_mode == "spread" && g_spread_str.empty());
     std::cout << "Mode:        " << (noModeFlatBet ? "none (flat unit betting)" : g_mode) << "\n";
-    std::cout << "Scenario:    " << ToString(c) << "\n";
+    std::cout << "Scenario:    " << ToString(c)
+              << "_penetration=" << g_penetration << "%\n";
     if (g_mode == "kelly") {
         std::cout << "Kelly eval:  " << g_kelly_measurements
                   << " x " << kKellyMeasurementRounds
@@ -490,8 +506,11 @@ static void runCase(const Case& c) {
     }
 
     double growthSum = 0.0;
+    double growthSqSum = 0.0;
     double avgFinalSum = 0.0;
+    double avgFinalSqSum = 0.0;
     double avgLogFinalSum = 0.0;
+    double avgLogFinalSqSum = 0.0;
     for (int rep = 0; rep < g_kelly_measurements; ++rep) {
         auto* player = makeConfiguredPlayer(startMoney);
         std::vector<Player*> results =
@@ -509,8 +528,11 @@ static void runCase(const Case& c) {
             : 0.0;
 
         growthSum += growthRate;
+        growthSqSum += growthRate * growthRate;
         avgFinalSum += avgFinal;
+        avgFinalSqSum += avgFinal * avgFinal;
         avgLogFinalSum += avgLogFinal;
+        avgLogFinalSqSum += avgLogFinal * avgLogFinal;
         delete result;
     }
 
@@ -518,17 +540,30 @@ static void runCase(const Case& c) {
         std::chrono::high_resolution_clock::now() - t0).count() / 1000.0;
 
     uint64_t totalKellyRounds = kKellyMeasurementRounds * static_cast<uint64_t>(g_kelly_measurements);
+    const double n = static_cast<double>(g_kelly_measurements);
+    auto sampleStddev = [n](double sum, double sqSum) {
+        if (n <= 1.0) return 0.0;
+        double sampleVariance = (sqSum - (sum * sum / n)) / (n - 1.0);
+        return std::sqrt(std::max(0.0, sampleVariance));
+    };
+    double avgFinalMean = avgFinalSum / n;
+    double avgFinalStddev = sampleStddev(avgFinalSum, avgFinalSqSum);
+    double avgLogFinalMean = avgLogFinalSum / n;
+    double avgLogFinalStddev = sampleStddev(avgLogFinalSum, avgLogFinalSqSum);
+    double growthMean = growthSum / n;
+    double growthStddev = sampleStddev(growthSum, growthSqSum);
+
     std::cout << "\n=== Results (" << g_kelly_measurements
               << " experiments x " << kKellyMeasurementRounds << " rounds, "
               << std::fixed << std::setprecision(0)
               << (totalKellyRounds / secs) << " hands/sec) ===\n";
     std::cout << std::setprecision(6);
     std::cout << "Average final bankroll: "
-              << (avgFinalSum / static_cast<double>(g_kelly_measurements)) << "\n";
+              << avgFinalMean << "  stddev: " << avgFinalStddev << "\n";
     std::cout << "Average log bankroll:   "
-              << (avgLogFinalSum / static_cast<double>(g_kelly_measurements)) << "\n";
+              << avgLogFinalMean << "  stddev: " << avgLogFinalStddev << "\n";
     std::cout << "Growth rate per round:  "
-              << (growthSum / static_cast<double>(g_kelly_measurements)) << "\n";
+              << growthMean << "  stddev: " << growthStddev << "\n";
     std::cout << "  (>1.0 = bankroll grows; <1.0 = bankroll shrinks)\n";
 }
 
@@ -614,6 +649,7 @@ static void printHelp(const char* prog) {
 // main
 // ---------------------------------------------------------------------------
 int main(int argc, char** argv) {
+    g_command_line = commandLineFromArgs(argc, argv);
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--help" || arg == "-h") { printHelp(argv[0]); return 0; }

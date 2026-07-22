@@ -116,7 +116,7 @@ Hand Hand::split() {
     }
     
     // Save the original bet and cards
-    unsigned int originalBet = bet;
+    double originalBet = bet;
     Card firstCard = cards[0];
     Card secondCard = cards[1];
     

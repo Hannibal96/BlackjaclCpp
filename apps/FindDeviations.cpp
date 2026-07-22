@@ -4,6 +4,7 @@
 #include "RL/QLearningStrategy.h"
 #include "RL/BasicStrategy.h"
 #include "RL/DecayingParameter.h"
+#include "Utils/RunLogger.h"
 #include "Utils/Utils.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -68,6 +69,7 @@ bool        g_full_verbose        = false;
 bool        g_no_save             = false;
 std::string g_checkpoint_name;               // custom folder name (empty = timestamp)
 std::string g_load_checkpoint;              // folder name to resume from (empty = fresh)
+std::string g_command_line;
 
 // Game configuration (single-case defaults)
 std::vector<int>         g_deck_sizes         = {6};
@@ -116,7 +118,9 @@ static void saveMeta(const std::string& ckptFolder, const json& meta);
 std::string buildRunHeader(const Case& c, const std::string& ckptFolder) {
     std::ostringstream os;
     os << "\n=== FindDeviations ===\n";
-    os << "Scenario:   " << ToString(c) << "\n";
+    os << "Command:    " << g_command_line << "\n";
+    os << "Scenario:   " << ToString(c)
+       << "_penetration=" << g_penetration << "%\n";
     if (g_training_stop_mode == TrainingStopMode::FIXED_ROUNDS) {
         os << "Rounds:     " << g_num_rounds << "  Threads: " << g_num_threads << "\n";
     } else {
@@ -457,6 +461,7 @@ void runCase(const Case& c) {
     } else {
         ckptFolder = g_checkpoint_name.empty() ? currentTimestamp() : g_checkpoint_name;
     }
+    RunLogger logger(std::filesystem::path(PROJECT_ROOT) / kQlearningCheckpointRoot, ckptFolder);
 
     const std::string runHeader = buildRunHeader(c, ckptFolder);
     std::cout << runHeader;
@@ -699,6 +704,7 @@ void printHelp(const char* prog) {
 // main
 // ---------------------------------------------------------------------------
 int main(int argc, char** argv) {
+    g_command_line = commandLineFromArgs(argc, argv);
     bool agentConfigLoaded = false;
 
     for (int i = 1; i < argc; ++i) {

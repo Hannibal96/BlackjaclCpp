@@ -1,6 +1,7 @@
 #pragma once
 #include "../Game/BlackjackRules.h"
 #include "../Game/Player.h"
+#include <string>
 #include <vector>
 
 // Simple utility function to run a blackjack simulation
@@ -27,3 +28,4 @@ std::vector<Player*> runParallelSimulation(const BlackjackRules& rules,
                                                uint64_t numRounds, 
                                                int numThreads);
 
+std::string commandLineFromArgs(int argc, char** argv);

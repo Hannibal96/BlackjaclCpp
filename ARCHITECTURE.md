@@ -1,166 +1,157 @@
 # BlackjaclCpp — Code Architecture Reference
 
+This file is the compact reference companion to [architecture.md](architecture.md).
+
 ## Directory Layout
 
-```
+```text
 BlackjaclCpp/
 ├── src/
 │   ├── Shoe/          # Card / deck / shoe primitives
-│   ├── Game/          # Game mechanics and table logic
+│   ├── Game/          # Game mechanics, table flow, betting, player state
 │   ├── RL/            # Strategies and reinforcement learning
-│   └── Utils/         # Shared utilities
-├── unittest/
-│   ├── regression/    # Regression tests vs. reference JSON tables
-│   └── *.cpp          # Unit / integration / benchmark tests
-├── basic_strategy_tables/   # Reference JSON strategy tables
-├── hpo/               # Python hyperparameter optimisation scripts
-├── CMakeLists.txt
-└── unittest/CMakeLists.txt
+│   └── Utils/         # Parallel simulation + run logging
+├── apps/              # Standalone training / evaluation executables
+├── unittest/          # Unit, regression, and benchmark tests
+├── basic_strategy_tables/
+├── checkpoints/
+│   ├── alternating-checkpoints/
+│   ├── checkpoints_QLearning/
+│   ├── checkpoints_ols/
+│   ├── CompareCountStrategies/
+│   └── MeasureEdge/
+└── CMakeLists.txt
 ```
 
----
+## Main App Targets
+
+| App | Purpose | Output Root |
+|---|---|---|
+| `FindDeviations` | Train/resume Q-learning playing deviations | `checkpoints/checkpoints_QLearning/` |
+| `FindOptimalCount` | Fit OLS count weights | `checkpoints/checkpoints_ols/` |
+| `MeasureEdge` | Evaluate fixed strategy + betting model | `checkpoints/MeasureEdge/` |
+| `AlternatingOptimization` | Alternate between RL policy learning and OLS count learning | `checkpoints/alternating-checkpoints/` |
+| `CompareCountStrategies` | Compare basic / I18 / full deviations for one count | `checkpoints/CompareCountStrategies/` |
 
 ## Class / Type Hierarchy
 
-### src/Shoe/
+### `src/Shoe`
 
-| Type | Kind | Inherits | File |
-|------|------|----------|------|
-| `Rank` | `enum class` | — | [Deck.h](src/Shoe/Deck.h) |
-| `Suit` | `enum class` | — | [Deck.h](src/Shoe/Deck.h) |
-| `Card` | `struct` | — | [Deck.h](src/Shoe/Deck.h) |
-| `Deck` | `class` | — | [Deck.h](src/Shoe/Deck.h) |
-| `Shoe` | `class` | — | [Shoe.h](src/Shoe/Shoe.h) |
-| `DebugShoe` | `class` | `: public Shoe` | [Shoe.h](src/Shoe/Shoe.h) |
+| Type | Kind | Inherits |
+|---|---|---|
+| `Card` | `struct` | — |
+| `Deck` | `class` | — |
+| `Shoe` | `class` | — |
+| `DebugShoe` | `class` | `Shoe` |
 
-`DebugShoe` uses a Linear Congruential Generator for fully deterministic card dealing (reproducible across C++ and Python).
+### `src/Game`
 
-### src/Game/
+| Type | Kind | Inherits |
+|---|---|---|
+| `Rules` | `struct` | — |
+| `BlackjackRules` | `struct` | `Rules` |
+| `Hand` | `class` | — |
+| `Slot` | `class` | — |
+| `Player` | `class` | — |
+| `Table` | `abstract class` | — |
+| `BlackjackTable` | `class` | `Table` |
 
-| Type | Kind | Inherits | File |
-|------|------|----------|------|
-| `Rules` | `struct` | — | [Rules.h](src/Game/Rules.h) |
-| `BlackjackRules` | `struct` | `: public Rules` | [BlackjackRules.h](src/Game/BlackjackRules.h) |
-| `DoubleDownOn` | `enum class` | — | [BlackjackRules.h](src/Game/BlackjackRules.h) |
-| `Surrender` | `enum class` | — | [BlackjackRules.h](src/Game/BlackjackRules.h) |
-| `HandType` | `enum class` | — | [Hand.h](src/Game/Hand.h) |
-| `Hand` | `class` | — | [Hand.h](src/Game/Hand.h) |
-| `Player` | `class` | — | [Player.h](src/Game/Player.h) |
-| `Slot` | `class` | — | [Slot.h](src/Game/Slot.h) |
-| `Table` | `abstract class` | — | [Table.h](src/Game/Table.h) |
-| `BlackjackTable` | `class` | `: public Table` | [BlackjackTable.h](src/Game/BlackjackTable.h) |
+### `src/RL`
 
-**`Table` (Template Method pattern)** — defines the round skeleton:
-```
-round() → collectBets → dealInitialCards → playersPlay → dealerPlays → evaluate
-```
-All five steps are pure virtual; `BlackjackTable` is the only concrete implementation.
+| Type | Kind | Inherits |
+|---|---|---|
+| `Strategy` | `abstract class` | — |
+| `RandomStrategy` | `class` | `Strategy` |
+| `BasicStrategy` | `class` | `Strategy` |
+| `QLearningStrategy` | `class` | `Strategy` |
+| `DecayingParameter` | `abstract class` | — |
+| `EpsilonDecayingParameter` | `class` | `DecayingParameter` |
+| `LinearDecayingParameter` | `class` | `DecayingParameter` |
 
-**`Slot`** — holds one or more `Hand` objects for a single player seat (created by splitting).
+### `src/Game` Betting
 
-### src/RL/
+| Type | Kind | Inherits |
+|---|---|---|
+| `BettingStrategy` | `abstract class` | — |
+| `SpreadBetting` | `class` | `BettingStrategy` |
+| `KellyBetting` | `class` | `BettingStrategy` |
 
-| Type | Kind | Inherits | File |
-|------|------|----------|------|
-| `Action` | `enum class` | — | [Action.h](src/RL/Action.h) |
-| `State` | `struct` | — | [State.h](src/RL/State.h) |
-| `Strategy` | `abstract class` | — | [Strategy.h](src/RL/Strategy.h) |
-| `RandomStrategy` | `class` | `: public Strategy` | [RandomStrategy.h](src/RL/RandomStrategy.h) |
-| `BasicStrategy` | `class` | `: public Strategy` | [BasicStrategy.h](src/RL/BasicStrategy.h) |
-| `QLearningStrategy` | `class` | `: public Strategy` | [QLearningStrategy.h](src/RL/QLearningStrategy.h) |
-| `ActionWithFallback` | `struct` | — | [BasicStrategy.h](src/RL/BasicStrategy.h) |
-| `DecayingParameter` | `abstract class` | — | [DecayingParameter.h](src/RL/DecayingParameter.h) |
-| `EpsilonDecayingParameter` | `class` | `: public DecayingParameter` | [DecayingParameter.h](src/RL/DecayingParameter.h) |
-| `LinearDecayingParameter` | `class` | `: public DecayingParameter` | [DecayingParameter.h](src/RL/DecayingParameter.h) |
-| `ExplorationMode` | `enum class` | — | [QLearningStrategy.h](src/RL/QLearningStrategy.h) |
+## Key State Shapes
 
-**`Strategy` (Strategy pattern)** — core interface:
-- `getAction(State) → Action` — decision
-- `updateTable(state, action, reward, nextState)` — learning (no-op by default)
-- `clone() → unique_ptr<Strategy>` — deep copy for parallel simulations
-- `operator+=` / `operator*=` — merge / scale Q-tables
-
-**`QLearningStrategy` key types:**
-```cpp
-StateKey  = tuple<int, HandType, unsigned int, unsigned int>
-            // (count, hand_type, player_sum, dealer_card)
-QTableKey = pair<StateKey, Action>
-```
-Per-state alpha and epsilon are stored independently for faster convergence on frequently-visited states.
-
----
-
-## Inheritance Trees
-
-```
-Shoe
-└── DebugShoe
-
-Rules
-└── BlackjackRules
-
-Table  (abstract)
-└── BlackjackTable
-
-Strategy  (abstract)
-├── RandomStrategy
-├── BasicStrategy
-└── QLearningStrategy
-
-DecayingParameter  (abstract)
-├── EpsilonDecayingParameter
-└── LinearDecayingParameter
+```text
+StateKey = (count, handType, playerSum, dealerCard)
+QTableKey = (StateKey, action)
 ```
 
----
+`Player::stateToKey()` is the central place where:
 
-## Test Executables
+- true count is computed
+- count is discretized / clamped
+- hand type is derived
+- raw table state becomes a strategy lookup key
 
-| Binary | Source | Type |
-|--------|--------|------|
-| `ShoeTest` | unittest/ShoeTest.cpp | Unit |
-| `HandTest` | unittest/HandTest.cpp | Unit |
-| `BlackjackTableTest` | unittest/BlackjackTableTest.cpp | Integration |
-| `BasicStrategyTest` | unittest/BasicStrategyTest.cpp | Strategy |
-| `DebugShoeTest` | unittest/DebugShoeTest.cpp | Determinism |
-| `BasicStrategyRegressionTest` | unittest/regression/BasicStrategyRegressionTest.cpp | Regression |
-| `QLearningRegressionTest` | unittest/regression/QLearningRegressionTest.cpp | Regression |
-| `PerformanceBenchmark` | unittest/PerformanceBenchmark.cpp | Benchmark |
-| `BlackjackBenchmark` | unittest/BlackjackBenchmark.cpp | Benchmark |
+## Round Skeleton
 
-Regression tests compare generated strategy tables against the JSON files in `basic_strategy_tables/`.  
-JSON filename convention: `decks=N_ss17=BOOL_das=BOOL_surr=TYPE_peek=BOOL.json`
-
----
-
-## Build Targets
-
-All production source is compiled once as `blackjack_objs` (CMake object library) and linked into every test binary — avoids redundant compilation.
-
-```bash
-cmake -B build/debug  -DCMAKE_BUILD_TYPE=Debug
-cmake -B build/release -DCMAKE_BUILD_TYPE=Release
-cmake --build build/debug
-ctest --test-dir build/debug
+```text
+BlackjackTable::round()
+├── reset shoe if penetration reached
+├── capture pre-round state for tracking
+├── collectBets()
+├── dealInitialCards()
+├── playersPlay()
+├── dealerPlays()
+├── evaluate()
+└── recordRound() for regression / graph bins
 ```
 
----
+## Learning / Analysis Data
 
-## Key Data-Flow (one round)
+### Q-learning checkpoints
 
-```
-Shoe  ──dealCard()──►  BlackjackTable
-                              │
-                    ┌─────────▼──────────┐
-                    │   Table::round()   │
-                    │  collectBets       │
-                    │  dealInitialCards  │
-                    │  playersPlay  ─────┼──► Player::getAction(State)
-                    │                   │       └─► Strategy::getAction(State)
-                    │  dealerPlays      │
-                    │  evaluate         │
-                    └─────────┬──────────┘
-                              │ reward
-                              ▼
-                  Strategy::updateTable()   ◄── Q-learning training
-```
+- `meta.json`
+- `<agent>_agent.json`
+- `<agent>_strategy.json`
+
+### OLS checkpoints
+
+- `meta.json`
+- `data.json` containing:
+  - `XtX`
+  - `Xty`
+  - sampled rounds
+
+### Alternating optimization checkpoints
+
+- `meta.json`
+- `state.json`
+- `P*.json`
+- `P*_agent.json`
+- `P*_strategy.json`
+- `W*.json`
+- `W*_data.json`
+- `W*_graph.json/svg`
+- `W*_graph_overlay.*`
+
+### Compare artifacts
+
+- `run.log`
+- `ev_count_graph.json/svg`
+- `count_histograms.json/svg`
+
+## Important Architectural Notes
+
+- Count logic lives in `Player`, not in the strategy classes.
+- Learned Q policies are converted to greedy `BasicStrategy` tables before evaluation apps use them.
+- Regression and EV-count graph collection use pre-round shoe state with round outcome as the target.
+- Parallel simulations merge players and strategies through averaging operators.
+- `RunLogger` mirrors terminal output into the same run folder used by checkpoints or graph artifacts.
+
+## Files To Read First
+
+- [src/Game/BlackjackTable.cpp](/home/neria/Desktop/BlackjaclCpp/src/Game/BlackjackTable.cpp)
+- [src/Game/Player.cpp](/home/neria/Desktop/BlackjaclCpp/src/Game/Player.cpp)
+- [src/Game/BettingStrategy.h](/home/neria/Desktop/BlackjaclCpp/src/Game/BettingStrategy.h)
+- [src/RL/BasicStrategy.h](/home/neria/Desktop/BlackjaclCpp/src/RL/BasicStrategy.h)
+- [src/RL/QLearningStrategy.h](/home/neria/Desktop/BlackjaclCpp/src/RL/QLearningStrategy.h)
+- [apps/AlternatingOptimization.cpp](/home/neria/Desktop/BlackjaclCpp/apps/AlternatingOptimization.cpp)
+- [apps/CompareCountStrategies.cpp](/home/neria/Desktop/BlackjaclCpp/apps/CompareCountStrategies.cpp)

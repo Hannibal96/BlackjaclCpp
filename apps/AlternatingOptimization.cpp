@@ -6,6 +6,7 @@
 #include "RL/QLearningStrategy.h"
 #include "RL/BasicStrategy.h"
 #include "RL/DecayingParameter.h"
+#include "Utils/RunLogger.h"
 #include "Utils/Utils.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -22,6 +23,8 @@
 #include <cmath>
 #include <algorithm>
 #include <cstdlib>
+#include <optional>
+#include <vector>
 #include <unistd.h>
 
 using json = nlohmann::json;
@@ -36,6 +39,12 @@ constexpr double kKellyInitialMoney = 1.0;
 constexpr double kKellyFraction = 1.0;
 constexpr uint64_t kKellyMeasurementRounds = 1'000'000ULL;
 enum class TrainingStopMode { FIXED_ROUNDS, TABLE_DIFF };
+enum class CountRegressionMode {
+    CLASSICAL_OLS,
+    SUM_ZERO,
+    SUM_ZERO_FIXED_W1_BIAS,
+    SUM_ZERO_FIXED_P0_FLAT_EDGE
+};
 
 struct AgentConfig {
     ExplorationMode explorationMode = ExplorationMode::EPSILON_GREEDY;
@@ -65,6 +74,10 @@ struct PolicyArtifact {
     std::unique_ptr<BasicStrategy> policy;
     double trainingEdge = 0.0;
     double evaluationEdge = 0.0;
+    bool hasCountBettingEvaluation = false;
+    double evaluationSpreadEdge = 0.0;
+    double evaluationKellyGrowth = 1.0;
+    double evaluationKellyGrowthStddev = 0.0;
     double handsPerSec = 0.0;
     uint64_t trainingRounds = 0;
 };
@@ -78,10 +91,18 @@ struct CountArtifact {
     uint64_t recordedRounds = 0;
     double evaluationEdge = 0.0;
     double evaluationKellyGrowth = 1.0;
+    double evaluationKellyGrowthStddev = 0.0;
     double handsPerSec = 0.0;
     double threshold = 0.0;
     double normalizationScale = 1.0;
     double referenceFlatEdge = 0.0;
+    CountRegressionMode regressionMode = CountRegressionMode::SUM_ZERO_FIXED_W1_BIAS;
+    std::optional<double> forcedBias;
+};
+
+struct KellyEvaluationResult {
+    double growthMean = 1.0;
+    double growthStddev = 0.0;
 };
 
 struct EvCountGraphPoint {
@@ -121,19 +142,21 @@ struct ResumeState {
 
 uint64_t    g_num_rounds          = 1'000'000'000ULL;
 uint64_t    g_eval_rounds         = 0;   // 0 => use g_num_rounds
-uint64_t    g_iterations          = 5;   // number of loop iterations k producing P_k from W_k, then W_{k+1}
-int         g_num_threads         = 16;
+uint64_t    g_iterations          = 3;   // number of loop iterations k producing P_k from W_k, then W_{k+1}
+int         g_num_threads         = 10;
 double      g_penetration         = 75.0;
 uint64_t    g_sample_every        = 1;
 uint64_t    g_sample_rounds       = 100'000'000ULL;
 double      g_diff_threshold      = 0.001;
 TrainingStopMode g_training_stop_mode = TrainingStopMode::FIXED_ROUNDS;
+CountRegressionMode g_count_regression_mode = CountRegressionMode::SUM_ZERO_FIXED_W1_BIAS;
 int         g_kelly_measurements  = 100;
 bool        g_verbose             = false;
 bool        g_full_verbose        = false;
 bool        g_no_save             = false;
 std::string g_checkpoint_name;
 std::string g_load_checkpoint;
+std::string g_command_line;
 
 std::vector<int>         g_deck_sizes         = {6};
 std::vector<bool>        g_stand_soft17       = {true};
@@ -147,6 +170,25 @@ std::vector<std::string> g_surrender          = {"2-10"};
 std::vector<float>       g_blackjack_pay      = {1.5f};
 
 AgentConfig g_agent;
+
+const char* countRegressionModeToString(CountRegressionMode mode) {
+    switch (mode) {
+        case CountRegressionMode::CLASSICAL_OLS: return "classical_ols";
+        case CountRegressionMode::SUM_ZERO: return "sum_zero";
+        case CountRegressionMode::SUM_ZERO_FIXED_W1_BIAS: return "sum_zero_fixed_w1_bias";
+        case CountRegressionMode::SUM_ZERO_FIXED_P0_FLAT_EDGE:
+            return "sum_zero_fixed_p0_flat_edge";
+    }
+    return "sum_zero_fixed_w1_bias";
+}
+
+CountRegressionMode stringToCountRegressionMode(const std::string& mode) {
+    if (mode == "classical_ols") return CountRegressionMode::CLASSICAL_OLS;
+    if (mode == "sum_zero") return CountRegressionMode::SUM_ZERO;
+    if (mode == "sum_zero_fixed_p0_flat_edge")
+        return CountRegressionMode::SUM_ZERO_FIXED_P0_FLAT_EDGE;
+    return CountRegressionMode::SUM_ZERO_FIXED_W1_BIAS;
+}
 
 std::string currentTimestamp() {
     time_t t = time(nullptr);
@@ -176,7 +218,9 @@ uint64_t countPhasePlayedRounds();
 std::string buildRunHeader(const Case& c, const std::string& folder, uint64_t evalRounds) {
     std::ostringstream os;
     os << "\n=== AlternatingOptimization ===\n";
-    os << "Scenario:      " << ToString(c) << "\n";
+    os << "Command:       " << g_command_line << "\n";
+    os << "Scenario:      " << ToString(c)
+       << "_penetration=" << g_penetration << "%\n";
     if (g_training_stop_mode == TrainingStopMode::FIXED_ROUNDS) {
         os << "Train rounds:  " << g_num_rounds << "  Threads: " << g_num_threads << "\n";
     } else {
@@ -189,6 +233,7 @@ std::string buildRunHeader(const Case& c, const std::string& folder, uint64_t ev
        << g_num_rounds << " recorded samples)\n";
     os << "Eval rounds:   " << evalRounds << "\n";
     os << "Iterations:    " << g_iterations << "  (each iteration learns P_k then W_{k+1})\n";
+    os << "Count OLS:     " << countRegressionModeToString(g_count_regression_mode) << "\n";
     os << "Penetration:   " << g_penetration << "%\n";
     os << "Sample-every:  " << g_sample_every << "\n";
     os << "Folder:        " << kAlternatingCheckpointRoot << "/" << folder << "/\n";
@@ -227,6 +272,8 @@ json buildMetaJson(const Case& c) {
     meta["algorithm_config"]["initial_count"]["factor"]  = 1.0;
     meta["algorithm_config"]["initial_count"]["bias"]    = 0.0;
     meta["algorithm_config"]["learned_count_factor_multiplier"] = kLearnedCountFactorMultiplier;
+    meta["algorithm_config"]["count_regression_mode"] =
+        countRegressionModeToString(g_count_regression_mode);
     meta["algorithm_config"]["initial_count"]["resolution"] = g_agent.countResolution;
     meta["algorithm_config"]["initial_count"]["min_count"]  = g_agent.minCount;
     meta["algorithm_config"]["initial_count"]["max_count"]  = g_agent.maxCount;
@@ -325,15 +372,16 @@ double evaluateEdge(const Case& c,
     return edge;
 }
 
-double evaluateKellyGrowth(const Case& c,
-                           const BasicStrategy& strategy,
-                           const CountConfig& count,
-                           uint64_t rounds,
-                           double initialMoney = kKellyInitialMoney,
-                           double kellyFraction = kKellyFraction) {
+KellyEvaluationResult evaluateKellyGrowth(const Case& c,
+                                          const BasicStrategy& strategy,
+                                          const CountConfig& count,
+                                          uint64_t rounds,
+                                          double initialMoney = kKellyInitialMoney,
+                                          double kellyFraction = kKellyFraction) {
     (void)rounds;
     BlackjackRules rules = buildRules(c, 0.0, std::numeric_limits<double>::max());
     double growthSum = 0.0;
+    double growthSqSum = 0.0;
 
     for (int rep = 0; rep < g_kelly_measurements; ++rep) {
         auto cloned = strategy.clone();
@@ -359,17 +407,33 @@ double evaluateKellyGrowth(const Case& c,
             growthRate = std::exp((avgLogFinal - std::log(initialMoney)) / roundsPerThread);
         }
         growthSum += growthRate;
+        growthSqSum += growthRate * growthRate;
         delete result;
     }
-    return growthSum / static_cast<double>(g_kelly_measurements);
+
+    KellyEvaluationResult result;
+    const double n = static_cast<double>(g_kelly_measurements);
+    result.growthMean = growthSum / n;
+    if (g_kelly_measurements > 1) {
+        double sampleVariance = (growthSqSum - (growthSum * growthSum / n)) / (n - 1.0);
+        result.growthStddev = std::sqrt(std::max(0.0, sampleVariance));
+    }
+    return result;
 }
 
-std::array<double, 14> solveOLS(std::array<std::array<double, 14>, 14> A,
-                                std::array<double, 14> b) {
-    std::array<std::array<double, 15>, 14> M;
+// The three regression modes use only A = X'X and d = X'Y. X has 13 rank
+// columns Z and a final all-ones intercept column.
+//
+// Classical OLS:
+//   min ||X theta - Y||^2
+//   theta = (X'X)^-1 X'Y.
+std::array<double, 14> solveClassicalOLS(
+        const std::array<std::array<double, 14>, 14>& A,
+        const std::array<double, 14>& d) {
+    std::array<std::array<double, 15>, 14> M{};
     for (int i = 0; i < 14; ++i) {
         for (int j = 0; j < 14; ++j) M[i][j] = A[i][j];
-        M[i][14] = b[i];
+        M[i][14] = d[i];
     }
 
     for (int col = 0; col < 14; ++col) {
@@ -381,7 +445,7 @@ std::array<double, 14> solveOLS(std::array<std::array<double, 14>, 14> A,
 
         double diag = M[col][col];
         if (std::abs(diag) < 1e-15)
-            throw std::runtime_error("Singular XtX — not enough variation in the data");
+            throw std::runtime_error("Singular classical OLS normal-equation system");
 
         for (int j = col; j <= 14; ++j) M[col][j] /= diag;
         for (int row = 0; row < 14; ++row) {
@@ -392,9 +456,99 @@ std::array<double, 14> solveOLS(std::array<std::array<double, 14>, 14> A,
         }
     }
 
+    std::array<double, 14> result{};
+    for (int i = 0; i < 14; ++i) result[i] = M[i][14];
+    return result;
+}
+
+// Zero-sum OLS with a free bias:
+//   min ||X theta - Y||^2  subject to c' theta = 0,
+// where c = [1,...,1,0] excludes the bias. Its KKT solution is
+//   [X'X c; c' 0] [theta; lambda] = [X'Y; 0].
+std::array<double, 14> solveSumZeroOLS(
+        const std::array<std::array<double, 14>, 14>& A,
+        const std::array<double, 14>& b) {
+    // Solve the KKT system [X'X c; c' 0][w; lambda] = [X'y; 0].
+    // c constrains the 13 rank weights to sum to zero and excludes the bias.
+    std::array<std::array<double, 16>, 15> M{};
+    for (int i = 0; i < 14; ++i) {
+        for (int j = 0; j < 14; ++j) M[i][j] = A[i][j];
+        M[i][14] = (i < 13) ? 1.0 : 0.0;
+        M[i][15] = b[i];
+    }
+    for (int j = 0; j < 13; ++j) M[14][j] = 1.0;
+
+    for (int col = 0; col < 15; ++col) {
+        int pivot = col;
+        for (int row = col + 1; row < 15; ++row)
+            if (std::abs(M[row][col]) > std::abs(M[pivot][col]))
+                pivot = row;
+        if (pivot != col) std::swap(M[col], M[pivot]);
+
+        double diag = M[col][col];
+        if (std::abs(diag) < 1e-15)
+            throw std::runtime_error("Singular constrained OLS KKT system — not enough variation in the data");
+
+        for (int j = col; j <= 15; ++j) M[col][j] /= diag;
+        for (int row = 0; row < 15; ++row) {
+            if (row == col) continue;
+            double f = M[row][col];
+            for (int j = col; j <= 15; ++j)
+                M[row][j] -= f * M[col][j];
+        }
+    }
+
     std::array<double, 14> w;
-    for (int i = 0; i < 14; ++i) w[i] = M[i][14];
+    for (int i = 0; i < 14; ++i) w[i] = M[i][15];
     return w;
+}
+
+// Zero-sum OLS with fixed bias b, supplied either by W1 or P0's flat edge:
+//   min ||Z w - (Y - 1 b)||^2  subject to 1'w = 0.
+// The adjusted right side is Z'(Y - 1b) = Z'Y - b Z'1. Both terms are in
+// the existing sufficient statistics: Z'Y = X'Y[0:13] and
+// Z'1 = X'X[0:13,13]. With A = Z'Z and d = Z'(Y - 1b), solve
+//   [A 1; 1' 0] [w; lambda] = [d; 0].
+// The KKT system therefore remains streaming-friendly.
+std::array<double, 14> solveSumZeroFixedBiasOLS(
+        const std::array<std::array<double, 14>, 14>& XtX,
+        const std::array<double, 14>& Xty,
+        double fixedBias) {
+    // With X = [Z 1] and fixed bias b, solve
+    // min ||Z w - (Y - 1 b)||^2 subject to 1' w = 0.
+    // Z'1 is already stored in the intercept column of X'X.
+    std::array<std::array<double, 15>, 14> M{};
+    for (int i = 0; i < 13; ++i) {
+        for (int j = 0; j < 13; ++j) M[i][j] = XtX[i][j];
+        M[i][13] = 1.0;
+        M[i][14] = Xty[i] - fixedBias * XtX[i][13];
+    }
+    for (int j = 0; j < 13; ++j) M[13][j] = 1.0;
+
+    for (int col = 0; col < 14; ++col) {
+        int pivot = col;
+        for (int row = col + 1; row < 14; ++row)
+            if (std::abs(M[row][col]) > std::abs(M[pivot][col]))
+                pivot = row;
+        if (pivot != col) std::swap(M[col], M[pivot]);
+
+        double diag = M[col][col];
+        if (std::abs(diag) < 1e-15)
+            throw std::runtime_error("Singular fixed-bias constrained OLS KKT system");
+
+        for (int j = col; j <= 14; ++j) M[col][j] /= diag;
+        for (int row = 0; row < 14; ++row) {
+            if (row == col) continue;
+            double f = M[row][col];
+            for (int j = col; j <= 14; ++j)
+                M[row][j] -= f * M[col][j];
+        }
+    }
+
+    std::array<double, 14> result{};
+    for (int i = 0; i < 13; ++i) result[i] = M[i][14];
+    result[13] = fixedBias;
+    return result;
 }
 
 CountArtifact normalizeCount(const std::array<double, 14>& raw) {
@@ -469,6 +623,21 @@ json evCountGraphToJson(const EvCountGraphArtifact& graph) {
             row["confidence_upper"] = nullptr;
         }
         row["regression_reward"] = p.regressionReward;
+        j["points"].push_back(row);
+    }
+    return j;
+}
+
+json countHistogramToJson(const EvCountGraphArtifact& graph) {
+    json j;
+    j["resolution"] = graph.resolution;
+    j["min_count"] = graph.minCount;
+    j["max_count"] = graph.maxCount;
+    j["points"] = json::array();
+    for (const auto& p : graph.points) {
+        json row;
+        row["count"] = p.count;
+        row["n"] = p.n;
         j["points"].push_back(row);
     }
     return j;
@@ -888,6 +1057,94 @@ std::string evCountOverlaySvg(const std::string& label,
     return svg.str();
 }
 
+std::string countHistogramToSvg(const std::string& label,
+                                const EvCountGraphArtifact& graph) {
+    const double width = 1000.0;
+    const double height = 560.0;
+    const double left = 90.0;
+    const double right = 30.0;
+    const double top = 40.0;
+    const double bottom = 70.0;
+    const double plotWidth = width - left - right;
+    const double plotHeight = height - top - bottom;
+
+    double minX = graph.minCount;
+    double maxX = graph.maxCount;
+    if (std::abs(maxX - minX) < kEps) maxX = minX + graph.resolution;
+
+    uint64_t maxN = 1;
+    for (const auto& p : graph.points) maxN = std::max(maxN, p.n);
+
+    auto mapX = [&](double x) {
+        return left + ((x - minX) / (maxX - minX)) * plotWidth;
+    };
+    auto mapY = [&](double n) {
+        return top + (1.0 - (n / static_cast<double>(maxN))) * plotHeight;
+    };
+
+    const double barWidth = std::max(2.0, plotWidth / std::max<size_t>(1, graph.points.size()) * 0.75);
+
+    std::ostringstream svg;
+    svg << "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"" << width
+        << "\" height=\"" << height << "\" viewBox=\"0 0 " << width << " " << height << "\">\n";
+    svg << "<rect width=\"100%\" height=\"100%\" fill=\"white\"/>\n";
+    svg << "<text x=\"" << left << "\" y=\"24\" font-family=\"sans-serif\" font-size=\"20\">"
+        << label << " count histogram</text>\n";
+    svg << "<line x1=\"" << left << "\" y1=\"" << (top + plotHeight) << "\" x2=\"" << (left + plotWidth)
+        << "\" y2=\"" << (top + plotHeight) << "\" stroke=\"black\" stroke-width=\"1.2\"/>\n";
+    svg << "<line x1=\"" << left << "\" y1=\"" << top << "\" x2=\"" << left
+        << "\" y2=\"" << (top + plotHeight) << "\" stroke=\"black\" stroke-width=\"1.2\"/>\n";
+
+    for (int i = 0; i <= 12; ++i) {
+        double yValue = static_cast<double>(maxN) * (static_cast<double>(i) / 12.0);
+        double y = mapY(yValue);
+        svg << "<line x1=\"" << left << "\" y1=\"" << y
+            << "\" x2=\"" << (left + plotWidth) << "\" y2=\"" << y
+            << "\" stroke=\"#e1e1e1\" stroke-dasharray=\"2,3\"/>\n";
+        if (i % 2 == 0) {
+            svg << "<text x=\"" << (left - 10) << "\" y=\"" << (y + 4)
+                << "\" text-anchor=\"end\" font-family=\"sans-serif\" font-size=\"12\">"
+                << static_cast<uint64_t>(std::llround(yValue)) << "</text>\n";
+        }
+    }
+
+    for (int i = 0; i <= 16; ++i) {
+        double xValue = minX + (maxX - minX) * (static_cast<double>(i) / 16.0);
+        double x = mapX(xValue);
+        svg << "<line x1=\"" << x << "\" y1=\"" << top
+            << "\" x2=\"" << x << "\" y2=\"" << (top + plotHeight)
+            << "\" stroke=\"#ececec\" stroke-dasharray=\"2,3\"/>\n";
+        if (i % 2 == 0) {
+            svg << "<text x=\"" << x << "\" y=\"" << (top + plotHeight + 24)
+                << "\" text-anchor=\"middle\" font-family=\"sans-serif\" font-size=\"12\">"
+                << std::fixed << std::setprecision(2) << xValue << "</text>\n";
+        }
+    }
+
+    for (const auto& p : graph.points) {
+        double x = mapX(p.count);
+        double y = mapY(static_cast<double>(p.n));
+        svg << "<rect x=\"" << (x - barWidth / 2.0) << "\" y=\"" << y
+            << "\" width=\"" << barWidth << "\" height=\"" << ((top + plotHeight) - y)
+            << "\" fill=\"#4c78a8\" fill-opacity=\"0.85\"/>\n";
+    }
+
+    if (minX <= 0.0 && maxX >= 0.0) {
+        double zeroX = mapX(0.0);
+        svg << "<line x1=\"" << zeroX << "\" y1=\"" << top
+            << "\" x2=\"" << zeroX << "\" y2=\"" << (top + plotHeight)
+            << "\" stroke=\"#666666\" stroke-width=\"1.8\"/>\n";
+    }
+
+    svg << "<text x=\"" << (left + plotWidth / 2.0) << "\" y=\"" << (height - 18)
+        << "\" text-anchor=\"middle\" font-family=\"sans-serif\" font-size=\"14\">Count</text>\n";
+    svg << "<text x=\"20\" y=\"" << (top + plotHeight / 2.0)
+        << "\" transform=\"rotate(-90 20 " << (top + plotHeight / 2.0)
+        << ")\" text-anchor=\"middle\" font-family=\"sans-serif\" font-size=\"14\">Encountered rounds</text>\n";
+    svg << "</svg>\n";
+    return svg.str();
+}
+
 CountConfig countConfigFromJson(const json& j) {
     CountConfig count;
     for (size_t i = 0; i < count.system.weights.size(); ++i)
@@ -1057,6 +1314,20 @@ Case loadCheckpointFolder(const std::string& folder) {
                                                 : TrainingStopMode::FIXED_ROUNDS;
     g_sample_rounds = a.value("policy_sample_rounds", 100'000'000ULL);
     g_diff_threshold = a.value("policy_diff_threshold", 0.001);
+    if (a.contains("count_regression_mode")) {
+        g_count_regression_mode =
+            stringToCountRegressionMode(a.at("count_regression_mode").get<std::string>());
+    } else {
+        const std::string legacyConstraint =
+            a.value("count_regression_constraint", std::string{});
+        if (legacyConstraint.find("W2+") != std::string::npos) {
+            g_count_regression_mode = CountRegressionMode::SUM_ZERO_FIXED_W1_BIAS;
+        } else if (legacyConstraint.find("sum") != std::string::npos) {
+            g_count_regression_mode = CountRegressionMode::SUM_ZERO;
+        } else {
+            g_count_regression_mode = CountRegressionMode::CLASSICAL_OLS;
+        }
+    }
 
     auto& rl = meta.at("rl");
     std::string mode = rl.at("exploration_mode").get<std::string>();
@@ -1081,6 +1352,7 @@ Case loadCheckpointFolder(const std::string& folder) {
     std::cout << "Train rounds:  " << g_num_rounds << "  Threads: " << g_num_threads << "\n";
     std::cout << "Eval rounds:   " << g_eval_rounds << "\n";
     std::cout << "Iterations:    " << g_iterations << "\n";
+    std::cout << "Count OLS:     " << countRegressionModeToString(g_count_regression_mode) << "\n";
     std::cout << "Penetration:   " << g_penetration << "%\n";
     std::cout << "Sample-every:  " << g_sample_every << "\n";
     std::cout << "Policy stop:   " << stopModeToString(g_training_stop_mode);
@@ -1116,6 +1388,15 @@ void savePolicyArtifact(const std::string& folder,
     summary["training_rounds"] = artifact.trainingRounds;
     summary["training_edge_flat"] = artifact.trainingEdge;
     summary["evaluation_edge_flat"] = artifact.evaluationEdge;
+    if (artifact.hasCountBettingEvaluation) {
+        summary["evaluation_edge_spread_1_10"] = artifact.evaluationSpreadEdge;
+        summary["evaluation_kelly_growth"] = artifact.evaluationKellyGrowth;
+        summary["evaluation_kelly_growth_stddev"] = artifact.evaluationKellyGrowthStddev;
+    } else {
+        summary["evaluation_edge_spread_1_10"] = nullptr;
+        summary["evaluation_kelly_growth"] = nullptr;
+        summary["evaluation_kelly_growth_stddev"] = nullptr;
+    }
     summary["hands_per_sec"] = artifact.handsPerSec;
     summary["count_config"] = countConfigToJson(count, true);
     std::ofstream f(root / (label + ".json"));
@@ -1139,8 +1420,20 @@ void saveCountArtifact(const std::string& folder,
     summary["spread_threshold"] = artifact.threshold;
     summary["evaluation_edge_spread_1_10"] = artifact.evaluationEdge;
     summary["evaluation_kelly_growth"] = artifact.evaluationKellyGrowth;
+    summary["evaluation_kelly_growth_stddev"] = artifact.evaluationKellyGrowthStddev;
     summary["normalization_scale"] = artifact.normalizationScale;
     summary["learned_count_factor_multiplier"] = kLearnedCountFactorMultiplier;
+    summary["regression_mode"] = countRegressionModeToString(artifact.regressionMode);
+    std::string biasConstraint = "free";
+    if (artifact.forcedBias.has_value()) {
+        biasConstraint =
+            artifact.regressionMode == CountRegressionMode::SUM_ZERO_FIXED_P0_FLAT_EDGE
+                ? "fixed_to_P0_flat_edge"
+                : "fixed_to_W1_bias";
+    }
+    summary["bias_constraint"] = biasConstraint;
+    if (artifact.forcedBias.has_value())
+        summary["forced_bias"] = *artifact.forcedBias;
     summary["reference_flat_edge"] = artifact.referenceFlatEdge;
     summary["raw_solution"] = artifact.rawSolution;
     summary["count_config"] = countConfigToJson(artifact.count, true);
@@ -1161,22 +1454,24 @@ void saveCountArtifact(const std::string& folder,
     if (df.is_open()) df << data.dump(2);
 }
 
-void saveEvCountGraphArtifact(const std::string& folder,
+void saveEvCountGraphArtifact(const std::filesystem::path& root,
                               const std::string& label,
                               const EvCountGraphArtifact& graph) {
     namespace fs = std::filesystem;
-    fs::path root = fs::path(PROJECT_ROOT) / kAlternatingCheckpointRoot / folder;
     fs::create_directories(root);
     std::ofstream f(root / (label + "_graph.json"));
     if (f.is_open()) f << evCountGraphToJson(graph).dump(2);
     std::ofstream svg(root / (label + "_graph.svg"));
     if (svg.is_open()) svg << evCountGraphToSvg(label, graph);
+    std::ofstream hf(root / (label + "_histogram.json"));
+    if (hf.is_open()) hf << countHistogramToJson(graph).dump(2);
+    std::ofstream hsv(root / (label + "_histogram.svg"));
+    if (hsv.is_open()) hsv << countHistogramToSvg(label, graph);
 }
 
-void saveCumulativeEvCountGraphArtifact(const std::string& folder,
+void saveCumulativeEvCountGraphArtifact(const std::filesystem::path& root,
                                         int upToWeightIndex) {
     namespace fs = std::filesystem;
-    fs::path root = fs::path(PROJECT_ROOT) / kAlternatingCheckpointRoot / folder;
 
     std::vector<NamedEvCountGraphArtifact> graphs;
     for (int i = 1; i <= upToWeightIndex; ++i) {
@@ -1204,7 +1499,8 @@ PolicyArtifact learnPolicy(const Case& c,
                            const CountConfig& count,
                            uint64_t rounds,
                            const std::string& label,
-                           const std::string& runHeader) {
+                           const std::string& runHeader,
+                           bool evaluateCountBetting) {
     (void)runHeader;
     auto* player = new Player(0.0, makeQStrategy());
     player->setNumDecks(c.deckSize);
@@ -1288,6 +1584,19 @@ PolicyArtifact learnPolicy(const Case& c,
     artifact.handsPerSec  = (secs > 0.0 ? trainedRounds / secs : 0.0);
     artifact.evaluationEdge = evaluateEdge(c, *policy, count, nullptr, 1.0, 1.0,
                                            (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds));
+    if (evaluateCountBetting) {
+        const double threshold = spreadThresholdFromCount(count);
+        auto betting = std::make_unique<SpreadBetting>(
+            std::vector<std::pair<double, double>>{{threshold, 10.0}});
+        artifact.evaluationSpreadEdge = evaluateEdge(
+            c, *policy, count, std::move(betting), 1.0, 10.0,
+            (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds));
+        KellyEvaluationResult kelly = evaluateKellyGrowth(
+            c, *policy, count, (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds));
+        artifact.evaluationKellyGrowth = kelly.growthMean;
+        artifact.evaluationKellyGrowthStddev = kelly.growthStddev;
+        artifact.hasCountBettingEvaluation = true;
+    }
     artifact.qStrategy = std::move(clonedQ);
     artifact.policy = std::move(policy);
 
@@ -1298,7 +1607,8 @@ PolicyArtifact learnPolicy(const Case& c,
 CountArtifact learnCount(const Case& c,
                          const BasicStrategy& fixedPolicy,
                          const CountConfig& strategyCount,
-                         uint64_t rounds) {
+                         uint64_t rounds,
+                         std::optional<double> forcedBias) {
     auto cloned = fixedPolicy.clone();
     auto* player = new Player(0.0, std::move(cloned));
     player->setNumDecks(c.deckSize);
@@ -1319,7 +1629,24 @@ CountArtifact learnCount(const Case& c,
         throw std::runtime_error("Count learning failed: no result players");
 
     Player* result = results[0];
-    CountArtifact artifact = normalizeCount(solveOLS(result->getXtX(), result->getXty()));
+    std::array<double, 14> rawSolution{};
+    switch (g_count_regression_mode) {
+        case CountRegressionMode::CLASSICAL_OLS:
+            rawSolution = solveClassicalOLS(result->getXtX(), result->getXty());
+            break;
+        case CountRegressionMode::SUM_ZERO:
+            rawSolution = solveSumZeroOLS(result->getXtX(), result->getXty());
+            break;
+        case CountRegressionMode::SUM_ZERO_FIXED_W1_BIAS:
+        case CountRegressionMode::SUM_ZERO_FIXED_P0_FLAT_EDGE:
+            rawSolution = forcedBias.has_value()
+                ? solveSumZeroFixedBiasOLS(result->getXtX(), result->getXty(), *forcedBias)
+                : solveSumZeroOLS(result->getXtX(), result->getXty());
+            break;
+    }
+    CountArtifact artifact = normalizeCount(rawSolution);
+    artifact.regressionMode = g_count_regression_mode;
+    artifact.forcedBias = forcedBias;
     artifact.XtX = result->getXtX();
     artifact.Xty = result->getXty();
     artifact.recordedRounds = result->getRegressionRounds();
@@ -1330,8 +1657,10 @@ CountArtifact learnCount(const Case& c,
         std::vector<std::pair<double, double>>{{artifact.threshold, 10.0}});
     artifact.evaluationEdge = evaluateEdge(c, fixedPolicy, artifact.count, std::move(betting),
                                            1.0, 10.0, (g_eval_rounds == 0 ? rounds : g_eval_rounds));
-    artifact.evaluationKellyGrowth = evaluateKellyGrowth(
+    KellyEvaluationResult kelly = evaluateKellyGrowth(
         c, fixedPolicy, artifact.count, (g_eval_rounds == 0 ? rounds : g_eval_rounds));
+    artifact.evaluationKellyGrowth = kelly.growthMean;
+    artifact.evaluationKellyGrowthStddev = kelly.growthStddev;
 
     delete result;
     return artifact;
@@ -1441,7 +1770,8 @@ void printCountSummary(const std::string& label, const CountArtifact& artifact) 
     std::cout << std::setprecision(6);
     std::cout << "\nSpread 1:10 evaluation edge (" << evalRounds << " rounds): "
               << artifact.evaluationEdge << "\n";
-    std::cout << "Kelly growth per round:      " << artifact.evaluationKellyGrowth << "\n";
+    std::cout << "Kelly growth per round:      " << artifact.evaluationKellyGrowth
+              << "  stddev: " << artifact.evaluationKellyGrowthStddev << "\n";
     std::cout << "Sanity checks:\n";
     std::cout << "  Sum(weights): " << sumWeights
               << "  (" << (std::abs(sumWeights) < 0.05 ? "PASS" : "WARN") << ", expected near 0)\n";
@@ -1451,14 +1781,49 @@ void printCountSummary(const std::string& label, const CountArtifact& artifact) 
     std::cout << "  (" << (tenRelDev < 0.05 ? "PASS" : "WARN") << ")\n";
     std::cout << "  Bias vs flat edge: bias=" << artifact.count.system.bias
               << "  flat_edge=" << artifact.referenceFlatEdge
-              << "  diff=" << std::abs(artifact.count.system.bias - artifact.referenceFlatEdge) << "\n";
+              << "  diff=" << std::abs(artifact.count.system.bias - artifact.referenceFlatEdge)
+              << "  rel_to_0.5%="
+              << (std::abs(artifact.count.system.bias - artifact.referenceFlatEdge) / 0.005 * 100.0)
+              << "%\n";
+    std::cout << "  Bias constraint: ";
+    if (!artifact.forcedBias.has_value()) {
+        std::cout << "free\n";
+    } else if (artifact.regressionMode == CountRegressionMode::SUM_ZERO_FIXED_P0_FLAT_EDGE) {
+        std::cout << "fixed to P0 flat edge\n";
+    } else {
+        std::cout << "fixed to W1 bias\n";
+    }
 }
 
 void printEvCountGraphSummary(const std::string& label, const EvCountGraphArtifact& graph) {
+    std::map<double, uint64_t> countsByBin;
+    uint64_t totalObserved = 0;
+    for (const auto& p : graph.points) {
+        countsByBin[p.count] = p.n;
+        totalObserved += p.n;
+    }
+
+    uint64_t symmetryMass = 0;
+    uint64_t symmetryDiff = 0;
+    for (const auto& [count, n] : countsByBin) {
+        if (count <= 0.0) continue;
+        auto it = countsByBin.find(-count);
+        if (it == countsByBin.end()) continue;
+        symmetryMass += n + it->second;
+        symmetryDiff += static_cast<uint64_t>(std::llabs(static_cast<long long>(n) - static_cast<long long>(it->second)));
+    }
+    double symmetryRel = (symmetryMass > 0)
+        ? static_cast<double>(symmetryDiff) / static_cast<double>(symmetryMass)
+        : 0.0;
+
     std::cout << "EV-count graph:         " << graph.points.size()
               << " points  res=" << graph.resolution
               << "  speed: " << std::fixed << std::setprecision(0)
               << graph.handsPerSec << " hands/sec\n";
+    std::cout << "Count histogram:        total=" << totalObserved
+              << "  symmetry_rel_diff=" << std::setprecision(4) << (symmetryRel * 100.0) << "%";
+    std::cout << "  (" << (symmetryRel < 0.10 ? "PASS" : "WARN")
+              << ", expected roughly symmetric)\n";
     std::cout << std::setprecision(6);
 }
 
@@ -1472,6 +1837,15 @@ void printPolicySummary(const std::string& label, const PolicyArtifact& artifact
     std::cout << "Training flat edge:   " << artifact.trainingEdge << "\n";
     std::cout << "Evaluation flat edge (" << evalRounds << " rounds): "
               << artifact.evaluationEdge << "\n";
+    if (artifact.hasCountBettingEvaluation) {
+        std::cout << "Spread 1:10 evaluation edge (" << evalRounds << " rounds): "
+                  << artifact.evaluationSpreadEdge << "\n";
+        std::cout << "Kelly growth per round:      " << artifact.evaluationKellyGrowth
+                  << "  stddev: " << artifact.evaluationKellyGrowthStddev << "\n";
+    } else {
+        std::cout << "Spread/Kelly evaluation skipped for P0: W0 is the zero count, "
+                     "so no positive-count betting signal is expected.\n";
+    }
 }
 
 void runCase(const Case& c) {
@@ -1482,6 +1856,7 @@ void runCase(const Case& c) {
             ? currentTimestamp() + "_" + ToStringTableName(c)
             : g_checkpoint_name + "_" + ToStringTableName(c));
     const uint64_t evalRounds = (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds);
+    RunLogger logger(std::filesystem::path(PROJECT_ROOT) / kAlternatingCheckpointRoot, folder);
     const std::string runHeader = buildRunHeader(c, folder, evalRounds);
 
     std::cout << runHeader;
@@ -1505,8 +1880,13 @@ void runCase(const Case& c) {
             }
 
             std::string pLabel = "P" + std::to_string(state.nextPolicyIndex);
-            PolicyArtifact learnedPolicy = learnPolicy(c, state.currentCount, g_num_rounds, pLabel, runHeader);
+            PolicyArtifact learnedPolicy =
+                learnPolicy(c, state.currentCount, g_num_rounds, pLabel, runHeader,
+                            state.nextPolicyIndex > 0);
             printPolicySummary(pLabel, learnedPolicy);
+            logger.fileStream() << "\n=== " << pLabel << " Strategy ===\n";
+            logger.fileStream() << *learnedPolicy.policy;
+            logger.fileStream() << "========================\n";
             if (g_verbose) {
                 std::cout << "\n=== " << pLabel << " Strategy ===\n";
                 std::cout << *learnedPolicy.policy;
@@ -1535,7 +1915,21 @@ void runCase(const Case& c) {
 
         std::string wLabel = "W" + std::to_string(state.nextPolicyIndex + 1);
         const uint64_t countRounds = countPhasePlayedRounds();
-        CountArtifact countArtifact = learnCount(c, *currentPolicy, state.currentCount, countRounds);
+        std::optional<double> forcedBias;
+        if (g_count_regression_mode == CountRegressionMode::SUM_ZERO_FIXED_W1_BIAS) {
+            // W1 estimates b1 freely; W2+ reuse that conserved value.
+            if (state.nextPolicyIndex > 0)
+                forcedBias = state.currentCount.system.bias;
+        } else if (g_count_regression_mode ==
+                   CountRegressionMode::SUM_ZERO_FIXED_P0_FLAT_EDGE) {
+            // P0 is evaluated before W1, so W1 and every later fit can use its
+            // measured flat edge as the conserved bias.
+            forcedBias = state.nextPolicyIndex == 0
+                ? state.currentPolicyFlatEdge
+                : state.currentCount.system.bias;
+        }
+        CountArtifact countArtifact = learnCount(
+            c, *currentPolicy, state.currentCount, countRounds, forcedBias);
         countArtifact.referenceFlatEdge = state.currentPolicyFlatEdge;
         printCountSummary(wLabel, countArtifact);
         if (!g_no_save)
@@ -1544,10 +1938,8 @@ void runCase(const Case& c) {
         const uint64_t graphRounds = (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds);
         EvCountGraphArtifact graphArtifact = measureEvCountGraph(c, *currentPolicy, countArtifact.count, graphRounds);
         printEvCountGraphSummary(wLabel, graphArtifact);
-        if (!g_no_save) {
-            saveEvCountGraphArtifact(folder, wLabel, graphArtifact);
-            saveCumulativeEvCountGraphArtifact(folder, static_cast<int>(state.nextPolicyIndex + 1));
-        }
+        saveEvCountGraphArtifact(logger.runDir(), wLabel, graphArtifact);
+        saveCumulativeEvCountGraphArtifact(logger.runDir(), static_cast<int>(state.nextPolicyIndex + 1));
 
         state.currentCount = countArtifact.count;
         state.currentPolicyLabel.clear();
@@ -1567,7 +1959,6 @@ void printHelp(const char* prog) {
     std::cout << "METHOD:\n";
     std::cout << "  1. Start from implicit W0 = zero count.\n";
     std::cout << "  2. For each loop index k = 0,1,2,... : learn Pk from fixed Wk, then learn W{k+1} from fixed Pk.\n\n";
-
     std::cout << "POLICY RL STOP MODES:\n";
     std::cout << "  rounds : learn each policy Pk for exactly --num-rounds hands.\n";
     std::cout << "  diff   : learn each policy Pk in chunks of --sample-rounds hands, compare the\n";
@@ -1592,9 +1983,10 @@ void printHelp(const char* prog) {
     std::cout << "  --sample-rounds <N>   In diff mode, compare policy Q-tables every N rounds (default: 100000000)\n";
     std::cout << "  --diff-threshold <v>  In diff mode, stop when avg abs Q-table change <= v (default: 0.001)\n";
     std::cout << "  --eval-rounds <N>     Edge evaluation rounds after each step (default: num-rounds)\n";
-    std::cout << "                        Policy steps report flat edge; count steps report spread edge and Kelly growth.\n";
-    std::cout << "  --iterations <N>      Number of loop iterations k (default: 5)\n";
-    std::cout << "  --num-threads <N>     Threads (default: 16)\n";
+    std::cout << "                        P0 reports flat edge; P1+ also report spread edge and Kelly growth.\n";
+    std::cout << "                        Count steps report spread edge and Kelly growth.\n";
+    std::cout << "  --iterations <N>      Number of loop iterations k (default: 3)\n";
+    std::cout << "  --num-threads <N>     Threads (default: 10)\n";
     std::cout << "  --penetration <val>   Shoe penetration % (default: 75.0)\n";
     std::cout << "  --sample-every <N>    Record every N-th round for OLS (default: 1)\n";
     std::cout << "                        The count phase plays N * num-rounds rounds so OLS still gets about num-rounds samples.\n";
@@ -1620,6 +2012,13 @@ void printHelp(const char* prog) {
     std::cout << "  --alpha-min <val>         Minimum learning rate (default: 0.0001)\n";
     std::cout << "  --alpha-decay <N>         Steps to decay alpha to min (default: 100)\n\n";
 
+    std::cout << "COUNT REGRESSION (choose at most one; default: --count-sum-zero-fixed-b1):\n";
+    std::cout << "  --count-classical-ols       Unconstrained min ||Xw-Y||^2.\n";
+    std::cout << "  --count-sum-zero            OLS subject to sum(rank weights)=0; bias is free.\n";
+    std::cout << "  --count-sum-zero-fixed-b1   Zero-sum OLS; W1 estimates b1, fixed for W2+.\n";
+    std::cout << "  --count-sum-zero-fixed-p0-edge\n";
+    std::cout << "                                Zero-sum OLS; P0 flat edge is fixed for W1+.\n\n";
+
     std::cout << "LEARNED COUNT SCALING:\n";
     std::cout << "  Learned count tags are temporarily scaled by "
               << kLearnedCountFactorMultiplier
@@ -1634,6 +2033,8 @@ void printHelp(const char* prog) {
 } // namespace
 
 int main(int argc, char** argv) {
+    g_command_line = commandLineFromArgs(argc, argv);
+    int countRegressionFlags = 0;
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--help" || arg == "-h") { printHelp(argv[0]); return 0; }
@@ -1657,6 +2058,23 @@ int main(int argc, char** argv) {
         else if (arg == "--verbose")                       g_verbose = true;
         else if (arg == "--full-verbose")                  { g_full_verbose = true; g_verbose = true; }
         else if (arg == "--no-save")                         g_no_save = true;
+        else if (arg == "--count-classical-ols") {
+            g_count_regression_mode = CountRegressionMode::CLASSICAL_OLS;
+            ++countRegressionFlags;
+        }
+        else if (arg == "--count-sum-zero") {
+            g_count_regression_mode = CountRegressionMode::SUM_ZERO;
+            ++countRegressionFlags;
+        }
+        else if (arg == "--count-sum-zero-fixed-b1" ||
+                 arg == "--count-sum-zero-fixed-bias") {
+            g_count_regression_mode = CountRegressionMode::SUM_ZERO_FIXED_W1_BIAS;
+            ++countRegressionFlags;
+        }
+        else if (arg == "--count-sum-zero-fixed-p0-edge") {
+            g_count_regression_mode = CountRegressionMode::SUM_ZERO_FIXED_P0_FLAT_EDGE;
+            ++countRegressionFlags;
+        }
 
         else if (arg == "--count-resolution" && i + 1 < argc) g_agent.countResolution = std::stod(argv[++i]);
         else if (arg == "--min-count"        && i + 1 < argc) g_agent.minCount = std::stoi(argv[++i]);
@@ -1696,6 +2114,10 @@ int main(int argc, char** argv) {
     std::vector<Case> cases;
     if (g_kelly_measurements < 1) {
         std::cerr << "Error: --kelly-measurements must be >= 1.\n";
+        return 1;
+    }
+    if (countRegressionFlags > 1) {
+        std::cerr << "Error: choose only one count regression mode flag.\n";
         return 1;
     }
     if (g_training_stop_mode == TrainingStopMode::TABLE_DIFF && g_sample_rounds == 0) {

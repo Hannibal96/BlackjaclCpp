@@ -8,9 +8,42 @@
 #include <future>
 #include <vector>
 #include <mutex>
+#include <sstream>
+#include <cctype>
 
 // Global mutex for thread-safe console output
 static std::mutex g_consoleMutex;
+
+static std::string shellQuote(const std::string& arg) {
+    if (arg.empty()) return "''";
+
+    bool needsQuotes = false;
+    for (char c : arg) {
+        if (!(std::isalnum(static_cast<unsigned char>(c)) ||
+              c == '_' || c == '-' || c == '.' || c == '/' || c == ':' || c == '=')) {
+            needsQuotes = true;
+            break;
+        }
+    }
+    if (!needsQuotes) return arg;
+
+    std::string quoted = "'";
+    for (char c : arg) {
+        if (c == '\'') quoted += "'\\''";
+        else quoted += c;
+    }
+    quoted += "'";
+    return quoted;
+}
+
+std::string commandLineFromArgs(int argc, char** argv) {
+    std::ostringstream os;
+    for (int i = 0; i < argc; ++i) {
+        if (i > 0) os << ' ';
+        os << shellQuote(argv[i] ? argv[i] : "");
+    }
+    return os.str();
+}
 
 bool runSimulation(const BlackjackRules& rules, std::vector<Player*>& players, uint64_t numRounds) {
     if (players.empty()) {
@@ -144,4 +177,3 @@ std::vector<Player*> runParallelSimulation(const BlackjackRules& rules,
     
     return resultPlayers;
 }
-

@@ -2,6 +2,7 @@
 #include "Game/BlackjackTable.h"
 #include "Game/Player.h"
 #include "RL/BasicStrategy.h"
+#include "Utils/RunLogger.h"
 #include "Utils/Utils.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -33,6 +34,7 @@ uint64_t    g_checkpoint_interval = 0;        // 0 = checkpoint only at end
 bool        g_no_save             = false;
 std::string g_checkpoint_name;
 std::string g_load_checkpoint;
+std::string g_command_line;
 uint64_t    g_sample_every        = 1;        // record every N-th round
 
 // Game configuration (single-case defaults matching most common casino)
@@ -286,9 +288,12 @@ static void runCase(const Case& c, const std::string& ckptFolder,
                     std::array<double, 14> prevXty,
                     uint64_t prevRecordedRounds,
                     uint64_t prevPlayedRounds) {
+    RunLogger logger(std::filesystem::path(PROJECT_ROOT) / kOlsCheckpointRoot, ckptFolder);
 
     std::cout << "\n=== FindOptimalCount ===\n";
-    std::cout << "Scenario:    " << ToString(c) << "\n";
+    std::cout << "Command:     " << g_command_line << "\n";
+    std::cout << "Scenario:    " << ToString(c)
+              << "_penetration=" << g_penetration << "%\n";
     std::cout << "Rounds:      " << g_num_rounds
               << "  Threads: " << g_num_threads << "\n";
     std::cout << "Penetration: " << g_penetration << "%\n";
@@ -396,6 +401,7 @@ static void printHelp(const char* prog) {
 // main
 // ---------------------------------------------------------------------------
 int main(int argc, char** argv) {
+    g_command_line = commandLineFromArgs(argc, argv);
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--help" || arg == "-h") { printHelp(argv[0]); return 0; }

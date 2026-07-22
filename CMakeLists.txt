@@ -24,6 +24,7 @@ add_library(blackjack_objs OBJECT
     src/RL/RandomStrategy.cpp
     src/RL/BasicStrategy.cpp
     src/RL/QLearningStrategy.cpp
+    src/Utils/RunLogger.cpp
     src/Utils/Utils.cpp
 )
 target_include_directories(blackjack_objs
@@ -41,4 +42,3 @@ add_subdirectory(unittest)
 
 # Standalone training/analysis apps
 add_subdirectory(apps)
-
