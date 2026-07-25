@@ -101,7 +101,7 @@ BlackjackTable::round()
 ├── playersPlay()
 ├── dealerPlays()
 ├── evaluate()
-└── recordRound() for regression / graph bins
+└── record round outcome for moments, regression, and graph bins
 ```
 
 ## Learning / Analysis Data
@@ -131,18 +131,44 @@ BlackjackTable::round()
 - `W*_data.json`
 - `W*_graph.json/svg`
 - `W*_graph_overlay.*`
+- `W*_second_moment_graph.json/svg`
+- `W*_second_moment_graph_overlay.*` containing cumulative W1 through Wk curves
+- `W*_kelly_graph.json/svg`
+- `W*_kelly_graph_overlay.*` containing cumulative W1 through Wk curves
 
 ### Compare artifacts
 
 - `run.log`
 - `ev_count_graph.json/svg`
 - `count_histograms.json/svg`
+- `second_moment_count_graph.json/svg` overlaying all compared policies
+- `kelly_fraction_graph.json/svg` overlaying all compared policies
+
+### Return moments and Kelly sweeps
+
+`Player` optionally tracks the global round-return moments `n`, `sum(X)`, and
+`sum(X^2)`. Thread-local totals are added without scaling, allowing the apps to
+report empirical edge, sample `std(X)`, and `E[X^2]` without retaining round
+histories. `BlackjackTable` reuses scratch bankroll storage and skips card-feature
+construction when only moments are enabled.
+
+The EV-vs-count flat simulation also bins `sum(X^2)` by count. Its dedicated
+graphs report `E[X^2 | count]` for a fixed unit initial wager. Alternating
+optimization writes a per-weight curve and cumulative W1-through-Wk overlays;
+CompareCountStrategies overlays the compared policies. Spread simulations do
+not contribute to these conditional curves.
+
+`KellyBetting` uses `bet / bankroll = k * estimatedEV`. Under the small-edge
+quadratic approximation, the optimal multiplier is therefore `k = 1/E[X^2]`.
+The apps compare that prediction with empirical growth over a configurable
+fraction grid.
 
 ## Important Architectural Notes
 
 - Count logic lives in `Player`, not in the strategy classes.
 - Learned Q policies are converted to greedy `BasicStrategy` tables before evaluation apps use them.
 - Regression and EV-count graph collection use pre-round shoe state with round outcome as the target.
+- Round-return variance includes the complete round result, including splits, doubles, surrender, blackjack payout, and the selected wager size.
 - Parallel simulations merge players and strategies through averaging operators.
 - `RunLogger` mirrors terminal output into the same run folder used by checkpoints or graph artifacts.
 

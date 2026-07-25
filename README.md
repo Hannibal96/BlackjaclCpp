@@ -72,12 +72,30 @@ Main test targets include:
 - `AlternatingOptimization`
   Alternates between policy learning and count learning:
   `W0 -> P0 -> W1 -> P1 -> ...`
-  with resumable checkpoints, EV-vs-count graphs, cumulative overlays, and histogram artifacts.
+  with resumable checkpoints, EV-vs-count graphs, cumulative overlays, histogram artifacts,
+  conditional `E[X^2 | count]` graphs, round-return variance, and Kelly-multiplier
+  sweep graphs.
 
 - `CompareCountStrategies`
   Compares one count system under:
   basic strategy, Illustrious 18, and full deviations.
-  It writes a run log, EV-vs-count graph/data, and a count histogram beside the run folder.
+  It writes a run log, EV-vs-count graph/data, a count histogram, spread-return variance,
+  conditional `E[X^2 | count]` curves, and an overlaid Kelly-multiplier sweep for
+  all policies.
+
+Conditional second-moment curves use only flat simulations with an initial wager
+of exactly 1, so `X` is the normalized net profit from one complete round. The
+statistics are accumulated in the same count bins as the EV graph and are not
+measured during spread simulations.
+
+Both apps accept `--kelly-fraction-min`, `--kelly-fraction-max`, and
+`--kelly-fraction-step`. Defaults sweep `0.65` through `1.00` in increments of `0.05`.
+Each fraction runs 10 independent experiments by default, configurable with
+`--kelly-measurements`. Kelly graphs show the mean growth with error bars equal to
+the sample standard deviation across those experiments.
+Because `KellyBetting` uses `bet / bankroll = multiplier * estimatedEV`, the
+small-edge prediction for the optimal multiplier is `1 / E[X^2]`, where `X` is
+the net unit-bet return for one complete blackjack round.
 
 ## Checkpoints And Run Artifacts
 
@@ -88,10 +106,14 @@ Main test targets include:
   `meta.json`, `data.json` (`XtX`, `Xty`, rounds) from `FindOptimalCount`
 
 - `checkpoints/alternating-checkpoints/<folder>/`
-  `meta.json`, `state.json`, `P*.json`, `P*_agent.json`, `P*_strategy.json`, `W*.json`, `W*_data.json`
+  `meta.json`, `state.json`, `P*.json`, `P*_agent.json`, `P*_strategy.json`, `W*.json`,
+  `W*_data.json`, `W*_second_moment_graph.json/svg`, cumulative
+  `W*_second_moment_graph_overlay.json/svg`, `W*_kelly_graph.json/svg`, and
+  cumulative `W*_kelly_graph_overlay.json/svg`
 
 - `checkpoints/CompareCountStrategies/<run-name>/`
-  `run.log`, `ev_count_graph.json/svg`, `count_histograms.json/svg`
+  `run.log`, `ev_count_graph.json/svg`, `count_histograms.json/svg`,
+  `kelly_fraction_graph.json/svg`
 
 - `checkpoints/MeasureEdge/<run-name>/`
   `run.log`
@@ -109,11 +131,10 @@ The compare and measurement apps exist mainly to validate and inspect those lear
 
 ## Notes For Another Agent
 
-- `Player` is the bridge between raw table state and strategy state keys. Count discretization, count clamping, betting context, regression sampling, and EV-count graph collection all live there.
-- `BlackjackTable::round()` is where per-round tracking hooks are captured for both regression and EV-count graphing.
+- `Player` is the bridge between raw table state and strategy state keys. Count discretization, betting context, regression sampling, EV-count bins, and streaming return moments all live there.
+- `BlackjackTable::round()` captures net round return after all splits, doubles, and settlements. Variance tracking stores only count, sum, and sum of squares, and these totals merge across threads without retaining outcome histories.
 - `MeasureEdge` and `CompareCountStrategies` are evaluation apps; they should not leave a live `QLearningStrategy` exploring during measurement.
-- The compare app currently contains temporary Kelly per-run debug printing in its run log and console output.
 
 ## Architecture Notes
 
-See [architecture.md](architecture.md) for the current runtime flow, class relationships, and how counting, betting, regression, graphing, and learning interact.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the current runtime flow, class relationships, and how counting, betting, regression, graphing, and learning interact.

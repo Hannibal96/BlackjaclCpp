@@ -7,6 +7,7 @@
 #include "RL/BasicStrategy.h"
 #include "RL/DecayingParameter.h"
 #include "Utils/RunLogger.h"
+#include "Utils/SimulationAnalysis.h"
 #include "Utils/Utils.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -74,8 +75,12 @@ struct PolicyArtifact {
     std::unique_ptr<BasicStrategy> policy;
     double trainingEdge = 0.0;
     double evaluationEdge = 0.0;
+    double evaluationEdgeStddev = 0.0;
+    double evaluationEdgeSecondMoment = 0.0;
     bool hasCountBettingEvaluation = false;
     double evaluationSpreadEdge = 0.0;
+    double evaluationSpreadStddev = 0.0;
+    double evaluationSpreadSecondMoment = 0.0;
     double evaluationKellyGrowth = 1.0;
     double evaluationKellyGrowthStddev = 0.0;
     double handsPerSec = 0.0;
@@ -90,8 +95,12 @@ struct CountArtifact {
     std::array<double, 14> Xty{};
     uint64_t recordedRounds = 0;
     double evaluationEdge = 0.0;
+    double evaluationEdgeStddev = 0.0;
+    double evaluationEdgeSecondMoment = 0.0;
     double evaluationKellyGrowth = 1.0;
     double evaluationKellyGrowthStddev = 0.0;
+    double evaluationKellyFraction = 1.0;
+    KellyGrowthCurve kellyCurve;
     double handsPerSec = 0.0;
     double threshold = 0.0;
     double normalizationScale = 1.0;
@@ -109,6 +118,7 @@ struct EvCountGraphPoint {
     double count = 0.0;
     uint64_t n = 0;
     double meanReward = 0.0;
+    double secondMomentReward = 0.0;
     double stddevReward = 0.0;
     double confidenceLower = 0.0;
     double confidenceUpper = 0.0;
@@ -138,6 +148,8 @@ struct ResumeState {
     std::string currentPolicyLabel;
     std::string currentPolicyPath;
     double currentPolicyFlatEdge = 0.0;
+    double currentPolicyFlatStddev = 0.0;
+    double currentPolicyFlatSecondMoment = 0.0;
 };
 
 uint64_t    g_num_rounds          = 1'000'000'000ULL;
@@ -150,7 +162,10 @@ uint64_t    g_sample_rounds       = 100'000'000ULL;
 double      g_diff_threshold      = 0.001;
 TrainingStopMode g_training_stop_mode = TrainingStopMode::FIXED_ROUNDS;
 CountRegressionMode g_count_regression_mode = CountRegressionMode::SUM_ZERO_FIXED_W1_BIAS;
-int         g_kelly_measurements  = 100;
+int         g_kelly_measurements  = 10;
+double      g_kelly_fraction_min  = 0.65;
+double      g_kelly_fraction_max  = 1.0;
+double      g_kelly_fraction_step = 0.05;
 bool        g_verbose             = false;
 bool        g_full_verbose        = false;
 bool        g_no_save             = false;
@@ -236,6 +251,8 @@ std::string buildRunHeader(const Case& c, const std::string& folder, uint64_t ev
     os << "Count OLS:     " << countRegressionModeToString(g_count_regression_mode) << "\n";
     os << "Penetration:   " << g_penetration << "%\n";
     os << "Sample-every:  " << g_sample_every << "\n";
+    os << "Kelly sweep:  [" << g_kelly_fraction_min << ", " << g_kelly_fraction_max
+       << "] step " << g_kelly_fraction_step << "\n";
     os << "Folder:        " << kAlternatingCheckpointRoot << "/" << folder << "/\n";
     os << "Initial count: none (all zeros)\n";
     os << "Count factor x:" << kLearnedCountFactorMultiplier << "\n";
@@ -268,6 +285,10 @@ json buildMetaJson(const Case& c) {
     meta["algorithm_config"]["policy_stop_mode"]     = stopModeToString(g_training_stop_mode);
     meta["algorithm_config"]["policy_sample_rounds"] = g_sample_rounds;
     meta["algorithm_config"]["policy_diff_threshold"] = g_diff_threshold;
+    meta["algorithm_config"]["kelly_fraction_min"] = g_kelly_fraction_min;
+    meta["algorithm_config"]["kelly_fraction_max"] = g_kelly_fraction_max;
+    meta["algorithm_config"]["kelly_fraction_step"] = g_kelly_fraction_step;
+    meta["algorithm_config"]["kelly_measurements"] = g_kelly_measurements;
     meta["algorithm_config"]["initial_count"]["weights"] = ZERO_WEIGHTS;
     meta["algorithm_config"]["initial_count"]["factor"]  = 1.0;
     meta["algorithm_config"]["initial_count"]["bias"]    = 0.0;
@@ -343,13 +364,13 @@ uint64_t countPhasePlayedRounds() {
     return g_num_rounds * g_sample_every;
 }
 
-double evaluateEdge(const Case& c,
-                    const BasicStrategy& strategy,
-                    const CountConfig& count,
-                    std::unique_ptr<BettingStrategy> betting,
-                    double minBet,
-                    double maxBet,
-                    uint64_t rounds) {
+EdgeStatistics evaluateEdge(const Case& c,
+                            const BasicStrategy& strategy,
+                            const CountConfig& count,
+                            std::unique_ptr<BettingStrategy> betting,
+                            double minBet,
+                            double maxBet,
+                            uint64_t rounds) {
     auto cloned = strategy.clone();
     auto* player = new Player(0.0, std::move(cloned));
     player->setNumDecks(c.deckSize);
@@ -358,6 +379,7 @@ double evaluateEdge(const Case& c,
     auto [strategyMinCount, strategyMaxCount] = strategy.getCountRange();
     player->setCountRange(strategyMinCount, strategyMaxCount);
     if (betting) player->setBettingStrategy(std::move(betting));
+    player->enableRoundStats();
 
     BlackjackRules rules = buildRules(c, minBet, maxBet);
     std::vector<Player*> results = runParallelSimulation(rules, {player}, rounds, g_num_threads);
@@ -367,7 +389,7 @@ double evaluateEdge(const Case& c,
         throw std::runtime_error("Edge evaluation failed: no result players");
 
     Player* result = results[0];
-    double edge = netPerRoundFromPlayer(*result, rounds, g_num_threads);
+    EdgeStatistics edge = edgeStatisticsFromPlayer(*result);
     delete result;
     return edge;
 }
@@ -419,6 +441,23 @@ KellyEvaluationResult evaluateKellyGrowth(const Case& c,
         result.growthStddev = std::sqrt(std::max(0.0, sampleVariance));
     }
     return result;
+}
+
+KellyGrowthCurve evaluateKellyGrowthCurve(const std::string& label,
+                                          const Case& c,
+                                          const BasicStrategy& strategy,
+                                          const CountConfig& count,
+                                          double predictedOptimalFraction) {
+    KellyGrowthCurve curve;
+    curve.label = label;
+    curve.predictedOptimalFraction = predictedOptimalFraction;
+    for (double fraction : makeKellyFractionGrid(
+             g_kelly_fraction_min, g_kelly_fraction_max, g_kelly_fraction_step)) {
+        const KellyEvaluationResult result = evaluateKellyGrowth(
+            c, strategy, count, kKellyMeasurementRounds, kKellyInitialMoney, fraction);
+        curve.points.push_back({fraction, result.growthMean, result.growthStddev});
+    }
+    return curve;
 }
 
 // The three regression modes use only A = X'X and d = X'Y. X has 13 rank
@@ -614,6 +653,8 @@ json evCountGraphToJson(const EvCountGraphArtifact& graph) {
         row["n"] = p.n;
         if (p.n > 0) row["mean_reward"] = p.meanReward;
         else         row["mean_reward"] = nullptr;
+        if (p.n > 0) row["conditional_second_moment"] = p.secondMomentReward;
+        else         row["conditional_second_moment"] = nullptr;
         row["stddev_reward"] = p.stddevReward;
         if (p.n > 0) {
             row["confidence_lower"] = p.confidenceLower;
@@ -657,6 +698,15 @@ EvCountGraphArtifact evCountGraphFromJson(const json& j) {
         if (!row.at("mean_reward").is_null())
             point.meanReward = row.at("mean_reward").get<double>();
         point.stddevReward = row.value("stddev_reward", 0.0);
+        if (row.contains("conditional_second_moment") &&
+            !row.at("conditional_second_moment").is_null()) {
+            point.secondMomentReward =
+                row.at("conditional_second_moment").get<double>();
+        } else {
+            point.secondMomentReward =
+                point.stddevReward * point.stddevReward +
+                point.meanReward * point.meanReward;
+        }
         if (row.contains("confidence_lower") && !row.at("confidence_lower").is_null())
             point.confidenceLower = row.at("confidence_lower").get<double>();
         else
@@ -689,6 +739,22 @@ std::string colorForGraph(size_t index) {
         "#8c564b", "#e377c2", "#17becf", "#bcbd22", "#7f7f7f"
     };
     return kColors[index % (sizeof(kColors) / sizeof(kColors[0]))];
+}
+
+ConditionalSecondMomentCurve conditionalSecondMomentCurve(
+    const std::string& label,
+    const EvCountGraphArtifact& graph) {
+    ConditionalSecondMomentCurve curve;
+    curve.label = label;
+    curve.points.reserve(graph.points.size());
+    for (const auto& point : graph.points) {
+        curve.points.push_back({
+            point.count,
+            point.n,
+            point.secondMomentReward
+        });
+    }
+    return curve;
 }
 
 std::string evCountGraphToSvg(const std::string& label,
@@ -1202,6 +1268,8 @@ void saveState(const std::string& folder, const ResumeState& state) {
     j["current_policy_label"] = state.currentPolicyLabel;
     j["current_policy_path"] = state.currentPolicyPath;
     j["current_policy_flat_edge"] = state.currentPolicyFlatEdge;
+    j["current_policy_flat_stddev"] = state.currentPolicyFlatStddev;
+    j["current_policy_flat_second_moment"] = state.currentPolicyFlatSecondMoment;
 
     std::ofstream f(root / "state.json");
     if (f.is_open()) f << j.dump(2);
@@ -1248,6 +1316,9 @@ ResumeState inferResumeState(const std::string& folder) {
             json pj;
             pf >> pj;
             state.currentPolicyFlatEdge = pj.value("evaluation_edge_flat", 0.0);
+            state.currentPolicyFlatStddev = pj.value("evaluation_edge_flat_stddev", 0.0);
+            state.currentPolicyFlatSecondMoment =
+                pj.value("evaluation_edge_flat_second_moment", 0.0);
         }
     } else {
         state.nextPhase = Phase::POLICY;
@@ -1277,6 +1348,9 @@ ResumeState loadState(const std::string& folder) {
     state.currentPolicyLabel = j.value("current_policy_label", "");
     state.currentPolicyPath = j.value("current_policy_path", "");
     state.currentPolicyFlatEdge = j.value("current_policy_flat_edge", 0.0);
+    state.currentPolicyFlatStddev = j.value("current_policy_flat_stddev", 0.0);
+    state.currentPolicyFlatSecondMoment =
+        j.value("current_policy_flat_second_moment", 0.0);
     return state;
 }
 
@@ -1314,6 +1388,14 @@ Case loadCheckpointFolder(const std::string& folder) {
                                                 : TrainingStopMode::FIXED_ROUNDS;
     g_sample_rounds = a.value("policy_sample_rounds", 100'000'000ULL);
     g_diff_threshold = a.value("policy_diff_threshold", 0.001);
+    g_kelly_fraction_min = a.value("kelly_fraction_min", 0.65);
+    g_kelly_fraction_max = a.value("kelly_fraction_max", 1.0);
+    g_kelly_fraction_step = a.value("kelly_fraction_step", 0.05);
+    g_kelly_measurements = a.value("kelly_measurements", 10);
+    if (g_kelly_measurements < 1)
+        throw std::runtime_error("Checkpoint kelly_measurements must be >= 1");
+    (void)makeKellyFractionGrid(
+        g_kelly_fraction_min, g_kelly_fraction_max, g_kelly_fraction_step);
     if (a.contains("count_regression_mode")) {
         g_count_regression_mode =
             stringToCountRegressionMode(a.at("count_regression_mode").get<std::string>());
@@ -1388,12 +1470,19 @@ void savePolicyArtifact(const std::string& folder,
     summary["training_rounds"] = artifact.trainingRounds;
     summary["training_edge_flat"] = artifact.trainingEdge;
     summary["evaluation_edge_flat"] = artifact.evaluationEdge;
+    summary["evaluation_edge_flat_stddev"] = artifact.evaluationEdgeStddev;
+    summary["evaluation_edge_flat_second_moment"] = artifact.evaluationEdgeSecondMoment;
     if (artifact.hasCountBettingEvaluation) {
         summary["evaluation_edge_spread_1_10"] = artifact.evaluationSpreadEdge;
+        summary["evaluation_edge_spread_1_10_stddev"] = artifact.evaluationSpreadStddev;
+        summary["evaluation_edge_spread_1_10_second_moment"] =
+            artifact.evaluationSpreadSecondMoment;
         summary["evaluation_kelly_growth"] = artifact.evaluationKellyGrowth;
         summary["evaluation_kelly_growth_stddev"] = artifact.evaluationKellyGrowthStddev;
     } else {
         summary["evaluation_edge_spread_1_10"] = nullptr;
+        summary["evaluation_edge_spread_1_10_stddev"] = nullptr;
+        summary["evaluation_edge_spread_1_10_second_moment"] = nullptr;
         summary["evaluation_kelly_growth"] = nullptr;
         summary["evaluation_kelly_growth_stddev"] = nullptr;
     }
@@ -1419,8 +1508,14 @@ void saveCountArtifact(const std::string& folder,
     summary["hands_per_sec"] = artifact.handsPerSec;
     summary["spread_threshold"] = artifact.threshold;
     summary["evaluation_edge_spread_1_10"] = artifact.evaluationEdge;
+    summary["evaluation_edge_spread_1_10_stddev"] = artifact.evaluationEdgeStddev;
+    summary["evaluation_edge_spread_1_10_second_moment"] =
+        artifact.evaluationEdgeSecondMoment;
     summary["evaluation_kelly_growth"] = artifact.evaluationKellyGrowth;
     summary["evaluation_kelly_growth_stddev"] = artifact.evaluationKellyGrowthStddev;
+    summary["evaluation_kelly_fraction"] = artifact.evaluationKellyFraction;
+    summary["predicted_kelly_fraction_1_over_ex2"] =
+        artifact.kellyCurve.predictedOptimalFraction;
     summary["normalization_scale"] = artifact.normalizationScale;
     summary["learned_count_factor_multiplier"] = kLearnedCountFactorMultiplier;
     summary["regression_mode"] = countRegressionModeToString(artifact.regressionMode);
@@ -1467,6 +1562,14 @@ void saveEvCountGraphArtifact(const std::filesystem::path& root,
     if (hf.is_open()) hf << countHistogramToJson(graph).dump(2);
     std::ofstream hsv(root / (label + "_histogram.svg"));
     if (hsv.is_open()) hsv << countHistogramToSvg(label, graph);
+    const std::vector<ConditionalSecondMomentCurve> secondMomentCurves{
+        conditionalSecondMomentCurve(label, graph)
+    };
+    std::ofstream(root / (label + "_second_moment_graph.json"))
+        << std::setw(2) << conditionalSecondMomentCurvesToJson(secondMomentCurves) << "\n";
+    std::ofstream(root / (label + "_second_moment_graph.svg"))
+        << conditionalSecondMomentCurvesToSvg(
+               label + " conditional second moment", secondMomentCurves);
 }
 
 void saveCumulativeEvCountGraphArtifact(const std::filesystem::path& root,
@@ -1493,6 +1596,56 @@ void saveCumulativeEvCountGraphArtifact(const std::filesystem::path& root,
     if (jf.is_open()) jf << evCountGraphsToJson(graphs);
     std::ofstream sf(root / ("W" + std::to_string(upToWeightIndex) + "_graph_overlay.svg"));
     if (sf.is_open()) sf << evCountOverlaySvg("W1..W" + std::to_string(upToWeightIndex), graphs);
+
+    std::vector<ConditionalSecondMomentCurve> secondMomentCurves;
+    secondMomentCurves.reserve(graphs.size());
+    for (const auto& named : graphs) {
+        secondMomentCurves.push_back(
+            conditionalSecondMomentCurve(named.label, named.graph));
+    }
+    std::ofstream(root / ("W" + std::to_string(upToWeightIndex) +
+                          "_second_moment_graph_overlay.json"))
+        << std::setw(2)
+        << conditionalSecondMomentCurvesToJson(secondMomentCurves) << "\n";
+    std::ofstream(root / ("W" + std::to_string(upToWeightIndex) +
+                          "_second_moment_graph_overlay.svg"))
+        << conditionalSecondMomentCurvesToSvg(
+               "W1..W" + std::to_string(upToWeightIndex) +
+                   " conditional second moment",
+               secondMomentCurves);
+}
+
+void saveKellyGrowthGraphArtifact(const std::filesystem::path& root,
+                                  const std::string& label,
+                                  const KellyGrowthCurve& curve) {
+    const std::vector<KellyGrowthCurve> curves{curve};
+    std::ofstream(root / (label + "_kelly_graph.json"))
+        << std::setw(2) << kellyGrowthCurvesToJson(curves) << "\n";
+    std::ofstream(root / (label + "_kelly_graph.svg"))
+        << kellyGrowthCurvesToSvg(label + " Kelly growth", curves);
+}
+
+void saveCumulativeKellyGrowthGraphArtifact(const std::filesystem::path& root,
+                                            int upToWeightIndex) {
+    namespace fs = std::filesystem;
+    std::vector<KellyGrowthCurve> curves;
+    for (int i = 1; i <= upToWeightIndex; ++i) {
+        const fs::path path = root / ("W" + std::to_string(i) + "_kelly_graph.json");
+        if (!fs::exists(path)) continue;
+        std::ifstream input(path);
+        if (!input.is_open()) continue;
+        json value;
+        input >> value;
+        curves.push_back(kellyGrowthCurveFromJson(value));
+    }
+    if (curves.empty()) return;
+
+    const std::string prefix = "W" + std::to_string(upToWeightIndex) + "_kelly_graph_overlay";
+    std::ofstream(root / (prefix + ".json"))
+        << std::setw(2) << kellyGrowthCurvesToJson(curves) << "\n";
+    std::ofstream(root / (prefix + ".svg"))
+        << kellyGrowthCurvesToSvg(
+               "W1..W" + std::to_string(upToWeightIndex) + " Kelly growth", curves);
 }
 
 PolicyArtifact learnPolicy(const Case& c,
@@ -1582,15 +1735,22 @@ PolicyArtifact learnPolicy(const Case& c,
     artifact.trainingRounds = trainedRounds;
     artifact.trainingEdge = netPerRoundFromPlayer(*result, trainedRounds, g_num_threads);
     artifact.handsPerSec  = (secs > 0.0 ? trainedRounds / secs : 0.0);
-    artifact.evaluationEdge = evaluateEdge(c, *policy, count, nullptr, 1.0, 1.0,
-                                           (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds));
+    const EdgeStatistics flat = evaluateEdge(
+        c, *policy, count, nullptr, 1.0, 1.0,
+        (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds));
+    artifact.evaluationEdge = flat.mean;
+    artifact.evaluationEdgeStddev = flat.stddev;
+    artifact.evaluationEdgeSecondMoment = flat.secondMoment;
     if (evaluateCountBetting) {
         const double threshold = spreadThresholdFromCount(count);
         auto betting = std::make_unique<SpreadBetting>(
             std::vector<std::pair<double, double>>{{threshold, 10.0}});
-        artifact.evaluationSpreadEdge = evaluateEdge(
+        const EdgeStatistics spread = evaluateEdge(
             c, *policy, count, std::move(betting), 1.0, 10.0,
             (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds));
+        artifact.evaluationSpreadEdge = spread.mean;
+        artifact.evaluationSpreadStddev = spread.stddev;
+        artifact.evaluationSpreadSecondMoment = spread.secondMoment;
         KellyEvaluationResult kelly = evaluateKellyGrowth(
             c, *policy, count, (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds));
         artifact.evaluationKellyGrowth = kelly.growthMean;
@@ -1605,10 +1765,12 @@ PolicyArtifact learnPolicy(const Case& c,
 }
 
 CountArtifact learnCount(const Case& c,
+                         const std::string& label,
                          const BasicStrategy& fixedPolicy,
                          const CountConfig& strategyCount,
                          uint64_t rounds,
-                         std::optional<double> forcedBias) {
+                         std::optional<double> forcedBias,
+                         double predictedKellyFraction) {
     auto cloned = fixedPolicy.clone();
     auto* player = new Player(0.0, std::move(cloned));
     player->setNumDecks(c.deckSize);
@@ -1655,12 +1817,19 @@ CountArtifact learnCount(const Case& c,
 
     auto betting = std::make_unique<SpreadBetting>(
         std::vector<std::pair<double, double>>{{artifact.threshold, 10.0}});
-    artifact.evaluationEdge = evaluateEdge(c, fixedPolicy, artifact.count, std::move(betting),
-                                           1.0, 10.0, (g_eval_rounds == 0 ? rounds : g_eval_rounds));
-    KellyEvaluationResult kelly = evaluateKellyGrowth(
-        c, fixedPolicy, artifact.count, (g_eval_rounds == 0 ? rounds : g_eval_rounds));
-    artifact.evaluationKellyGrowth = kelly.growthMean;
-    artifact.evaluationKellyGrowthStddev = kelly.growthStddev;
+    const EdgeStatistics spread = evaluateEdge(
+        c, fixedPolicy, artifact.count, std::move(betting), 1.0, 10.0,
+        (g_eval_rounds == 0 ? rounds : g_eval_rounds));
+    artifact.evaluationEdge = spread.mean;
+    artifact.evaluationEdgeStddev = spread.stddev;
+    artifact.evaluationEdgeSecondMoment = spread.secondMoment;
+    artifact.kellyCurve = evaluateKellyGrowthCurve(
+        label, c, fixedPolicy, artifact.count, predictedKellyFraction);
+    if (const auto* optimum = artifact.kellyCurve.optimalPoint()) {
+        artifact.evaluationKellyFraction = optimum->fraction;
+        artifact.evaluationKellyGrowth = optimum->growthMean;
+        artifact.evaluationKellyGrowthStddev = optimum->growthStddev;
+    }
 
     delete result;
     return artifact;
@@ -1710,6 +1879,7 @@ EvCountGraphArtifact measureEvCountGraph(const Case& c,
             point.n = stats.n;
             point.meanReward = stats.sumReward / static_cast<double>(stats.n);
             double meanSq = stats.sumRewardSq / static_cast<double>(stats.n);
+            point.secondMomentReward = meanSq;
             double variance = std::max(0.0, meanSq - point.meanReward * point.meanReward);
             point.stddevReward = std::sqrt(variance);
             double stderr = point.stddevReward / std::sqrt(static_cast<double>(stats.n));
@@ -1769,8 +1939,12 @@ void printCountSummary(const std::string& label, const CountArtifact& artifact) 
               << artifact.count.system.factor << "\n";
     std::cout << std::setprecision(6);
     std::cout << "\nSpread 1:10 evaluation edge (" << evalRounds << " rounds): "
-              << artifact.evaluationEdge << "\n";
-    std::cout << "Kelly growth per round:      " << artifact.evaluationKellyGrowth
+              << artifact.evaluationEdge << "  std(X): " << artifact.evaluationEdgeStddev
+              << "  E[X^2]: " << artifact.evaluationEdgeSecondMoment << "\n";
+    std::cout << "Optimal Kelly multiplier:    " << artifact.evaluationKellyFraction
+              << "  predicted 1/E[X^2]: "
+              << artifact.kellyCurve.predictedOptimalFraction << "\n";
+    std::cout << "Optimal Kelly growth/round:  " << artifact.evaluationKellyGrowth
               << "  stddev: " << artifact.evaluationKellyGrowthStddev << "\n";
     std::cout << "Sanity checks:\n";
     std::cout << "  Sum(weights): " << sumWeights
@@ -1836,10 +2010,13 @@ void printPolicySummary(const std::string& label, const PolicyArtifact& artifact
     std::cout << std::setprecision(6);
     std::cout << "Training flat edge:   " << artifact.trainingEdge << "\n";
     std::cout << "Evaluation flat edge (" << evalRounds << " rounds): "
-              << artifact.evaluationEdge << "\n";
+              << artifact.evaluationEdge << "  std(X): " << artifact.evaluationEdgeStddev
+              << "  E[X^2]: " << artifact.evaluationEdgeSecondMoment << "\n";
     if (artifact.hasCountBettingEvaluation) {
         std::cout << "Spread 1:10 evaluation edge (" << evalRounds << " rounds): "
-                  << artifact.evaluationSpreadEdge << "\n";
+                  << artifact.evaluationSpreadEdge
+                  << "  std(X): " << artifact.evaluationSpreadStddev
+                  << "  E[X^2]: " << artifact.evaluationSpreadSecondMoment << "\n";
         std::cout << "Kelly growth per round:      " << artifact.evaluationKellyGrowth
                   << "  stddev: " << artifact.evaluationKellyGrowthStddev << "\n";
     } else {
@@ -1900,6 +2077,8 @@ void runCase(const Case& c) {
             state.currentPolicyPath = std::string(kAlternatingCheckpointRoot) + "/" + folder + "/" +
                                       pLabel + "_strategy.json";
             state.currentPolicyFlatEdge = learnedPolicy.evaluationEdge;
+            state.currentPolicyFlatStddev = learnedPolicy.evaluationEdgeStddev;
+            state.currentPolicyFlatSecondMoment = learnedPolicy.evaluationEdgeSecondMoment;
             state.nextPhase = Phase::COUNT;
             if (!g_no_save) saveState(folder, state);
             continue;
@@ -1928,8 +2107,12 @@ void runCase(const Case& c) {
                 ? state.currentPolicyFlatEdge
                 : state.currentCount.system.bias;
         }
+        const double predictedKellyFraction = state.currentPolicyFlatSecondMoment > 0.0
+            ? 1.0 / state.currentPolicyFlatSecondMoment
+            : 0.0;
         CountArtifact countArtifact = learnCount(
-            c, *currentPolicy, state.currentCount, countRounds, forcedBias);
+            c, wLabel, *currentPolicy, state.currentCount, countRounds, forcedBias,
+            predictedKellyFraction);
         countArtifact.referenceFlatEdge = state.currentPolicyFlatEdge;
         printCountSummary(wLabel, countArtifact);
         if (!g_no_save)
@@ -1940,11 +2123,16 @@ void runCase(const Case& c) {
         printEvCountGraphSummary(wLabel, graphArtifact);
         saveEvCountGraphArtifact(logger.runDir(), wLabel, graphArtifact);
         saveCumulativeEvCountGraphArtifact(logger.runDir(), static_cast<int>(state.nextPolicyIndex + 1));
+        saveKellyGrowthGraphArtifact(logger.runDir(), wLabel, countArtifact.kellyCurve);
+        saveCumulativeKellyGrowthGraphArtifact(
+            logger.runDir(), static_cast<int>(state.nextPolicyIndex + 1));
 
         state.currentCount = countArtifact.count;
         state.currentPolicyLabel.clear();
         state.currentPolicyPath.clear();
         state.currentPolicyFlatEdge = 0.0;
+        state.currentPolicyFlatStddev = 0.0;
+        state.currentPolicyFlatSecondMoment = 0.0;
         state.nextPolicyIndex += 1;
         state.nextPhase = Phase::POLICY;
         currentPolicy.reset();
@@ -1975,7 +2163,11 @@ void printHelp(const char* prog) {
     std::cout << "    checkpoints/alternating-checkpoints/<folder>/W*.json               Count summaries\n";
     std::cout << "    checkpoints/alternating-checkpoints/<folder>/W*_data.json          Regression matrices\n";
     std::cout << "    checkpoints/alternating-checkpoints/<folder>/W*_graph.json/svg     Single EV-vs-count graph\n";
+    std::cout << "    checkpoints/alternating-checkpoints/<folder>/W*_second_moment_graph.json/svg\n";
+    std::cout << "                                                                      Unit-wager E[X^2 | count]\n";
     std::cout << "    checkpoints/alternating-checkpoints/<folder>/W*_graph_overlay.*    Cumulative W1..Wk comparison graph\n\n";
+    std::cout << "    checkpoints/alternating-checkpoints/<folder>/W*_kelly_graph.*     Kelly multiplier sweep\n";
+    std::cout << "    checkpoints/alternating-checkpoints/<folder>/W*_kelly_graph_overlay.*  Cumulative Kelly comparison\n\n";
 
     std::cout << "SIMULATION:\n";
     std::cout << "  --num-rounds <N>      Rounds used in each policy/count phase (default: 1000000000)\n";
@@ -1990,7 +2182,10 @@ void printHelp(const char* prog) {
     std::cout << "  --penetration <val>   Shoe penetration % (default: 75.0)\n";
     std::cout << "  --sample-every <N>    Record every N-th round for OLS (default: 1)\n";
     std::cout << "                        The count phase plays N * num-rounds rounds so OLS still gets about num-rounds samples.\n";
-    std::cout << "  --kelly-measurements <N>  Number of Kelly experiments of 1,000,000 rounds each (default: 100)\n";
+    std::cout << "  --kelly-measurements <N>  Experiments per Kelly fraction, 1,000,000 rounds each (default: 10)\n";
+    std::cout << "  --kelly-fraction-min <v>   Kelly multiplier sweep minimum (default: 0.65)\n";
+    std::cout << "  --kelly-fraction-max <v>   Kelly multiplier sweep maximum (default: 1.0)\n";
+    std::cout << "  --kelly-fraction-step <v>  Kelly multiplier sweep step (default: 0.05)\n";
     std::cout << "  --checkpoint-name <name>  Folder prefix under checkpoints/alternating-checkpoints/ (default: timestamp)\n";
     std::cout << "  --load-checkpoint <name>  Resume from checkpoints/alternating-checkpoints/<name>/\n";
     std::cout << "  --verbose             Print the final learned policy table after each policy step completes\n";
@@ -2053,6 +2248,9 @@ int main(int argc, char** argv) {
         else if (arg == "--penetration"      && i + 1 < argc) g_penetration = std::stod(argv[++i]);
         else if (arg == "--sample-every"     && i + 1 < argc) g_sample_every = std::stoull(argv[++i]);
         else if (arg == "--kelly-measurements" && i + 1 < argc) g_kelly_measurements = std::stoi(argv[++i]);
+        else if (arg == "--kelly-fraction-min" && i + 1 < argc) g_kelly_fraction_min = std::stod(argv[++i]);
+        else if (arg == "--kelly-fraction-max" && i + 1 < argc) g_kelly_fraction_max = std::stod(argv[++i]);
+        else if (arg == "--kelly-fraction-step" && i + 1 < argc) g_kelly_fraction_step = std::stod(argv[++i]);
         else if (arg == "--checkpoint-name"  && i + 1 < argc) g_checkpoint_name = argv[++i];
         else if (arg == "--load-checkpoint"  && i + 1 < argc) g_load_checkpoint = argv[++i];
         else if (arg == "--verbose")                       g_verbose = true;
@@ -2114,6 +2312,13 @@ int main(int argc, char** argv) {
     std::vector<Case> cases;
     if (g_kelly_measurements < 1) {
         std::cerr << "Error: --kelly-measurements must be >= 1.\n";
+        return 1;
+    }
+    try {
+        (void)makeKellyFractionGrid(
+            g_kelly_fraction_min, g_kelly_fraction_max, g_kelly_fraction_step);
+    } catch (const std::invalid_argument& e) {
+        std::cerr << "Error: " << e.what() << ".\n";
         return 1;
     }
     if (countRegressionFlags > 1) {

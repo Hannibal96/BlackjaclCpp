@@ -25,6 +25,7 @@ add_library(blackjack_objs OBJECT
     src/RL/BasicStrategy.cpp
     src/RL/QLearningStrategy.cpp
     src/Utils/RunLogger.cpp
+    src/Utils/SimulationAnalysis.cpp
     src/Utils/Utils.cpp
 )
 target_include_directories(blackjack_objs

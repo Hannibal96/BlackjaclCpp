@@ -7,6 +7,7 @@
 #include "RL/QLearningStrategy.h"
 #include "RL/DecayingParameter.h"
 #include "Utils/RunLogger.h"
+#include "Utils/SimulationAnalysis.h"
 #include "Utils/Utils.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -59,8 +60,12 @@ struct EvalResult {
     std::string label;
     std::string note;
     double spreadEdge = 0.0;
+    double spreadStddev = 0.0;
+    double spreadSecondMoment = 0.0;
     double kellyGrowth = 1.0;
     double kellyGrowthStddev = 0.0;
+    double kellyFraction = 1.0;
+    KellyGrowthCurve kellyCurve;
 };
 
 struct KellyEvaluationResult {
@@ -72,6 +77,7 @@ struct EvCountGraphPoint {
     double count = 0.0;
     uint64_t n = 0;
     double meanReward = 0.0;
+    double secondMomentReward = 0.0;
     double stddevReward = 0.0;
     double confidenceLower = 0.0;
     double confidenceUpper = 0.0;
@@ -85,6 +91,7 @@ struct StrategyGraphArtifact {
     double maxCount = 0.0;
     uint64_t rounds = 0;
     double handsPerSec = 0.0;
+    EdgeStatistics flatStatistics;
     std::vector<EvCountGraphPoint> points;
 };
 
@@ -99,7 +106,10 @@ uint64_t    g_num_rounds   = 1'000'000'000ULL;   // training rounds for full dev
 uint64_t    g_eval_rounds  = 0;                  // 0 => use g_num_rounds for spread eval
 int         g_num_threads  = 16;
 double      g_penetration  = 75.0;
-int         g_kelly_measurements = 100;
+int         g_kelly_measurements = 10;
+double      g_kelly_fraction_min = 0.65;
+double      g_kelly_fraction_max = 1.0;
+double      g_kelly_fraction_step = 0.05;
 double      g_count_resolution = 1.0;
 int         g_min_count = -5;
 int         g_max_count = 5;
@@ -266,6 +276,9 @@ json graphsToJson(const std::vector<StrategyGraphArtifact>& graphs) {
         g["max_count"] = graph.maxCount;
         g["rounds"] = graph.rounds;
         g["hands_per_sec"] = graph.handsPerSec;
+        g["flat_edge"] = graph.flatStatistics.mean;
+        g["flat_stddev"] = graph.flatStatistics.stddev;
+        g["flat_second_moment"] = graph.flatStatistics.secondMoment;
         g["points"] = json::array();
         for (const auto& p : graph.points) {
             json row;
@@ -273,6 +286,8 @@ json graphsToJson(const std::vector<StrategyGraphArtifact>& graphs) {
             row["n"] = p.n;
             row["reference_reward"] = kReferenceBias + kReferenceFactor * p.count;
             row["mean_reward"] = (p.n > 0 ? json(p.meanReward) : json(nullptr));
+            row["conditional_second_moment"] =
+                (p.n > 0 ? json(p.secondMomentReward) : json(nullptr));
             row["stddev_reward"] = p.stddevReward;
             row["confidence_lower"] = (p.n > 0 ? json(p.confidenceLower) : json(nullptr));
             row["confidence_upper"] = (p.n > 0 ? json(p.confidenceUpper) : json(nullptr));
@@ -286,6 +301,21 @@ json graphsToJson(const std::vector<StrategyGraphArtifact>& graphs) {
 std::string colorForGraph(size_t index) {
     static const char* kColors[] = {"#1f77b4", "#d62728", "#2ca02c", "#ff7f0e", "#9467bd"};
     return kColors[index % (sizeof(kColors) / sizeof(kColors[0]))];
+}
+
+ConditionalSecondMomentCurve conditionalSecondMomentCurve(
+    const StrategyGraphArtifact& graph) {
+    ConditionalSecondMomentCurve curve;
+    curve.label = graph.label;
+    curve.points.reserve(graph.points.size());
+    for (const auto& point : graph.points) {
+        curve.points.push_back({
+            point.count,
+            point.n,
+            point.secondMomentReward
+        });
+    }
+    return curve;
 }
 
 std::string graphsToSvg(const std::vector<StrategyGraphArtifact>& graphs) {
@@ -603,6 +633,7 @@ StrategyGraphArtifact measureEvCountGraph(const Case& c,
     player->setCountRange(strategyMinCount, strategyMaxCount);
     double graphResolution = (count.resolution > 0.0) ? (count.resolution / 4.0) : 0.25;
     player->enableCountGraph(graphResolution);
+    player->enableRoundStats();
 
     BlackjackRules rules = buildRules(c, 1.0, 1.0);
     auto start = std::chrono::high_resolution_clock::now();
@@ -620,6 +651,7 @@ StrategyGraphArtifact measureEvCountGraph(const Case& c,
     graph.resolution = graphResolution;
     graph.rounds = rounds;
     graph.handsPerSec = (secs > 0.0 ? rounds / secs : 0.0);
+    graph.flatStatistics = edgeStatisticsFromPlayer(*result);
     graph.minCount = count.minCount;
     graph.maxCount = count.maxCount;
     const int minBinIndex = static_cast<int>(std::llround(graph.minCount / graphResolution));
@@ -634,6 +666,7 @@ StrategyGraphArtifact measureEvCountGraph(const Case& c,
             point.n = stats.n;
             point.meanReward = stats.sumReward / static_cast<double>(stats.n);
             double meanSq = stats.sumRewardSq / static_cast<double>(stats.n);
+            point.secondMomentReward = meanSq;
             double variance = std::max(0.0, meanSq - point.meanReward * point.meanReward);
             point.stddevReward = std::sqrt(variance);
             double stderr = point.stddevReward / std::sqrt(static_cast<double>(stats.n));
@@ -646,10 +679,10 @@ StrategyGraphArtifact measureEvCountGraph(const Case& c,
     return graph;
 }
 
-double evaluateSpreadEdge(const Case& c,
-                          const BasicStrategy& strategy,
-                          const StrategyCountConfig& count,
-                          uint64_t rounds) {
+EdgeStatistics evaluateSpreadEdge(const Case& c,
+                                  const BasicStrategy& strategy,
+                                  const StrategyCountConfig& count,
+                                  uint64_t rounds) {
     double threshold = (std::abs(count.system.factor) < 1e-12)
         ? std::numeric_limits<double>::infinity()
         : (-count.system.bias / count.system.factor);
@@ -662,6 +695,7 @@ double evaluateSpreadEdge(const Case& c,
     player->setCountRange(strategyMinCount, strategyMaxCount);
     player->setBettingStrategy(
         std::make_unique<SpreadBetting>(std::vector<std::pair<double, double>>{{threshold, 10.0}}));
+    player->enableRoundStats();
 
     BlackjackRules rules = buildRules(c, 1.0, 10.0);
     std::vector<Player*> results = runParallelSimulation(rules, {player}, rounds, g_num_threads);
@@ -669,7 +703,7 @@ double evaluateSpreadEdge(const Case& c,
     if (results.empty())
         throw std::runtime_error("Spread evaluation failed");
     Player* result = results[0];
-    double edge = result->getMoney() / averageRoundsPerThread(rounds, g_num_threads);
+    EdgeStatistics edge = edgeStatisticsFromPlayer(*result);
     delete result;
     return edge;
 }
@@ -677,7 +711,8 @@ double evaluateSpreadEdge(const Case& c,
 KellyEvaluationResult evaluateKellyGrowth(const std::string& label,
                                           const Case& c,
                                           const BasicStrategy& strategy,
-                                          const StrategyCountConfig& count) {
+                                          const StrategyCountConfig& count,
+                                          double kellyFraction) {
     (void)label;
     BlackjackRules rules = buildRules(c, 0.0, std::numeric_limits<double>::max());
     double growthSum = 0.0;
@@ -689,7 +724,7 @@ KellyEvaluationResult evaluateKellyGrowth(const std::string& label,
         player->setCountResolution(count.resolution);
         auto [strategyMinCount, strategyMaxCount] = strategy.getCountRange();
         player->setCountRange(strategyMinCount, strategyMaxCount);
-        player->setBettingStrategy(std::make_unique<KellyBetting>(1.0));
+        player->setBettingStrategy(std::make_unique<KellyBetting>(kellyFraction));
 
         std::vector<Player*> results =
             runParallelSimulation(rules, {player}, kKellyMeasurementRounds, g_num_threads);
@@ -715,6 +750,23 @@ KellyEvaluationResult evaluateKellyGrowth(const std::string& label,
         result.growthStddev = std::sqrt(std::max(0.0, sampleVariance));
     }
     return result;
+}
+
+KellyGrowthCurve evaluateKellyGrowthCurve(const std::string& label,
+                                          const Case& c,
+                                          const BasicStrategy& strategy,
+                                          const StrategyCountConfig& count,
+                                          double predictedOptimalFraction) {
+    KellyGrowthCurve curve;
+    curve.label = label;
+    curve.predictedOptimalFraction = predictedOptimalFraction;
+    for (double fraction : makeKellyFractionGrid(
+             g_kelly_fraction_min, g_kelly_fraction_max, g_kelly_fraction_step)) {
+        const KellyEvaluationResult result =
+            evaluateKellyGrowth(label, c, strategy, count, fraction);
+        curve.points.push_back({fraction, result.growthMean, result.growthStddev});
+    }
+    return curve;
 }
 
 std::unique_ptr<BasicStrategy> loadBasicStrategyForCase(const Case& c) {
@@ -930,15 +982,23 @@ EvalResult evaluateCase(const std::string& label,
                         const std::string& note,
                         const Case& c,
                         const BasicStrategy& strategy,
-                        const StrategyCountConfig& count) {
+                        const StrategyCountConfig& count,
+                        double predictedKellyFraction) {
     EvalResult result;
     result.label = label;
     result.note = note;
     const uint64_t evalRounds = (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds);
-    result.spreadEdge = evaluateSpreadEdge(c, strategy, count, evalRounds);
-    KellyEvaluationResult kelly = evaluateKellyGrowth(label, c, strategy, count);
-    result.kellyGrowth = kelly.growthMean;
-    result.kellyGrowthStddev = kelly.growthStddev;
+    const EdgeStatistics spread = evaluateSpreadEdge(c, strategy, count, evalRounds);
+    result.spreadEdge = spread.mean;
+    result.spreadStddev = spread.stddev;
+    result.spreadSecondMoment = spread.secondMoment;
+    result.kellyCurve = evaluateKellyGrowthCurve(
+        label, c, strategy, count, predictedKellyFraction);
+    if (const auto* optimum = result.kellyCurve.optimalPoint()) {
+        result.kellyFraction = optimum->fraction;
+        result.kellyGrowth = optimum->growthMean;
+        result.kellyGrowthStddev = optimum->growthStddev;
+    }
     return result;
 }
 
@@ -954,14 +1014,23 @@ void printResultsTable(const std::vector<EvalResult>& results) {
     std::cout << "\n=== Comparison ===\n";
     std::cout << std::left << std::setw(34) << "Case"
               << std::right << std::setw(18) << "Spread 1:10"
+              << std::setw(18) << "Spread std(X)"
+              << std::setw(16) << "Kelly fraction"
               << std::setw(18) << "Kelly growth"
               << std::setw(18) << "Kelly stddev" << "\n";
-    std::cout << std::string(88, '-') << "\n";
+    std::cout << std::string(122, '-') << "\n";
     for (const auto& r : results) {
         std::cout << std::left << std::setw(34) << r.label
                   << std::right << std::setw(18) << std::fixed << std::setprecision(6) << r.spreadEdge
+                  << std::setw(18) << std::fixed << std::setprecision(6) << r.spreadStddev
+                  << std::setw(16) << std::fixed << std::setprecision(2) << r.kellyFraction
                   << std::setw(18) << std::fixed << std::setprecision(6) << r.kellyGrowth
                   << std::setw(18) << std::fixed << std::setprecision(6) << r.kellyGrowthStddev << "\n";
+        if (!r.kellyCurve.points.empty()) {
+            std::cout << "  Spread E[X^2]=" << std::setprecision(6) << r.spreadSecondMoment
+                      << "  predicted Kelly multiplier from flat 1/E[X^2]="
+                      << std::setprecision(6) << r.kellyCurve.predictedOptimalFraction << "\n";
+        }
         if (!r.note.empty())
             std::cout << "  " << r.note << "\n";
     }
@@ -977,6 +1046,8 @@ void runCase(const Case& c) {
               << "_penetration=" << g_penetration << "%\n";
     std::cout << "Eval rounds:   " << evalRounds << "  Threads: " << g_num_threads << "\n";
     std::cout << "Kelly eval:    " << g_kelly_measurements << " x " << kKellyMeasurementRounds << " rounds\n";
+    std::cout << "Kelly sweep:   [" << g_kelly_fraction_min << ", " << g_kelly_fraction_max
+              << "] step " << g_kelly_fraction_step << "\n";
     std::cout << "Train rounds:  " << g_num_rounds << "\n";
     std::cout << "Penetration:   " << g_penetration << "%\n";
     std::cout << "Count grid:    res=" << g_count_resolution
@@ -990,8 +1061,12 @@ void runCase(const Case& c) {
     std::vector<StrategyGraphArtifact> graphs;
 
     auto basicStrategy = loadBasicStrategyForCase(c);
-    results.push_back(evaluateCase("Basic strategy", "", c, *basicStrategy, requestedCount));
-    graphs.push_back(measureEvCountGraph(c, "Basic strategy", *basicStrategy, requestedCount, evalRounds));
+    graphs.push_back(measureEvCountGraph(
+        c, "Basic strategy", *basicStrategy, requestedCount, evalRounds));
+    results.push_back(evaluateCase(
+        "Basic strategy", "", c, *basicStrategy, requestedCount,
+        graphs.back().flatStatistics.secondMoment > 0.0
+            ? 1.0 / graphs.back().flatStatistics.secondMoment : 0.0));
 
     if (isHiLoWeights(requestedCount.system.weights)) {
         auto i18Strategy = expandBasicStrategyAcrossCounts(*basicStrategy, requestedCount.minCount, requestedCount.maxCount);
@@ -999,8 +1074,12 @@ void runCase(const Case& c) {
         std::string note;
         if (!c.standSoft17)
             note = "Using standard Hi-Lo multi-deck S17 reference indices; your game is H17 so exact rule-specific indices may differ.";
-        results.push_back(evaluateCase("Illustrious 18", note, c, *i18Strategy, requestedCount));
-        graphs.push_back(measureEvCountGraph(c, "Illustrious 18", *i18Strategy, requestedCount, evalRounds));
+        graphs.push_back(measureEvCountGraph(
+            c, "Illustrious 18", *i18Strategy, requestedCount, evalRounds));
+        results.push_back(evaluateCase(
+            "Illustrious 18", note, c, *i18Strategy, requestedCount,
+            graphs.back().flatStatistics.secondMoment > 0.0
+                ? 1.0 / graphs.back().flatStatistics.secondMoment : 0.0));
     } else {
         EvalResult skipped;
         skipped.label = "Illustrious 18";
@@ -1047,8 +1126,12 @@ void runCase(const Case& c) {
     logger.fileStream() << "\n=== Full deviations strategy ===\n";
     logger.fileStream() << *fullDeviations;
     logger.fileStream() << "===============================\n";
-    results.push_back(evaluateCase("Full deviations", fullNote, c, *fullDeviations, fullDeviationCount));
-    graphs.push_back(measureEvCountGraph(c, "Full deviations", *fullDeviations, fullDeviationCount, evalRounds));
+    graphs.push_back(measureEvCountGraph(
+        c, "Full deviations", *fullDeviations, fullDeviationCount, evalRounds));
+    results.push_back(evaluateCase(
+        "Full deviations", fullNote, c, *fullDeviations, fullDeviationCount,
+        graphs.back().flatStatistics.secondMoment > 0.0
+            ? 1.0 / graphs.back().flatStatistics.secondMoment : 0.0));
 
     printResultsTable(results);
 
@@ -1059,6 +1142,24 @@ void runCase(const Case& c) {
     std::ofstream(logger.pathFor("ev_count_graph.svg")) << graphsToSvg(graphs);
     std::ofstream(logger.pathFor("count_histograms.json")) << std::setw(2) << histJson << "\n";
     std::ofstream(logger.pathFor("count_histograms.svg")) << histogramToSvg(histogramGraph);
+    std::vector<ConditionalSecondMomentCurve> secondMomentCurves;
+    secondMomentCurves.reserve(graphs.size());
+    for (const auto& graph : graphs)
+        secondMomentCurves.push_back(conditionalSecondMomentCurve(graph));
+    std::ofstream(logger.pathFor("second_moment_count_graph.json"))
+        << std::setw(2)
+        << conditionalSecondMomentCurvesToJson(secondMomentCurves) << "\n";
+    std::ofstream(logger.pathFor("second_moment_count_graph.svg"))
+        << conditionalSecondMomentCurvesToSvg(
+               "Conditional second moment by strategy", secondMomentCurves);
+    std::vector<KellyGrowthCurve> kellyCurves;
+    for (const auto& result : results) {
+        if (!result.kellyCurve.points.empty()) kellyCurves.push_back(result.kellyCurve);
+    }
+    std::ofstream(logger.pathFor("kelly_fraction_graph.json"))
+        << std::setw(2) << kellyGrowthCurvesToJson(kellyCurves) << "\n";
+    std::ofstream(logger.pathFor("kelly_fraction_graph.svg"))
+        << kellyGrowthCurvesToSvg("Kelly growth by strategy", kellyCurves);
 
     std::cout << "\nSaved artifacts:\n";
     std::cout << "  " << logger.pathFor("run.log").string() << "\n";
@@ -1066,6 +1167,10 @@ void runCase(const Case& c) {
     std::cout << "  " << logger.pathFor("ev_count_graph.svg").string() << "\n";
     std::cout << "  " << logger.pathFor("count_histograms.json").string() << "\n";
     std::cout << "  " << logger.pathFor("count_histograms.svg").string() << "\n";
+    std::cout << "  " << logger.pathFor("second_moment_count_graph.json").string() << "\n";
+    std::cout << "  " << logger.pathFor("second_moment_count_graph.svg").string() << "\n";
+    std::cout << "  " << logger.pathFor("kelly_fraction_graph.json").string() << "\n";
+    std::cout << "  " << logger.pathFor("kelly_fraction_graph.svg").string() << "\n";
 }
 
 void printHelp(const char* prog) {
@@ -1085,7 +1190,10 @@ void printHelp(const char* prog) {
     std::cout << "  --num-rounds <N>       Training rounds for fresh full deviations (default: 1000000000)\n";
     std::cout << "  --num-threads <N>      Threads (default: 16)\n";
     std::cout << "  --penetration <val>    Shoe penetration % (default: 75.0)\n";
-    std::cout << "  --kelly-measurements <N>  Kelly experiments of 1,000,000 rounds each (default: 100)\n\n";
+    std::cout << "  --kelly-measurements <N>  Experiments per Kelly fraction, 1,000,000 rounds each (default: 10)\n\n";
+    std::cout << "  --kelly-fraction-min <v>   Kelly multiplier sweep minimum (default: 0.65)\n";
+    std::cout << "  --kelly-fraction-max <v>   Kelly multiplier sweep maximum (default: 1.0)\n";
+    std::cout << "  --kelly-fraction-step <v>  Kelly multiplier sweep step (default: 0.05)\n\n";
 
     std::cout << "COUNT SPECIFICATION (pick one):\n";
     std::cout << "  --count <name>         none, hilo, ko, hiopt1, hiopt2, omega2, zen, halves\n";
@@ -1115,7 +1223,8 @@ void printHelp(const char* prog) {
     std::cout << "OUTPUT:\n";
     std::cout << "  --verbose                   Print the final full-deviations strategy table\n\n";
     std::cout << "  Logs and graph artifacts are saved under checkpoints/CompareCountStrategies/<run-name>/\n";
-    std::cout << "  Files include run.log, ev_count_graph.json/.svg, and count_histograms.json/.svg\n\n";
+    std::cout << "  Files include run.log, EV/count, unit-wager conditional second-moment,\n";
+    std::cout << "  histogram, and kelly_fraction_graph artifacts.\n\n";
 
     std::cout << "GAME CONFIG:\n";
     std::cout << "  --decks, --ss17, --das, --sas, --don, --rsa, --hsa, --peek, --surr, --bj\n";
@@ -1134,6 +1243,9 @@ int main(int argc, char** argv) {
         else if (arg == "--num-threads"      && i+1<argc) g_num_threads = std::stoi(argv[++i]);
         else if (arg == "--penetration"      && i+1<argc) g_penetration = std::stod(argv[++i]);
         else if (arg == "--kelly-measurements" && i+1<argc) g_kelly_measurements = std::stoi(argv[++i]);
+        else if (arg == "--kelly-fraction-min" && i+1<argc) g_kelly_fraction_min = std::stod(argv[++i]);
+        else if (arg == "--kelly-fraction-max" && i+1<argc) g_kelly_fraction_max = std::stod(argv[++i]);
+        else if (arg == "--kelly-fraction-step" && i+1<argc) g_kelly_fraction_step = std::stod(argv[++i]);
 
         else if (arg == "--count"            && i+1<argc) g_count_name = argv[++i];
         else if (arg == "--count-weights"    && i+1<argc) g_count_weights_str = argv[++i];
@@ -1198,6 +1310,13 @@ int main(int argc, char** argv) {
     }
     if (g_kelly_measurements < 1) {
         std::cerr << "Error: --kelly-measurements must be >= 1.\n";
+        return 1;
+    }
+    try {
+        (void)makeKellyFractionGrid(
+            g_kelly_fraction_min, g_kelly_fraction_max, g_kelly_fraction_step);
+    } catch (const std::invalid_argument& e) {
+        std::cerr << "Error: " << e.what() << ".\n";
         return 1;
     }
 

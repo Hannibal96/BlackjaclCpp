@@ -40,6 +40,7 @@ add_gtest(BasicStrategyTest ${CMAKE_CURRENT_SOURCE_DIR}/BasicStrategyTest.cpp)
 add_gtest(PerformanceBenchmark ${CMAKE_CURRENT_SOURCE_DIR}/PerformanceBenchmark.cpp)
 add_gtest(BlackjackBenchmark ${CMAKE_CURRENT_SOURCE_DIR}/BlackjackBenchmark.cpp)
 add_gtest(DebugShoeTest ${CMAKE_CURRENT_SOURCE_DIR}/DebugShoeTest.cpp)
+add_gtest(SimulationAnalysisTest ${CMAKE_CURRENT_SOURCE_DIR}/SimulationAnalysisTest.cpp)
 
 # Convenient meta-target to build all tests
 add_custom_target(tests ALL
@@ -51,6 +52,7 @@ add_custom_target(tests ALL
     PerformanceBenchmark
     BlackjackBenchmark
     DebugShoeTest
+    SimulationAnalysisTest
     BasicStrategyRegressionTest
     QLearningRegressionTest
 )

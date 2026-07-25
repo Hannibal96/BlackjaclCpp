@@ -22,6 +22,7 @@ BlackjackTable::BlackjackTable(const BlackjackRules& gameRules, std::vector<Play
       maxBet(gameRules.maxBet),
       round_number(0ULL)
 {
+    moneyBeforeScratch.resize(players.size());
     // Initialize player slots map
     for (auto* player : players) {
         playerSlots[player] = std::vector<Slot>();
@@ -35,19 +36,24 @@ void BlackjackTable::round() {
 
     // Capture pre-round state for regression tracking (after reset, before dealing).
     bool anyRoundTracking = false;
+    bool anyFeatureTracking = false;
     for (auto* p : players) {
-        if (p->isRegressionEnabled() || p->isCountGraphEnabled()) anyRoundTracking = true;
+        if (p->isRegressionEnabled() || p->isCountGraphEnabled()) {
+            anyRoundTracking = true;
+            anyFeatureTracking = true;
+        }
+        if (p->isRoundStatsEnabled()) anyRoundTracking = true;
     }
 
     std::array<int, 13> removedBefore{};
     double remainingDecksBefore = 0.0;
-    std::vector<double> moneyBefore;
     if (anyRoundTracking) {
-        removedBefore = shoe->getRemovedCards();
-        remainingDecksBefore = shoe->cardsRemaining() / 52.0;
-        moneyBefore.resize(players.size());
+        if (anyFeatureTracking) {
+            removedBefore = shoe->getRemovedCards();
+            remainingDecksBefore = shoe->cardsRemaining() / 52.0;
+        }
         for (size_t i = 0; i < players.size(); ++i)
-            moneyBefore[i] = players[i]->getMoney();
+            moneyBeforeScratch[i] = players[i]->getMoney();
     }
 
     clearHands();
@@ -99,13 +105,19 @@ void BlackjackTable::round() {
 
     // Update regression accumulators with this round's outcome
     if (anyRoundTracking) {
-        std::array<double, 13> x;
-        for (int i = 0; i < 13; ++i)
-            x[i] = (remainingDecksBefore > 0.0)
-                    ? static_cast<double>(removedBefore[i]) / remainingDecksBefore
-                    : 0.0;
-        for (size_t i = 0; i < players.size(); ++i)
-            players[i]->recordRound(x, players[i]->getMoney() - moneyBefore[i]);
+        std::array<double, 13> x{};
+        if (anyFeatureTracking) {
+            for (int i = 0; i < 13; ++i)
+                x[i] = (remainingDecksBefore > 0.0)
+                        ? static_cast<double>(removedBefore[i]) / remainingDecksBefore
+                        : 0.0;
+        }
+        for (size_t i = 0; i < players.size(); ++i) {
+            const double reward = players[i]->getMoney() - moneyBeforeScratch[i];
+            players[i]->recordRoundOutcome(reward);
+            if (players[i]->isRegressionEnabled() || players[i]->isCountGraphEnabled())
+                players[i]->recordRound(x, reward);
+        }
     }
 }
 

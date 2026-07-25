@@ -56,6 +56,13 @@ protected:
     double countGraphResolution = 0.25;
     std::map<int, CountGraphBinStats> countGraphBins;
 
+    // Optional global round-return moments. These remain absolute totals when
+    // thread-local players are combined, unlike bankroll/Q-table averages.
+    bool roundStatsEnabled = false;
+    uint64_t roundStatsCount = 0;
+    double roundRewardSum = 0.0;
+    double roundRewardSumSq = 0.0;
+
 public:
     // Constructor
     Player(double initialMoney, std::unique_ptr<Strategy> strat, std::string name = "Uzan");
@@ -131,6 +138,13 @@ public:
     }
     bool isCountGraphEnabled() const { return countGraphEnabled; }
     double getCountGraphResolution() const { return countGraphResolution; }
+
+    void enableRoundStats() { roundStatsEnabled = true; }
+    bool isRoundStatsEnabled() const { return roundStatsEnabled; }
+    void recordRoundOutcome(double reward);
+    uint64_t getRoundStatsCount() const { return roundStatsCount; }
+    double getRoundRewardSum() const { return roundRewardSum; }
+    double getRoundRewardSumSq() const { return roundRewardSumSq; }
 
     // Accumulate one round: x = pre-round normalized removed-cards, y = round net outcome
     void recordRound(const std::array<double, 13>& x, double y);

@@ -128,6 +128,13 @@ void Player::setNumDecks(int decks) {
     numDecks = decks;
 }
 
+void Player::recordRoundOutcome(double reward) {
+    if (!roundStatsEnabled) return;
+    ++roundStatsCount;
+    roundRewardSum += reward;
+    roundRewardSumSq += reward * reward;
+}
+
 void Player::recordRound(const std::array<double, 13>& x, double y) {
     if (countGraphEnabled) {
         double trueCount = 0.0;
@@ -186,6 +193,12 @@ Player& Player::operator+=(const Player& other) {
             dst.sumRewardSq += stats.sumRewardSq;
         }
     }
+    if (roundStatsEnabled || other.roundStatsEnabled) {
+        roundStatsEnabled = roundStatsEnabled || other.roundStatsEnabled;
+        roundStatsCount += other.roundStatsCount;
+        roundRewardSum += other.roundRewardSum;
+        roundRewardSumSq += other.roundRewardSumSq;
+    }
     return *this;
 }
 
@@ -197,7 +210,8 @@ Player& Player::operator*=(double factor) {
     if (strategy) {
         *strategy *= factor;
     }
-    // Do NOT scale XtX/Xty/regressionRounds/countGraphBins — they accumulate absolute totals, not per-thread averages.
+    // Do NOT scale regression/count-graph/round-stat totals: they accumulate
+    // absolute observations rather than per-thread averages.
     return *this;
 }
 
@@ -223,6 +237,10 @@ Player* Player::clone() const {
     p->countGraphEnabled = countGraphEnabled;
     p->countGraphResolution = countGraphResolution;
     p->countGraphBins = countGraphBins;
+    p->roundStatsEnabled = roundStatsEnabled;
+    p->roundStatsCount = roundStatsCount;
+    p->roundRewardSum = roundRewardSum;
+    p->roundRewardSumSq = roundRewardSumSq;
     if (bettingStrategy) p->bettingStrategy = std::unique_ptr<BettingStrategy>(bettingStrategy->clone());
     p->countFactor = countFactor;
     p->countBias   = countBias;

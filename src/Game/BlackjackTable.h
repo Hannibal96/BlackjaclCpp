@@ -30,6 +30,7 @@ private:
     // Game state
     Hand dealerHand;
     std::map<Player*, std::vector<Slot>> playerSlots;
+    std::vector<double> moneyBeforeScratch;
     
     // Helper methods
     void clearHands();
