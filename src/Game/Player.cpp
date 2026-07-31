@@ -93,11 +93,18 @@ void Player::setBettingStrategy(std::unique_ptr<BettingStrategy> bs) {
 }
 
 // Update the player's money with SARS parameters for learning strategies
-void Player::updateMoney(double reward, const State& state, Action action, const State& nextState) {
+void Player::updateMoney(double reward, const State& state, Action action,
+                         const State& nextState,
+                         double learningRewardDivisor,
+                         double nextValueMultiplier) {
+    if (learningRewardDivisor <= 0.0)
+        throw std::invalid_argument("Learning reward divisor must be positive");
+
     money += reward;
     logMoneyDirty = true;
-    strategy->updateTable(stateToKey(state), action, reward,
-                          stateToKey(nextState), nextState.allowedActions);
+    strategy->updateTable(
+        stateToKey(state), action, reward / learningRewardDivisor,
+        stateToKey(nextState), nextState.allowedActions, nextValueMultiplier);
 }
 
 void Player::resetPlayer(double m) {

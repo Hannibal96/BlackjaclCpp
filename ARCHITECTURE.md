@@ -16,6 +16,7 @@ BlackjaclCpp/
 ├── basic_strategy_tables/
 ├── checkpoints/
 │   ├── alternating-checkpoints/
+│   ├── double-down-madness-alternating-checkpoints/
 │   ├── checkpoints_QLearning/
 │   ├── checkpoints_ols/
 │   ├── CompareCountStrategies/
@@ -30,8 +31,8 @@ BlackjaclCpp/
 | `FindDeviations` | Train/resume Q-learning playing deviations | `checkpoints/checkpoints_QLearning/` |
 | `FindOptimalCount` | Fit OLS count weights | `checkpoints/checkpoints_ols/` |
 | `MeasureEdge` | Evaluate fixed strategy + betting model | `checkpoints/MeasureEdge/` |
-| `AlternatingOptimization` | Alternate between RL policy learning and OLS count learning | `checkpoints/alternating-checkpoints/` |
-| `CompareCountStrategies` | Compare basic / I18 / full deviations for one count | `checkpoints/CompareCountStrategies/` |
+| `AlternatingOptimization` | Unified blackjack/DDM RL and OLS pipeline selected by `--game` | Game-specific alternating checkpoint root |
+| `CompareCountStrategies` | Unified blackjack/DDM strategy comparison selected by `--game` | Game-specific comparison checkpoint root |
 
 ## Class / Type Hierarchy
 
@@ -50,11 +51,13 @@ BlackjaclCpp/
 |---|---|---|
 | `Rules` | `struct` | — |
 | `BlackjackRules` | `struct` | `Rules` |
+| `DoubleDownMadnessRules` | `struct` | `Rules` |
 | `Hand` | `class` | — |
 | `Slot` | `class` | — |
 | `Player` | `class` | — |
 | `Table` | `abstract class` | — |
 | `BlackjackTable` | `class` | `Table` |
+| `DoubleDownMadnessTable` | `class` | `Table` |
 
 ### `src/RL`
 
@@ -104,6 +107,17 @@ BlackjackTable::round()
 └── record round outcome for moments, regression, and graph bins
 ```
 
+`DoubleDownMadnessTable::round()` follows the same outer tracking skeleton but
+uses a one-card player start, a covered dealer hole card, repeated doubling,
+continued decisions after hitting an initial Ace, a one-card limit after
+doubling that Ace, immediate two-card blackjack settlement, and a push when the
+dealer busts with exactly 22.
+
+DDM Q-values are normalized to the wager entering each state. A hit carries
+`V(next)` forward, while a double that continues carries `2 * V(next)`. This is
+required because the strategy state intentionally excludes bankroll and wager
+size, while DDM permits repeated doubling.
+
 ## Learning / Analysis Data
 
 ### Q-learning checkpoints
@@ -136,6 +150,10 @@ BlackjackTable::round()
 - `W*_kelly_graph.json/svg`
 - `W*_kelly_graph_overlay.*` containing cumulative W1 through Wk curves
 
+The Double Down Madness optimizer writes the same artifact set beneath
+`checkpoints/double-down-madness-alternating-checkpoints/`; its metadata records
+the paytable version in addition to decks, H17/S17, and penetration.
+
 ### Compare artifacts
 
 - `run.log`
@@ -143,6 +161,10 @@ BlackjackTable::round()
 - `count_histograms.json/svg`
 - `second_moment_count_graph.json/svg` overlaying all compared policies
 - `kelly_fraction_graph.json/svg` overlaying all compared policies
+
+The DDM comparison app writes the same artifact families for known basic
+strategy and full deviations. A loaded alternating policy `Pk` is paired with
+`Wk` by default so both policies use the same count and betting model.
 
 ### Return moments and Kelly sweeps
 
@@ -175,9 +197,14 @@ fraction grid.
 ## Files To Read First
 
 - [src/Game/BlackjackTable.cpp](/home/neria/Desktop/BlackjaclCpp/src/Game/BlackjackTable.cpp)
+- [src/Game/DoubleDownMadnessTable.cpp](/home/neria/Desktop/BlackjaclCpp/src/Game/DoubleDownMadnessTable.cpp)
 - [src/Game/Player.cpp](/home/neria/Desktop/BlackjaclCpp/src/Game/Player.cpp)
 - [src/Game/BettingStrategy.h](/home/neria/Desktop/BlackjaclCpp/src/Game/BettingStrategy.h)
 - [src/RL/BasicStrategy.h](/home/neria/Desktop/BlackjaclCpp/src/RL/BasicStrategy.h)
 - [src/RL/QLearningStrategy.h](/home/neria/Desktop/BlackjaclCpp/src/RL/QLearningStrategy.h)
 - [apps/AlternatingOptimization.cpp](/home/neria/Desktop/BlackjaclCpp/apps/AlternatingOptimization.cpp)
+- [apps/BlackjackAlternatingOptimization.cpp](/home/neria/Desktop/BlackjaclCpp/apps/BlackjackAlternatingOptimization.cpp)
+- [apps/DoubleDownMadnessAlternatingOptimization.cpp](/home/neria/Desktop/BlackjaclCpp/apps/DoubleDownMadnessAlternatingOptimization.cpp)
 - [apps/CompareCountStrategies.cpp](/home/neria/Desktop/BlackjaclCpp/apps/CompareCountStrategies.cpp)
+- [apps/BlackjackCompareCountStrategies.cpp](/home/neria/Desktop/BlackjaclCpp/apps/BlackjackCompareCountStrategies.cpp)
+- [apps/DoubleDownMadnessCompareCountStrategies.cpp](/home/neria/Desktop/BlackjaclCpp/apps/DoubleDownMadnessCompareCountStrategies.cpp)

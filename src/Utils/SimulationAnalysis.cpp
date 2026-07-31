@@ -50,6 +50,31 @@ std::vector<double> makeKellyFractionGrid(double minimum, double maximum, double
     return values;
 }
 
+KellyFractionRange resolveKellyFractionRange(
+        double predictedOptimalFraction,
+        std::optional<double> minimumOverride,
+        std::optional<double> maximumOverride,
+        double step,
+        double radius) {
+    if (!std::isfinite(predictedOptimalFraction) || predictedOptimalFraction < 0.0 ||
+        !std::isfinite(step) || step <= 0.0 ||
+        !std::isfinite(radius) || radius < 0.0) {
+        throw std::invalid_argument(
+            "Kelly range center/radius must be non-negative and step must be positive");
+    }
+
+    const double snappedCenter =
+        std::round(predictedOptimalFraction / step) * step;
+    KellyFractionRange range;
+    range.minimum = minimumOverride.value_or(
+        std::max(0.0, snappedCenter - radius));
+    range.maximum = maximumOverride.value_or(snappedCenter + radius);
+
+    // Reuse grid validation so mixed dynamic/explicit endpoints fail consistently.
+    (void)makeKellyFractionGrid(range.minimum, range.maximum, 1.0);
+    return range;
+}
+
 nlohmann::json kellyGrowthCurvesToJson(const std::vector<KellyGrowthCurve>& curves) {
     nlohmann::json root;
     root["error_bar"] = "mean_plus_minus_sample_stddev";

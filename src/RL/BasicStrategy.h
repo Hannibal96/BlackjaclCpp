@@ -39,6 +39,9 @@ public:
 
     // Load strategy from a project-relative file path.
     bool loadFromFile(const std::string& filepath);
+
+    // Merge entries from a project-relative JSON file into the current table.
+    bool mergeFromFile(const std::string& filepath);
     
     // Get action based on state key and allowed actions (implements pure virtual from Strategy)
     Action getAction(const StateKey& key, const std::vector<Action>& allowedActions) override;

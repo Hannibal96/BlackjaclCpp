@@ -81,7 +81,10 @@ public:
     virtual double getBet(const std::array<int, 13>& removedCards);
 
     // Update the player's money with SARS parameters for learning strategies
-    void updateMoney(double reward, const State& state, Action action, const State& nextState);
+    void updateMoney(double reward, const State& state, Action action,
+                     const State& nextState,
+                     double learningRewardDivisor = 1.0,
+                     double nextValueMultiplier = 1.0);
 
     // Update money only — no Q-table update. Use when the player made no decision
     // (e.g. dealer blackjack resolved before player acts in a peek game).

@@ -60,6 +60,30 @@ TEST(SimulationAnalysisTest, RejectsInvalidKellyGrid) {
     EXPECT_THROW(makeKellyFractionGrid(0.5, 1.0, 0.0), std::invalid_argument);
 }
 
+TEST(SimulationAnalysisTest, SnapsDefaultKellyRangeCenterToStep) {
+    const KellyFractionRange range = resolveKellyFractionRange(0.73);
+    EXPECT_NEAR(range.minimum, 0.50, 1e-12);
+    EXPECT_NEAR(range.maximum, 1.00, 1e-12);
+}
+
+TEST(SimulationAnalysisTest, ClampsDefaultKellyRangeAtZero) {
+    const KellyFractionRange range = resolveKellyFractionRange(0.10);
+    EXPECT_DOUBLE_EQ(range.minimum, 0.0);
+    EXPECT_NEAR(range.maximum, 0.35, 1e-12);
+}
+
+TEST(SimulationAnalysisTest, AppliesKellyRangeEndpointOverridesIndependently) {
+    const KellyFractionRange minimumOverride =
+        resolveKellyFractionRange(0.74, 0.60, std::nullopt);
+    EXPECT_DOUBLE_EQ(minimumOverride.minimum, 0.60);
+    EXPECT_NEAR(minimumOverride.maximum, 1.00, 1e-12);
+
+    const KellyFractionRange maximumOverride =
+        resolveKellyFractionRange(0.74, std::nullopt, 0.90);
+    EXPECT_NEAR(maximumOverride.minimum, 0.50, 1e-12);
+    EXPECT_DOUBLE_EQ(maximumOverride.maximum, 0.90);
+}
+
 TEST(SimulationAnalysisTest, SelectsLargestEmpiricalGrowth) {
     KellyGrowthCurve curve;
     curve.points = {{0.75, 1.00001, 0.0}, {0.80, 1.00003, 0.0}, {0.85, 1.00002, 0.0}};

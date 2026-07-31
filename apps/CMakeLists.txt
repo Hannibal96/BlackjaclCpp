@@ -51,6 +51,9 @@ set_property(TARGET FindOptimalCount PROPERTY CXX_STANDARD 20)
 # AlternatingOptimization — alternate between RL policy learning and OLS count learning
 add_executable(AlternatingOptimization
     ${CMAKE_CURRENT_SOURCE_DIR}/AlternatingOptimization.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/GameAppDispatcher.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/BlackjackAlternatingOptimization.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/DoubleDownMadnessAlternatingOptimization.cpp
 )
 target_link_libraries(AlternatingOptimization
     PRIVATE
@@ -67,6 +70,9 @@ set_property(TARGET AlternatingOptimization PROPERTY CXX_STANDARD 20)
 # CompareCountStrategies — compare basic strategy, Illustrious 18, and full deviations for a count
 add_executable(CompareCountStrategies
     ${CMAKE_CURRENT_SOURCE_DIR}/CompareCountStrategies.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/GameAppDispatcher.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/BlackjackCompareCountStrategies.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/DoubleDownMadnessCompareCountStrategies.cpp
 )
 target_link_libraries(CompareCountStrategies
     PRIVATE

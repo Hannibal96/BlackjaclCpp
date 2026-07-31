@@ -55,4 +55,6 @@ add_custom_target(tests ALL
     SimulationAnalysisTest
     BasicStrategyRegressionTest
     QLearningRegressionTest
+    DoubleDownMadnessEdgeRegressionTest
+    DoubleDownMadnessQLearningRegressionTest
 )

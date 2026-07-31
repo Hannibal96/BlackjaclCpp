@@ -34,3 +34,30 @@ target_include_directories(QLearningRegressionTest
 )
 set_property(TARGET QLearningRegressionTest PROPERTY CXX_STANDARD 20)
 
+add_executable(DoubleDownMadnessEdgeRegressionTest
+    ${CMAKE_CURRENT_SOURCE_DIR}/DoubleDownMadnessEdgeRegressionTest.cpp
+)
+target_link_libraries(DoubleDownMadnessEdgeRegressionTest
+    PRIVATE
+        $<TARGET_OBJECTS:blackjack_objs>
+)
+target_include_directories(DoubleDownMadnessEdgeRegressionTest
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+)
+set_property(TARGET DoubleDownMadnessEdgeRegressionTest PROPERTY CXX_STANDARD 20)
+
+add_executable(DoubleDownMadnessQLearningRegressionTest
+    ${CMAKE_CURRENT_SOURCE_DIR}/DoubleDownMadnessQLearningRegressionTest.cpp
+)
+target_link_libraries(DoubleDownMadnessQLearningRegressionTest
+    PRIVATE
+        $<TARGET_OBJECTS:blackjack_objs>
+)
+target_include_directories(DoubleDownMadnessQLearningRegressionTest
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+)
+set_property(TARGET DoubleDownMadnessQLearningRegressionTest PROPERTY CXX_STANDARD 20)
