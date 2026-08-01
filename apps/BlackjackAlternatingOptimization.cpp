@@ -35,16 +35,21 @@ namespace {
 constexpr std::array<double, 13> ZERO_WEIGHTS = {};
 constexpr double kEps = 1e-12;
 constexpr const char* kAlternatingCheckpointRoot = "checkpoints/alternating-checkpoints";
-constexpr double kLearnedCountFactorMultiplier = 180.0;
+constexpr double kTargetTenValueTag = -1.0;
 constexpr double kKellyInitialMoney = 1.0;
 constexpr double kKellyFraction = 1.0;
 constexpr uint64_t kKellyMeasurementRounds = 1'000'000ULL;
 enum class TrainingStopMode { FIXED_ROUNDS, TABLE_DIFF };
-enum class CountRegressionMode {
+enum class CountRegressionObjective {
     CLASSICAL_OLS,
+    QUADRATIC_KELLY
+};
+enum class CountRegressionConstraint {
+    NONE,
     SUM_ZERO,
     SUM_ZERO_FIXED_W1_BIAS,
-    SUM_ZERO_FIXED_P0_FLAT_EDGE
+    SUM_ZERO_FIXED_P0_FLAT_EDGE,
+    FIXED_ZERO_BIAS
 };
 
 struct AgentConfig {
@@ -105,7 +110,9 @@ struct CountArtifact {
     double threshold = 0.0;
     double normalizationScale = 1.0;
     double referenceFlatEdge = 0.0;
-    CountRegressionMode regressionMode = CountRegressionMode::SUM_ZERO_FIXED_W1_BIAS;
+    CountRegressionObjective regressionObjective = CountRegressionObjective::CLASSICAL_OLS;
+    CountRegressionConstraint regressionConstraint =
+        CountRegressionConstraint::SUM_ZERO_FIXED_W1_BIAS;
     std::optional<double> forcedBias;
 };
 
@@ -129,6 +136,7 @@ struct EvCountGraphArtifact {
     double resolution = 0.25;
     uint64_t rounds = 0;
     double handsPerSec = 0.0;
+    bool hasEvRegressionLine = true;
     double minCount = 0.0;
     double maxCount = 0.0;
     std::vector<EvCountGraphPoint> points;
@@ -161,7 +169,10 @@ uint64_t    g_sample_every        = 1;
 uint64_t    g_sample_rounds       = 100'000'000ULL;
 double      g_diff_threshold      = 0.001;
 TrainingStopMode g_training_stop_mode = TrainingStopMode::FIXED_ROUNDS;
-CountRegressionMode g_count_regression_mode = CountRegressionMode::SUM_ZERO_FIXED_W1_BIAS;
+CountRegressionObjective g_count_regression_objective =
+    CountRegressionObjective::CLASSICAL_OLS;
+CountRegressionConstraint g_count_regression_constraint =
+    CountRegressionConstraint::SUM_ZERO_FIXED_W1_BIAS;
 int         g_kelly_measurements  = 10;
 std::optional<double> g_kelly_fraction_min;
 std::optional<double> g_kelly_fraction_max;
@@ -186,23 +197,40 @@ std::vector<float>       g_blackjack_pay      = {1.5f};
 
 AgentConfig g_agent;
 
-const char* countRegressionModeToString(CountRegressionMode mode) {
-    switch (mode) {
-        case CountRegressionMode::CLASSICAL_OLS: return "classical_ols";
-        case CountRegressionMode::SUM_ZERO: return "sum_zero";
-        case CountRegressionMode::SUM_ZERO_FIXED_W1_BIAS: return "sum_zero_fixed_w1_bias";
-        case CountRegressionMode::SUM_ZERO_FIXED_P0_FLAT_EDGE:
+const char* countRegressionObjectiveToString(CountRegressionObjective objective) {
+    switch (objective) {
+        case CountRegressionObjective::CLASSICAL_OLS: return "classical_ols";
+        case CountRegressionObjective::QUADRATIC_KELLY: return "quadratic_kelly";
+    }
+    return "classical_ols";
+}
+
+const char* countRegressionConstraintToString(CountRegressionConstraint constraint) {
+    switch (constraint) {
+        case CountRegressionConstraint::NONE: return "none";
+        case CountRegressionConstraint::SUM_ZERO: return "sum_zero";
+        case CountRegressionConstraint::SUM_ZERO_FIXED_W1_BIAS:
+            return "sum_zero_fixed_w1_bias";
+        case CountRegressionConstraint::SUM_ZERO_FIXED_P0_FLAT_EDGE:
             return "sum_zero_fixed_p0_flat_edge";
+        case CountRegressionConstraint::FIXED_ZERO_BIAS: return "fixed_zero_bias";
     }
     return "sum_zero_fixed_w1_bias";
 }
 
-CountRegressionMode stringToCountRegressionMode(const std::string& mode) {
-    if (mode == "classical_ols") return CountRegressionMode::CLASSICAL_OLS;
-    if (mode == "sum_zero") return CountRegressionMode::SUM_ZERO;
-    if (mode == "sum_zero_fixed_p0_flat_edge")
-        return CountRegressionMode::SUM_ZERO_FIXED_P0_FLAT_EDGE;
-    return CountRegressionMode::SUM_ZERO_FIXED_W1_BIAS;
+CountRegressionObjective stringToCountRegressionObjective(const std::string& value) {
+    return value == "quadratic_kelly"
+        ? CountRegressionObjective::QUADRATIC_KELLY
+        : CountRegressionObjective::CLASSICAL_OLS;
+}
+
+CountRegressionConstraint stringToCountRegressionConstraint(const std::string& value) {
+    if (value == "none") return CountRegressionConstraint::NONE;
+    if (value == "sum_zero") return CountRegressionConstraint::SUM_ZERO;
+    if (value == "sum_zero_fixed_p0_flat_edge")
+        return CountRegressionConstraint::SUM_ZERO_FIXED_P0_FLAT_EDGE;
+    if (value == "fixed_zero_bias") return CountRegressionConstraint::FIXED_ZERO_BIAS;
+    return CountRegressionConstraint::SUM_ZERO_FIXED_W1_BIAS;
 }
 
 std::string currentTimestamp() {
@@ -210,6 +238,15 @@ std::string currentTimestamp() {
     char buf[20];
     strftime(buf, sizeof(buf), "%Y%m%d_%H%M%S", localtime(&t));
     return buf;
+}
+
+std::string checkpointTableName(const Case& c) {
+    // Strategy-table lookup caps large shoes at four decks. Checkpoint identity
+    // must retain the actual simulation deck count so research runs cannot mix.
+    std::string name = ToStringTableName(c);
+    const size_t firstSeparator = name.find('_');
+    return "decks=" + std::to_string(c.deckSize) +
+        (firstSeparator == std::string::npos ? std::string{} : name.substr(firstSeparator));
 }
 
 std::string doubleOnToString(DoubleDownOn d) {
@@ -248,16 +285,23 @@ std::string buildRunHeader(const Case& c, const std::string& folder, uint64_t ev
        << g_num_rounds << " recorded samples)\n";
     os << "Eval rounds:   " << evalRounds << "\n";
     os << "Iterations:    " << g_iterations << "  (each iteration learns P_k then W_{k+1})\n";
-    os << "Count OLS:     " << countRegressionModeToString(g_count_regression_mode) << "\n";
+    os << "Count objective: "
+       << countRegressionObjectiveToString(g_count_regression_objective) << "\n";
+    os << "Count constraint: "
+       << countRegressionConstraintToString(g_count_regression_constraint) << "\n";
     os << "Penetration:   " << g_penetration << "%\n";
     os << "Sample-every:  " << g_sample_every << "\n";
-    os << "Kelly sweep:  centered at nearest step to 1/E[X^2] +/- 0.25 (minimum 0)";
+    os << "Kelly sweep:  centered at "
+       << (g_count_regression_objective == CountRegressionObjective::QUADRATIC_KELLY
+               ? "fitted-signal multiplier 1.0"
+               : "nearest step to 1/E[X^2]")
+       << " +/- 0.25 (minimum 0)";
     if (g_kelly_fraction_min) os << "  min override=" << *g_kelly_fraction_min;
     if (g_kelly_fraction_max) os << "  max override=" << *g_kelly_fraction_max;
     os << "  step " << g_kelly_fraction_step << "\n";
     os << "Folder:        " << kAlternatingCheckpointRoot << "/" << folder << "/\n";
     os << "Initial count: none (all zeros)\n";
-    os << "Count factor x:" << kLearnedCountFactorMultiplier << "\n";
+    os << "Count scaling:  average 10/J/Q/K tag = " << kTargetTenValueTag << "\n";
     os << "===============================\n";
     return os.str();
 }
@@ -288,7 +332,9 @@ json buildMetaJson(const Case& c) {
     meta["algorithm_config"]["policy_sample_rounds"] = g_sample_rounds;
     meta["algorithm_config"]["policy_diff_threshold"] = g_diff_threshold;
     meta["algorithm_config"]["kelly_fraction_range_mode"] =
-        "rounded_predicted_1_over_ex2_plus_minus_0.25";
+        g_count_regression_objective == CountRegressionObjective::QUADRATIC_KELLY
+            ? "direct_fraction_multiplier_one_plus_minus_0.25"
+            : "rounded_predicted_1_over_ex2_plus_minus_0.25";
     meta["algorithm_config"]["kelly_fraction_min"] = g_kelly_fraction_min
         ? json(*g_kelly_fraction_min) : json(nullptr);
     meta["algorithm_config"]["kelly_fraction_max"] = g_kelly_fraction_max
@@ -298,9 +344,12 @@ json buildMetaJson(const Case& c) {
     meta["algorithm_config"]["initial_count"]["weights"] = ZERO_WEIGHTS;
     meta["algorithm_config"]["initial_count"]["factor"]  = 1.0;
     meta["algorithm_config"]["initial_count"]["bias"]    = 0.0;
-    meta["algorithm_config"]["learned_count_factor_multiplier"] = kLearnedCountFactorMultiplier;
-    meta["algorithm_config"]["count_regression_mode"] =
-        countRegressionModeToString(g_count_regression_mode);
+    meta["algorithm_config"]["learned_count_normalization"] = "ten_value_average";
+    meta["algorithm_config"]["learned_count_target_ten_value_tag"] = kTargetTenValueTag;
+    meta["algorithm_config"]["count_regression_objective"] =
+        countRegressionObjectiveToString(g_count_regression_objective);
+    meta["algorithm_config"]["count_regression_constraint"] =
+        countRegressionConstraintToString(g_count_regression_constraint);
     meta["algorithm_config"]["initial_count"]["resolution"] = g_agent.countResolution;
     meta["algorithm_config"]["initial_count"]["min_count"]  = g_agent.minCount;
     meta["algorithm_config"]["initial_count"]["max_count"]  = g_agent.maxCount;
@@ -469,13 +518,14 @@ KellyGrowthCurve evaluateKellyGrowthCurve(const std::string& label,
     return curve;
 }
 
-// The three regression modes use only A = X'X and d = X'Y. X has 13 rank
-// columns Z and a final all-ones intercept column.
-//
-// Classical OLS:
-//   min ||X theta - Y||^2
-//   theta = (X'X)^-1 X'Y.
-std::array<double, 14> solveClassicalOLS(
+// Let theta=[w,b], with 13 rank weights w and intercept b. Both objectives are
+// quadratic forms 0.5 theta' A theta - d' theta, represented by the same
+// streaming arrays:
+//   OLS:             A=E[cc'],       d=E[Xc]
+//   Quadratic Kelly: A=E[X^2 cc'],   d=E[Xc]
+// The latter follows log(1+theta'c X) ~= theta'c X - 0.5(theta'c X)^2.
+// Without constraints, either objective solves A theta=d.
+std::array<double, 14> solveUnconstrainedNormalEquation(
         const std::array<std::array<double, 14>, 14>& A,
         const std::array<double, 14>& d) {
     std::array<std::array<double, 15>, 14> M{};
@@ -493,7 +543,7 @@ std::array<double, 14> solveClassicalOLS(
 
         double diag = M[col][col];
         if (std::abs(diag) < 1e-15)
-            throw std::runtime_error("Singular classical OLS normal-equation system");
+            throw std::runtime_error("Singular unconstrained normal-equation system");
 
         for (int j = col; j <= 14; ++j) M[col][j] /= diag;
         for (int row = 0; row < 14; ++row) {
@@ -509,11 +559,9 @@ std::array<double, 14> solveClassicalOLS(
     return result;
 }
 
-// Zero-sum OLS with a free bias:
-//   min ||X theta - Y||^2  subject to c' theta = 0,
-// where c = [1,...,1,0] excludes the bias. Its KKT solution is
-//   [X'X c; c' 0] [theta; lambda] = [X'Y; 0].
-std::array<double, 14> solveSumZeroOLS(
+// For either objective, sum-zero with free bias adds q'theta=0 where
+// q=[1,...,1,0]. The KKT system is [A q; q' 0][theta;lambda]=[d;0].
+std::array<double, 14> solveSumZeroNormalEquation(
         const std::array<std::array<double, 14>, 14>& A,
         const std::array<double, 14>& b) {
     // Solve the KKT system [X'X c; c' 0][w; lambda] = [X'y; 0].
@@ -535,7 +583,7 @@ std::array<double, 14> solveSumZeroOLS(
 
         double diag = M[col][col];
         if (std::abs(diag) < 1e-15)
-            throw std::runtime_error("Singular constrained OLS KKT system — not enough variation in the data");
+            throw std::runtime_error("Singular sum-zero KKT system - not enough variation in the data");
 
         for (int j = col; j <= 15; ++j) M[col][j] /= diag;
         for (int row = 0; row < 15; ++row) {
@@ -551,14 +599,10 @@ std::array<double, 14> solveSumZeroOLS(
     return w;
 }
 
-// Zero-sum OLS with fixed bias b, supplied either by W1 or P0's flat edge:
-//   min ||Z w - (Y - 1 b)||^2  subject to 1'w = 0.
-// The adjusted right side is Z'(Y - 1b) = Z'Y - b Z'1. Both terms are in
-// the existing sufficient statistics: Z'Y = X'Y[0:13] and
-// Z'1 = X'X[0:13,13]. With A = Z'Z and d = Z'(Y - 1b), solve
-//   [A 1; 1' 0] [w; lambda] = [d; 0].
-// The KKT system therefore remains streaming-friendly.
-std::array<double, 14> solveSumZeroFixedBiasOLS(
+// Fixing b to b0 reduces either objective to the rank-weight system with
+// adjusted right side d_w-A_wb*b0. Adding 1'w=0 gives
+// [A_ww 1; 1' 0][w;lambda]=[d_w-A_wb*b0;0]. This uses only streamed A,d.
+std::array<double, 14> solveSumZeroFixedBiasNormalEquation(
         const std::array<std::array<double, 14>, 14>& XtX,
         const std::array<double, 14>& Xty,
         double fixedBias) {
@@ -582,7 +626,7 @@ std::array<double, 14> solveSumZeroFixedBiasOLS(
 
         double diag = M[col][col];
         if (std::abs(diag) < 1e-15)
-            throw std::runtime_error("Singular fixed-bias constrained OLS KKT system");
+            throw std::runtime_error("Singular fixed-bias sum-zero KKT system");
 
         for (int j = col; j <= 14; ++j) M[col][j] /= diag;
         for (int row = 0; row < 14; ++row) {
@@ -603,8 +647,11 @@ CountArtifact normalizeCount(const std::array<double, 14>& raw) {
     CountArtifact artifact;
     artifact.rawSolution = raw;
 
+    const double normalizationScale =
+        learnedCountNormalizationScale(raw, kTargetTenValueTag);
+
     for (int i = 0; i < 13; ++i) {
-        artifact.rawNormalizedWeights[i] = raw[i] * kLearnedCountFactorMultiplier;
+        artifact.rawNormalizedWeights[i] = raw[i] * normalizationScale;
         artifact.count.system.weights[i] = artifact.rawNormalizedWeights[i];
     }
 
@@ -618,12 +665,14 @@ CountArtifact normalizeCount(const std::array<double, 14>& raw) {
     artifact.count.system.weights[10] = tenValueAverage;
     artifact.count.system.weights[11] = tenValueAverage;
 
-    artifact.count.system.factor = 1.0 / kLearnedCountFactorMultiplier;
+    artifact.count.system.factor = 1.0 / normalizationScale;
     artifact.count.system.bias   = raw[13];
+    artifact.count.system.continuousBettingCount =
+        g_count_regression_objective == CountRegressionObjective::QUADRATIC_KELLY;
     artifact.count.resolution    = g_agent.countResolution;
     artifact.count.minCount      = g_agent.minCount;
     artifact.count.maxCount      = g_agent.maxCount;
-    artifact.normalizationScale  = kLearnedCountFactorMultiplier;
+    artifact.normalizationScale  = normalizationScale;
 
     return artifact;
 }
@@ -631,7 +680,10 @@ CountArtifact normalizeCount(const std::array<double, 14>& raw) {
 double spreadThresholdFromCount(const CountConfig& count) {
     if (std::abs(count.system.factor) < kEps)
         return std::numeric_limits<double>::infinity();
-    return -count.system.bias / count.system.factor;
+    const double threshold = -count.system.bias / count.system.factor;
+    return count.system.continuousBettingCount
+        ? std::nextafter(threshold, std::numeric_limits<double>::infinity())
+        : threshold;
 }
 
 json countConfigToJson(const CountConfig& count, bool roundWeights = true) {
@@ -642,6 +694,7 @@ json countConfigToJson(const CountConfig& count, bool roundWeights = true) {
     j["weights"] = weights;
     j["factor"] = count.system.factor;
     j["bias"] = count.system.bias;
+    j["continuous_betting_count"] = count.system.continuousBettingCount;
     j["resolution"] = count.resolution;
     j["min_count"] = count.minCount;
     j["max_count"] = count.maxCount;
@@ -653,6 +706,7 @@ json evCountGraphToJson(const EvCountGraphArtifact& graph) {
     j["resolution"] = graph.resolution;
     j["rounds"] = graph.rounds;
     j["hands_per_sec"] = graph.handsPerSec;
+    j["has_ev_regression_line"] = graph.hasEvRegressionLine;
     j["min_count"] = graph.minCount;
     j["max_count"] = graph.maxCount;
     j["points"] = json::array();
@@ -672,7 +726,12 @@ json evCountGraphToJson(const EvCountGraphArtifact& graph) {
             row["confidence_lower"] = nullptr;
             row["confidence_upper"] = nullptr;
         }
-        row["regression_reward"] = p.regressionReward;
+        if (graph.hasEvRegressionLine) {
+            row["regression_reward"] = p.regressionReward;
+        } else {
+            row["regression_reward"] = nullptr;
+            row["fitted_bet_fraction"] = p.regressionReward;
+        }
         j["points"].push_back(row);
     }
     return j;
@@ -698,6 +757,7 @@ EvCountGraphArtifact evCountGraphFromJson(const json& j) {
     graph.resolution = j.value("resolution", 0.25);
     graph.rounds = j.value("rounds", 0ULL);
     graph.handsPerSec = j.value("hands_per_sec", 0.0);
+    graph.hasEvRegressionLine = j.value("has_ev_regression_line", true);
     graph.minCount = j.value("min_count", 0.0);
     graph.maxCount = j.value("max_count", 0.0);
     for (const auto& row : j.at("points")) {
@@ -724,7 +784,10 @@ EvCountGraphArtifact evCountGraphFromJson(const json& j) {
             point.confidenceUpper = row.at("confidence_upper").get<double>();
         else
             point.confidenceUpper = point.meanReward;
-        point.regressionReward = row.value("regression_reward", 0.0);
+        if (row.contains("regression_reward") && row.at("regression_reward").is_number())
+            point.regressionReward = row.at("regression_reward").get<double>();
+        else
+            point.regressionReward = row.value("fitted_bet_fraction", 0.0);
         graph.points.push_back(point);
     }
     return graph;
@@ -784,8 +847,10 @@ std::string evCountGraphToSvg(const std::string& label,
     double minY = std::numeric_limits<double>::infinity();
     double maxY = -std::numeric_limits<double>::infinity();
     for (const auto& p : graph.points) {
-        minY = std::min(minY, p.regressionReward);
-        maxY = std::max(maxY, p.regressionReward);
+        if (graph.hasEvRegressionLine) {
+            minY = std::min(minY, p.regressionReward);
+            maxY = std::max(maxY, p.regressionReward);
+        }
         if (p.n > 0) {
             minY = std::min(minY, p.confidenceLower);
             maxY = std::max(maxY, p.confidenceUpper);
@@ -819,10 +884,12 @@ std::string evCountGraphToSvg(const std::string& label,
     bool regressionStarted = false;
     for (const auto& p : graph.points) {
         const double x = mapX(p.count);
-        const double regressionY = mapY(p.regressionReward);
-        regressionPath << (regressionStarted ? " L " : "M ")
-                       << x << " " << regressionY;
-        regressionStarted = true;
+        if (graph.hasEvRegressionLine) {
+            const double regressionY = mapY(p.regressionReward);
+            regressionPath << (regressionStarted ? " L " : "M ")
+                           << x << " " << regressionY;
+            regressionStarted = true;
+        }
 
         if (p.n > 0) {
             const double empiricalY = mapY(p.meanReward);
@@ -952,9 +1019,11 @@ std::string evCountGraphToSvg(const std::string& label,
     svg << "<text x=\"" << (width - 170) << "\" y=\"24\" font-family=\"sans-serif\" font-size=\"12\">Empirical EV</text>\n";
     svg << "<rect x=\"" << (width - 220) << "\" y=\"31\" width=\"40\" height=\"10\" fill=\"#1f77b4\" fill-opacity=\"0.28\"/>\n";
     svg << "<text x=\"" << (width - 170) << "\" y=\"40\" font-family=\"sans-serif\" font-size=\"12\">95% confidence band</text>\n";
-    svg << "<line x1=\"" << (width - 220) << "\" y1=\"56\" x2=\"" << (width - 180)
-        << "\" y2=\"56\" stroke=\"#d62728\" stroke-width=\"2\"/>\n";
-    svg << "<text x=\"" << (width - 170) << "\" y=\"60\" font-family=\"sans-serif\" font-size=\"12\">Regression line</text>\n";
+    if (graph.hasEvRegressionLine) {
+        svg << "<line x1=\"" << (width - 220) << "\" y1=\"56\" x2=\"" << (width - 180)
+            << "\" y2=\"56\" stroke=\"#d62728\" stroke-width=\"2\"/>\n";
+        svg << "<text x=\"" << (width - 170) << "\" y=\"60\" font-family=\"sans-serif\" font-size=\"12\">Regression line</text>\n";
+    }
     svg << "</svg>\n";
     return svg.str();
 }
@@ -978,8 +1047,10 @@ std::string evCountOverlaySvg(const std::string& label,
         minX = std::min(minX, named.graph.minCount);
         maxX = std::max(maxX, named.graph.maxCount);
         for (const auto& p : named.graph.points) {
-            minY = std::min(minY, p.regressionReward);
-            maxY = std::max(maxY, p.regressionReward);
+            if (named.graph.hasEvRegressionLine) {
+                minY = std::min(minY, p.regressionReward);
+                maxY = std::max(maxY, p.regressionReward);
+            }
             if (p.n > 0) {
                 minY = std::min(minY, p.meanReward);
                 maxY = std::max(maxY, p.meanReward);
@@ -1082,9 +1153,11 @@ std::string evCountOverlaySvg(const std::string& label,
         bool regressionStarted = false;
         for (const auto& p : named.graph.points) {
             const double x = mapX(p.count);
-            regressionPath << (regressionStarted ? " L " : "M ")
-                           << x << " " << mapY(p.regressionReward);
-            regressionStarted = true;
+            if (named.graph.hasEvRegressionLine) {
+                regressionPath << (regressionStarted ? " L " : "M ")
+                               << x << " " << mapY(p.regressionReward);
+                regressionStarted = true;
+            }
             if (p.n > 0) {
                 empiricalPath << (empiricalStarted ? " L " : "M ")
                               << x << " " << mapY(p.meanReward);
@@ -1226,6 +1299,8 @@ CountConfig countConfigFromJson(const json& j) {
         count.system.weights[i] = j.at("weights").at(i).get<double>();
     count.system.factor = j.value("factor", 1.0);
     count.system.bias = j.value("bias", 0.0);
+    count.system.continuousBettingCount =
+        j.value("continuous_betting_count", false);
     count.resolution = j.value("resolution", 1.0);
     count.minCount = j.value("min_count", -5);
     count.maxCount = j.value("max_count", 5);
@@ -1420,19 +1495,34 @@ Case loadCheckpointFolder(const std::string& folder) {
         (void)makeKellyFractionGrid(
             *g_kelly_fraction_min, *g_kelly_fraction_max, g_kelly_fraction_step);
     }
-    if (a.contains("count_regression_mode")) {
-        g_count_regression_mode =
-            stringToCountRegressionMode(a.at("count_regression_mode").get<std::string>());
+    if (a.contains("count_regression_objective")) {
+        g_count_regression_objective = stringToCountRegressionObjective(
+            a.at("count_regression_objective").get<std::string>());
+        g_count_regression_constraint = stringToCountRegressionConstraint(
+            a.value("count_regression_constraint", "sum_zero_fixed_w1_bias"));
+    } else if (a.contains("count_regression_mode")) {
+        const std::string legacyMode = a.at("count_regression_mode").get<std::string>();
+        if (legacyMode == "quadratic_kelly") {
+            g_count_regression_objective = CountRegressionObjective::QUADRATIC_KELLY;
+            g_count_regression_constraint = CountRegressionConstraint::NONE;
+        } else {
+            g_count_regression_objective = CountRegressionObjective::CLASSICAL_OLS;
+            g_count_regression_constraint =
+                stringToCountRegressionConstraint(legacyMode == "classical_ols"
+                    ? "none" : legacyMode);
+        }
     } else {
         const std::string legacyConstraint =
             a.value("count_regression_constraint", std::string{});
         if (legacyConstraint.find("W2+") != std::string::npos) {
-            g_count_regression_mode = CountRegressionMode::SUM_ZERO_FIXED_W1_BIAS;
+            g_count_regression_constraint =
+                CountRegressionConstraint::SUM_ZERO_FIXED_W1_BIAS;
         } else if (legacyConstraint.find("sum") != std::string::npos) {
-            g_count_regression_mode = CountRegressionMode::SUM_ZERO;
+            g_count_regression_constraint = CountRegressionConstraint::SUM_ZERO;
         } else {
-            g_count_regression_mode = CountRegressionMode::CLASSICAL_OLS;
+            g_count_regression_constraint = CountRegressionConstraint::NONE;
         }
+        g_count_regression_objective = CountRegressionObjective::CLASSICAL_OLS;
     }
 
     auto& rl = meta.at("rl");
@@ -1458,7 +1548,10 @@ Case loadCheckpointFolder(const std::string& folder) {
     std::cout << "Train rounds:  " << g_num_rounds << "  Threads: " << g_num_threads << "\n";
     std::cout << "Eval rounds:   " << g_eval_rounds << "\n";
     std::cout << "Iterations:    " << g_iterations << "\n";
-    std::cout << "Count OLS:     " << countRegressionModeToString(g_count_regression_mode) << "\n";
+    std::cout << "Count objective: "
+              << countRegressionObjectiveToString(g_count_regression_objective) << "\n";
+    std::cout << "Count constraint: "
+              << countRegressionConstraintToString(g_count_regression_constraint) << "\n";
     std::cout << "Penetration:   " << g_penetration << "%\n";
     std::cout << "Sample-every:  " << g_sample_every << "\n";
     std::cout << "Policy stop:   " << stopModeToString(g_training_stop_mode);
@@ -1538,15 +1631,28 @@ void saveCountArtifact(const std::string& folder,
     summary["evaluation_kelly_growth"] = artifact.evaluationKellyGrowth;
     summary["evaluation_kelly_growth_stddev"] = artifact.evaluationKellyGrowthStddev;
     summary["evaluation_kelly_fraction"] = artifact.evaluationKellyFraction;
-    summary["predicted_kelly_fraction_1_over_ex2"] =
-        artifact.kellyCurve.predictedOptimalFraction;
+    summary["kelly_sweep_center"] = artifact.kellyCurve.predictedOptimalFraction;
+    if (artifact.regressionObjective != CountRegressionObjective::QUADRATIC_KELLY) {
+        summary["predicted_kelly_fraction_1_over_ex2"] =
+            artifact.kellyCurve.predictedOptimalFraction;
+    }
     summary["normalization_scale"] = artifact.normalizationScale;
-    summary["learned_count_factor_multiplier"] = kLearnedCountFactorMultiplier;
-    summary["regression_mode"] = countRegressionModeToString(artifact.regressionMode);
+    summary["learned_count_target_ten_value_tag"] = kTargetTenValueTag;
+    summary["regression_objective_type"] =
+        countRegressionObjectiveToString(artifact.regressionObjective);
+    summary["regression_mode"] =
+        countRegressionObjectiveToString(artifact.regressionObjective);
+    summary["regression_constraint"] =
+        countRegressionConstraintToString(artifact.regressionConstraint);
+    summary["regression_objective"] =
+        artifact.regressionObjective == CountRegressionObjective::QUADRATIC_KELLY
+            ? "maximize_second_order_expected_log_growth"
+            : "minimize_expected_squared_error";
     std::string biasConstraint = "free";
     if (artifact.forcedBias.has_value()) {
         biasConstraint =
-            artifact.regressionMode == CountRegressionMode::SUM_ZERO_FIXED_P0_FLAT_EDGE
+            artifact.regressionConstraint ==
+                    CountRegressionConstraint::SUM_ZERO_FIXED_P0_FLAT_EDGE
                 ? "fixed_to_P0_flat_edge"
                 : "fixed_to_W1_bias";
     }
@@ -1568,6 +1674,13 @@ void saveCountArtifact(const std::string& folder,
         data["XtX"].push_back(row);
     }
     data["Xty"] = artifact.Xty;
+    data["regression_objective"] =
+        artifact.regressionObjective == CountRegressionObjective::QUADRATIC_KELLY
+            ? "quadratic_kelly"
+            : "expected_value_ols";
+    data["regression_constraint"] =
+        countRegressionConstraintToString(artifact.regressionConstraint);
+    data["bias_constraint"] = biasConstraint;
     data["recorded_rounds"] = artifact.recordedRounds;
     std::ofstream df(root / (label + "_data.json"));
     if (df.is_open()) df << data.dump(2);
@@ -1801,7 +1914,10 @@ CountArtifact learnCount(const Case& c,
     player->setCountSystem(strategyCount.system);
     player->setCountResolution(strategyCount.resolution);
     player->setCountRange(strategyCount.minCount, strategyCount.maxCount);
-    player->enableRegression();
+    player->enableRegression(
+        g_count_regression_objective == CountRegressionObjective::QUADRATIC_KELLY
+            ? RegressionObjective::QUADRATIC_KELLY
+            : RegressionObjective::EXPECTED_VALUE_OLS);
     player->setRegressionSampleEvery(g_sample_every);
 
     BlackjackRules rules = buildRules(c, 1.0, 1.0);
@@ -1816,22 +1932,33 @@ CountArtifact learnCount(const Case& c,
 
     Player* result = results[0];
     std::array<double, 14> rawSolution{};
-    switch (g_count_regression_mode) {
-        case CountRegressionMode::CLASSICAL_OLS:
-            rawSolution = solveClassicalOLS(result->getXtX(), result->getXty());
+    switch (g_count_regression_constraint) {
+        case CountRegressionConstraint::NONE:
+            rawSolution =
+                g_count_regression_objective == CountRegressionObjective::QUADRATIC_KELLY
+                    ? solveQuadraticKellyRegression(result->getXtX(), result->getXty())
+                    : solveUnconstrainedNormalEquation(
+                          result->getXtX(), result->getXty());
             break;
-        case CountRegressionMode::SUM_ZERO:
-            rawSolution = solveSumZeroOLS(result->getXtX(), result->getXty());
+        case CountRegressionConstraint::SUM_ZERO:
+            rawSolution = solveSumZeroNormalEquation(
+                result->getXtX(), result->getXty());
             break;
-        case CountRegressionMode::SUM_ZERO_FIXED_W1_BIAS:
-        case CountRegressionMode::SUM_ZERO_FIXED_P0_FLAT_EDGE:
+        case CountRegressionConstraint::SUM_ZERO_FIXED_W1_BIAS:
+        case CountRegressionConstraint::SUM_ZERO_FIXED_P0_FLAT_EDGE:
             rawSolution = forcedBias.has_value()
-                ? solveSumZeroFixedBiasOLS(result->getXtX(), result->getXty(), *forcedBias)
-                : solveSumZeroOLS(result->getXtX(), result->getXty());
+                ? solveSumZeroFixedBiasNormalEquation(
+                      result->getXtX(), result->getXty(), *forcedBias)
+                : solveSumZeroNormalEquation(result->getXtX(), result->getXty());
+            break;
+        case CountRegressionConstraint::FIXED_ZERO_BIAS:
+            rawSolution = solveQuadraticKellyRegressionWithFixedBias(
+                result->getXtX(), result->getXty(), 0.0);
             break;
     }
     CountArtifact artifact = normalizeCount(rawSolution);
-    artifact.regressionMode = g_count_regression_mode;
+    artifact.regressionObjective = g_count_regression_objective;
+    artifact.regressionConstraint = g_count_regression_constraint;
     artifact.forcedBias = forcedBias;
     artifact.XtX = result->getXtX();
     artifact.Xty = result->getXty();
@@ -1847,8 +1974,12 @@ CountArtifact learnCount(const Case& c,
     artifact.evaluationEdge = spread.mean;
     artifact.evaluationEdgeStddev = spread.stddev;
     artifact.evaluationEdgeSecondMoment = spread.secondMoment;
+    const double predictedMultiplier =
+        g_count_regression_objective == CountRegressionObjective::QUADRATIC_KELLY
+            ? 1.0
+            : predictedKellyFraction;
     artifact.kellyCurve = evaluateKellyGrowthCurve(
-        label, c, fixedPolicy, artifact.count, predictedKellyFraction);
+        label, c, fixedPolicy, artifact.count, predictedMultiplier);
     if (const auto* optimum = artifact.kellyCurve.optimalPoint()) {
         artifact.evaluationKellyFraction = optimum->fraction;
         artifact.evaluationKellyGrowth = optimum->growthMean;
@@ -1890,6 +2021,8 @@ EvCountGraphArtifact measureEvCountGraph(const Case& c,
     graph.handsPerSec = (secs > 0.0 ? rounds / secs : 0.0);
     graph.minCount = count.minCount;
     graph.maxCount = count.maxCount;
+    graph.hasEvRegressionLine =
+        g_count_regression_objective != CountRegressionObjective::QUADRATIC_KELLY;
     const int minBinIndex = static_cast<int>(std::llround(graph.minCount / graphResolution));
     const int maxBinIndex = static_cast<int>(std::llround(graph.maxCount / graphResolution));
     const auto& bins = result->getCountGraphBins();
@@ -1955,7 +2088,9 @@ void printCountSummary(const std::string& label, const CountArtifact& artifact) 
     std::cout << "  " << std::left << std::setw(10) << "Bias"
               << std::setw(12) << std::fixed << std::setprecision(6)
               << artifact.count.system.bias << "\n";
-    std::cout << "  " << std::left << std::setw(10) << "EV>0 TC"
+    std::cout << "  " << std::left << std::setw(10)
+              << (artifact.regressionObjective == CountRegressionObjective::QUADRATIC_KELLY
+                      ? "Bet>0 TC" : "EV>0 TC")
               << std::setw(12) << std::fixed << std::setprecision(6)
               << artifact.threshold << "\n";
     std::cout << "  " << std::left << std::setw(10) << "Factor"
@@ -1966,13 +2101,18 @@ void printCountSummary(const std::string& label, const CountArtifact& artifact) 
               << artifact.evaluationEdge << "  std(X): " << artifact.evaluationEdgeStddev
               << "  E[X^2]: " << artifact.evaluationEdgeSecondMoment << "\n";
     std::cout << "Optimal Kelly multiplier:    " << artifact.evaluationKellyFraction
-              << "  predicted 1/E[X^2]: "
+              << (artifact.regressionObjective == CountRegressionObjective::QUADRATIC_KELLY
+                      ? "  fitted-signal target: " : "  predicted 1/E[X^2]: ")
               << artifact.kellyCurve.predictedOptimalFraction << "\n";
     std::cout << "Optimal Kelly growth/round:  " << artifact.evaluationKellyGrowth
               << "  stddev: " << artifact.evaluationKellyGrowthStddev << "\n";
     std::cout << "Sanity checks:\n";
-    std::cout << "  Sum(weights): " << sumWeights
-              << "  (" << (std::abs(sumWeights) < 0.05 ? "PASS" : "WARN") << ", expected near 0)\n";
+    std::cout << "  Sum(weights): " << sumWeights;
+    if (artifact.regressionConstraint == CountRegressionConstraint::NONE ||
+        artifact.regressionConstraint == CountRegressionConstraint::FIXED_ZERO_BIAS)
+        std::cout << "  (unconstrained)\n";
+    else
+        std::cout << "  (" << (std::abs(sumWeights) < 0.05 ? "PASS" : "WARN") << ", expected near 0)\n";
     std::cout << "  10-value consistency: mean=" << tenMean
               << "  max_dev=" << tenMaxDev
               << "  rel=" << (tenRelDev * 100.0) << "%";
@@ -1986,8 +2126,11 @@ void printCountSummary(const std::string& label, const CountArtifact& artifact) 
     std::cout << "  Bias constraint: ";
     if (!artifact.forcedBias.has_value()) {
         std::cout << "free\n";
-    } else if (artifact.regressionMode == CountRegressionMode::SUM_ZERO_FIXED_P0_FLAT_EDGE) {
+    } else if (artifact.regressionConstraint ==
+               CountRegressionConstraint::SUM_ZERO_FIXED_P0_FLAT_EDGE) {
         std::cout << "fixed to P0 flat edge\n";
+    } else if (artifact.regressionConstraint == CountRegressionConstraint::FIXED_ZERO_BIAS) {
+        std::cout << "fixed to zero\n";
     } else {
         std::cout << "fixed to W1 bias\n";
     }
@@ -2054,8 +2197,8 @@ void runCase(const Case& c) {
     const std::string folder = resuming
         ? g_load_checkpoint
         : (g_checkpoint_name.empty()
-            ? currentTimestamp() + "_" + ToStringTableName(c)
-            : g_checkpoint_name + "_" + ToStringTableName(c));
+            ? currentTimestamp() + "_" + checkpointTableName(c)
+            : g_checkpoint_name + "_" + checkpointTableName(c));
     const uint64_t evalRounds = (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds);
     RunLogger logger(std::filesystem::path(PROJECT_ROOT) / kAlternatingCheckpointRoot, folder);
     const std::string runHeader = buildRunHeader(c, folder, evalRounds);
@@ -2119,17 +2262,21 @@ void runCase(const Case& c) {
         std::string wLabel = "W" + std::to_string(state.nextPolicyIndex + 1);
         const uint64_t countRounds = countPhasePlayedRounds();
         std::optional<double> forcedBias;
-        if (g_count_regression_mode == CountRegressionMode::SUM_ZERO_FIXED_W1_BIAS) {
+        if (g_count_regression_constraint ==
+            CountRegressionConstraint::SUM_ZERO_FIXED_W1_BIAS) {
             // W1 estimates b1 freely; W2+ reuse that conserved value.
             if (state.nextPolicyIndex > 0)
                 forcedBias = state.currentCount.system.bias;
-        } else if (g_count_regression_mode ==
-                   CountRegressionMode::SUM_ZERO_FIXED_P0_FLAT_EDGE) {
+        } else if (g_count_regression_constraint ==
+                   CountRegressionConstraint::SUM_ZERO_FIXED_P0_FLAT_EDGE) {
             // P0 is evaluated before W1, so W1 and every later fit can use its
             // measured flat edge as the conserved bias.
             forcedBias = state.nextPolicyIndex == 0
                 ? state.currentPolicyFlatEdge
                 : state.currentCount.system.bias;
+        } else if (g_count_regression_constraint ==
+                   CountRegressionConstraint::FIXED_ZERO_BIAS) {
+            forcedBias = 0.0;
         }
         const double predictedKellyFraction = state.currentPolicyFlatSecondMoment > 0.0
             ? 1.0 / state.currentPolicyFlatSecondMoment
@@ -2166,7 +2313,7 @@ void runCase(const Case& c) {
 
 void printHelp(const char* prog) {
     std::cout << "Usage: " << prog << " [OPTIONS]\n\n";
-    std::cout << "Alternating optimization between policy learning (RL) and count learning (OLS).\n\n";
+    std::cout << "Alternating optimization between policy learning (RL) and configurable count regression.\n\n";
 
     std::cout << "METHOD:\n";
     std::cout << "  1. Start from implicit W0 = zero count.\n";
@@ -2204,8 +2351,8 @@ void printHelp(const char* prog) {
     std::cout << "  --iterations <N>      Number of loop iterations k (default: 3)\n";
     std::cout << "  --num-threads <N>     Threads (default: 10)\n";
     std::cout << "  --penetration <val>   Shoe penetration % (default: 75.0)\n";
-    std::cout << "  --sample-every <N>    Record every N-th round for OLS (default: 1)\n";
-    std::cout << "                        The count phase plays N * num-rounds rounds so OLS still gets about num-rounds samples.\n";
+    std::cout << "  --sample-every <N>    Record every N-th round for count regression (default: 1)\n";
+    std::cout << "                        The count phase plays N * num-rounds rounds to retain about num-rounds samples.\n";
     std::cout << "  --kelly-measurements <N>  Experiments per Kelly fraction, 1,000,000 rounds each (default: 10)\n";
     std::cout << "  --kelly-fraction-min <v>   Override sweep minimum\n";
     std::cout << "  --kelly-fraction-max <v>   Override sweep maximum\n";
@@ -2232,17 +2379,20 @@ void printHelp(const char* prog) {
     std::cout << "  --alpha-min <val>         Minimum learning rate (default: 0.0001)\n";
     std::cout << "  --alpha-decay <N>         Steps to decay alpha to min (default: 100)\n\n";
 
-    std::cout << "COUNT REGRESSION (choose at most one; default: --count-sum-zero-fixed-b1):\n";
-    std::cout << "  --count-classical-ols       Unconstrained min ||Xw-Y||^2.\n";
-    std::cout << "  --count-sum-zero            OLS subject to sum(rank weights)=0; bias is free.\n";
-    std::cout << "  --count-sum-zero-fixed-b1   Zero-sum OLS; W1 estimates b1, fixed for W2+.\n";
+    std::cout << "COUNT OBJECTIVE (choose at most one; default: --count-classical-ols):\n";
+    std::cout << "  --count-classical-ols       Minimize E[(X-w'c)^2].\n";
+    std::cout << "  --count-quadratic-kelly     Maximize the second-order approximation to E[log(1+w'c X)].\n\n";
+    std::cout << "COUNT CONSTRAINT (choose at most one; default: --count-sum-zero-fixed-b1):\n";
+    std::cout << "  --count-unconstrained       Fit all rank weights and the bias freely.\n";
+    std::cout << "  --count-sum-zero            Require sum(rank weights)=0; bias is free.\n";
+    std::cout << "  --count-sum-zero-fixed-b1   Require sum(rank weights)=0; W1 estimates b1, fixed for W2+.\n";
     std::cout << "  --count-sum-zero-fixed-p0-edge\n";
-    std::cout << "                                Zero-sum OLS; P0 flat edge is fixed for W1+.\n\n";
+    std::cout << "                                Require sum(rank weights)=0; P0 flat edge is fixed for W1+.\n\n";
 
     std::cout << "LEARNED COUNT SCALING:\n";
-    std::cout << "  Learned count tags are temporarily scaled by "
-              << kLearnedCountFactorMultiplier
-              << ", and the EV factor is scaled inversely.\n\n";
+    std::cout << "  Each learned count is scaled so the average 10/J/Q/K tag is "
+              << kTargetTenValueTag
+              << "; the betting factor is scaled inversely.\n\n";
 
     std::cout << "GAME CONFIG:\n";
     std::cout << "  --decks, --ss17, --das, --sas, --don, --rsa, --hsa,\n";
@@ -2254,7 +2404,8 @@ void printHelp(const char* prog) {
 
 int runBlackjackAlternatingOptimization(int argc, char** argv) {
     g_command_line = commandLineFromArgs(argc, argv);
-    int countRegressionFlags = 0;
+    int countObjectiveFlags = 0;
+    int countConstraintFlags = 0;
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--help" || arg == "-h") { printHelp(argv[0]); return 0; }
@@ -2283,21 +2434,31 @@ int runBlackjackAlternatingOptimization(int argc, char** argv) {
         else if (arg == "--full-verbose")                  { g_full_verbose = true; g_verbose = true; }
         else if (arg == "--no-save")                         g_no_save = true;
         else if (arg == "--count-classical-ols") {
-            g_count_regression_mode = CountRegressionMode::CLASSICAL_OLS;
-            ++countRegressionFlags;
+            g_count_regression_objective = CountRegressionObjective::CLASSICAL_OLS;
+            ++countObjectiveFlags;
+        }
+        else if (arg == "--count-quadratic-kelly") {
+            g_count_regression_objective = CountRegressionObjective::QUADRATIC_KELLY;
+            ++countObjectiveFlags;
+        }
+        else if (arg == "--count-unconstrained") {
+            g_count_regression_constraint = CountRegressionConstraint::NONE;
+            ++countConstraintFlags;
         }
         else if (arg == "--count-sum-zero") {
-            g_count_regression_mode = CountRegressionMode::SUM_ZERO;
-            ++countRegressionFlags;
+            g_count_regression_constraint = CountRegressionConstraint::SUM_ZERO;
+            ++countConstraintFlags;
         }
         else if (arg == "--count-sum-zero-fixed-b1" ||
                  arg == "--count-sum-zero-fixed-bias") {
-            g_count_regression_mode = CountRegressionMode::SUM_ZERO_FIXED_W1_BIAS;
-            ++countRegressionFlags;
+            g_count_regression_constraint =
+                CountRegressionConstraint::SUM_ZERO_FIXED_W1_BIAS;
+            ++countConstraintFlags;
         }
         else if (arg == "--count-sum-zero-fixed-p0-edge") {
-            g_count_regression_mode = CountRegressionMode::SUM_ZERO_FIXED_P0_FLAT_EDGE;
-            ++countRegressionFlags;
+            g_count_regression_constraint =
+                CountRegressionConstraint::SUM_ZERO_FIXED_P0_FLAT_EDGE;
+            ++countConstraintFlags;
         }
 
         else if (arg == "--count-resolution" && i + 1 < argc) g_agent.countResolution = std::stod(argv[++i]);
@@ -2356,8 +2517,12 @@ int runBlackjackAlternatingOptimization(int argc, char** argv) {
         std::cerr << "Error: " << e.what() << ".\n";
         return 1;
     }
-    if (countRegressionFlags > 1) {
-        std::cerr << "Error: choose only one count regression mode flag.\n";
+    if (countObjectiveFlags > 1) {
+        std::cerr << "Error: choose only one count objective flag.\n";
+        return 1;
+    }
+    if (countConstraintFlags > 1) {
+        std::cerr << "Error: choose only one count constraint flag.\n";
         return 1;
     }
     if (g_training_stop_mode == TrainingStopMode::TABLE_DIFF && g_sample_rounds == 0) {

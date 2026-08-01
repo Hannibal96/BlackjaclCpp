@@ -107,6 +107,7 @@ struct CheckpointCountConfig {
     std::array<double, 13> weights{};
     double factor = 1.0;
     double bias = 0.0;
+    bool continuousBettingCount = false;
     double resolution = 1.0;
     int    minCount   = 0;
     int    maxCount   = 0;
@@ -128,6 +129,7 @@ uint64_t    g_sample_rounds = 100'000'000ULL;
 double      g_diff_threshold = 0.001;
 bool        g_verbose = false;
 std::string g_command_line;
+std::string g_output_dir;
 
 std::string g_count_name;
 std::string g_count_weights_str;
@@ -726,6 +728,8 @@ EdgeStatistics evaluateSpreadEdge(const MadnessCase& c,
     double threshold = (std::abs(count.system.factor) < 1e-12)
         ? std::numeric_limits<double>::infinity()
         : (-count.system.bias / count.system.factor);
+    if (count.system.continuousBettingCount && std::isfinite(threshold))
+        threshold = std::nextafter(threshold, std::numeric_limits<double>::infinity());
 
     auto* player = new Player(0.0, strategy.clone());
     player->setNumDecks(c.deckSize);
@@ -934,6 +938,8 @@ std::unique_ptr<BasicStrategy> loadFullDeviationsFromCheckpoint(
         outCount.weights[i] = countJson.at("weights")[i].get<double>();
     outCount.factor = countJson.at("factor").get<double>();
     outCount.bias = countJson.at("bias").get<double>();
+    outCount.continuousBettingCount =
+        countJson.value("continuous_betting_count", false);
     outCount.resolution = countJson.at("resolution").get<double>();
     outCount.minCount = countJson.at("min_count").get<int>();
     outCount.maxCount = countJson.at("max_count").get<int>();
@@ -1019,7 +1025,11 @@ void printResultsTable(const std::vector<EvalResult>& results) {
 
 void runCase(const MadnessCase& c) {
     const std::string runName = currentTimestamp() + "_" + ToStringTableName(c);
-    RunLogger logger(std::filesystem::path(PROJECT_ROOT) / kCompareCheckpointRoot, runName);
+    std::filesystem::path outputPath = g_output_dir.empty()
+        ? std::filesystem::path(PROJECT_ROOT) / kCompareCheckpointRoot / runName
+        : std::filesystem::path(g_output_dir);
+    if (outputPath.is_relative()) outputPath = std::filesystem::path(PROJECT_ROOT) / outputPath;
+    RunLogger logger(outputPath.parent_path(), outputPath.filename().string());
     const uint64_t evalRounds = (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds);
     std::cout << "\n=== DoubleDownMadnessCompareCountStrategies ===\n";
     std::cout << "Command:       " << g_command_line << "\n";
@@ -1052,6 +1062,8 @@ void runCase(const MadnessCase& c) {
         checkpointCount.system.weights = ckptCount.weights;
         checkpointCount.system.factor = ckptCount.factor;
         checkpointCount.system.bias = ckptCount.bias;
+        checkpointCount.system.continuousBettingCount =
+            ckptCount.continuousBettingCount;
         checkpointCount.resolution = ckptCount.resolution;
         checkpointCount.minCount = ckptCount.minCount;
         checkpointCount.maxCount = ckptCount.maxCount;
@@ -1073,6 +1085,8 @@ void runCase(const MadnessCase& c) {
         }
         if (!approxEqual(ckptCount.factor, requestedCount.system.factor) ||
             !approxEqual(ckptCount.bias, requestedCount.system.bias) ||
+            ckptCount.continuousBettingCount !=
+                requestedCount.system.continuousBettingCount ||
             !approxEqual(ckptCount.resolution, requestedCount.resolution) ||
             ckptCount.minCount != requestedCount.minCount ||
             ckptCount.maxCount != requestedCount.maxCount) {
@@ -1206,6 +1220,7 @@ void printHelp(const char* prog) {
 
     std::cout << "OUTPUT:\n";
     std::cout << "  --verbose                   Print the final full-deviations strategy table\n\n";
+    std::cout << "  --output-dir <path>         Write this run directly to path\n\n";
     std::cout << "  Logs and graph artifacts are saved under checkpoints/DoubleDownMadnessCompareCountStrategies/<run-name>/\n";
     std::cout << "  Files include run.log, EV/count, unit-wager conditional second-moment,\n";
     std::cout << "  histogram, and kelly_fraction_graph artifacts.\n\n";
@@ -1233,6 +1248,7 @@ int runDoubleDownMadnessCompareCountStrategies(int argc, char** argv) {
         else if (arg == "--kelly-fraction-min" && i+1<argc) g_kelly_fraction_min = std::stod(argv[++i]);
         else if (arg == "--kelly-fraction-max" && i+1<argc) g_kelly_fraction_max = std::stod(argv[++i]);
         else if (arg == "--kelly-fraction-step" && i+1<argc) g_kelly_fraction_step = std::stod(argv[++i]);
+        else if (arg == "--output-dir"        && i+1<argc) g_output_dir = argv[++i];
 
         else if (arg == "--count"            && i+1<argc) g_count_name = argv[++i];
         else if (arg == "--count-weights"    && i+1<argc) g_count_weights_str = argv[++i];

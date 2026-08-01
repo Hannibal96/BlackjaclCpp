@@ -200,6 +200,44 @@ cards = [shoe.deal_card() for _ in range(20)]
 
 See [DEBUG_MODE.md](DEBUG_MODE.md) for comprehensive guide on debug mode and Python alignment.
 
+## Current Alternating-Optimization Research
+
+`AlternatingOptimization` is the unified CLI for classic blackjack and Double
+Down Madness:
+
+```bash
+./build/bin/AlternatingOptimization --game blackjack [game/options]
+./build/bin/AlternatingOptimization --game ddm --version 1 [game/options]
+```
+
+It alternates `W0 -> P0 -> W1 -> P1 -> ...`, saves resumable policy/count
+artifacts, and generates EV/count, histogram, conditional second-moment, and
+Kelly-multiplier graphs. Count objective and constraints are independent:
+
+- Objectives: `--count-classical-ols`, `--count-quadratic-kelly`.
+- Constraints: `--count-unconstrained`, `--count-sum-zero`,
+  `--count-sum-zero-fixed-b1`, `--count-sum-zero-fixed-p0-edge`.
+- Default: classical OLS plus `--count-sum-zero-fixed-b1`.
+- Legacy DDM `--count-quadratic-kelly-zero-bias` remains accepted.
+
+Both objectives use streamed normal-equation statistics. OLS has
+`A=E[cc^T]`; quadratic Kelly has `A=E[X^2cc^T]`; both use `d=E[Xc]`. Sum-zero
+and fixed-bias modes solve KKT systems directly from `A,d`, without retaining
+round histories. New metadata stores `count_regression_objective` and
+`count_regression_constraint` separately while retaining legacy checkpoint
+loading.
+
+Known limitation: DDM allows repeated doubling, so exposure becomes `2^d` times
+the initial Kelly wager. The quadratic approximation does not enforce
+`1+fX>0`; rare ruin produces `-infinity` log bankroll and zero growth for the
+whole parallel experiment. Large DDM Kelly standard deviations are usually a
+mixture of near-one growth and ruined zero-growth trials. Do not interpret them
+as ordinary estimator noise.
+
+The user prefers regression tests over low-value unit tests for simulation
+accuracy and never wants more than one 10-thread research simulation running at
+once because concurrent runs overheat the machine.
+
 ## Branch Strategy
 
 - `master`: Main branch for stable code

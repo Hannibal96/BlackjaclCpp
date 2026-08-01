@@ -67,7 +67,7 @@ double Player::getBet(const std::array<int, 13>& removedCards) {
             rawCount += countWeights[i] * static_cast<double>(removedCards[i]);
         double tc = rawCount / remainingDecks;
         // Discretize to the same resolution used for strategy state keys
-        if (countResolution > 0.0)
+        if (!continuousBettingCount && countResolution > 0.0)
             tc = std::round(tc / countResolution) * countResolution;
         ctx.trueCount = tc;
     } else {
@@ -163,10 +163,12 @@ void Player::recordRound(const std::array<double, 13>& x, double y) {
     std::array<double, 14> xb;
     for (int i = 0; i < 13; ++i) xb[i] = x[i];
     xb[13] = 1.0;  // bias term
+    const double covarianceWeight =
+        regressionObjective == RegressionObjective::QUADRATIC_KELLY ? y * y : 1.0;
 
     for (int i = 0; i < 14; ++i) {
         for (int j = 0; j < 14; ++j)
-            XtX[i][j] += xb[i] * xb[j];
+            XtX[i][j] += covarianceWeight * xb[i] * xb[j];
         Xty[i] += xb[i] * y;
     }
     ++regressionRounds;
@@ -182,7 +184,13 @@ Player& Player::operator+=(const Player& other) {
     if (strategy && other.strategy) {
         *strategy += *other.strategy;
     }
-    if (regressionEnabled) {
+    if (regressionEnabled && other.regressionEnabled &&
+        regressionObjective != other.regressionObjective) {
+        throw std::logic_error("Cannot combine players with different regression objectives");
+    }
+    if (regressionEnabled || other.regressionEnabled) {
+        if (!regressionEnabled) regressionObjective = other.regressionObjective;
+        regressionEnabled = true;
         for (int i = 0; i < 14; ++i) {
             for (int j = 0; j < 14; ++j)
                 XtX[i][j] += other.XtX[i][j];
@@ -236,6 +244,7 @@ Player* Player::clone() const {
     p->maxCount = maxCount;
     p->numDecks = numDecks;
     p->regressionEnabled = regressionEnabled;
+    p->regressionObjective = regressionObjective;
     p->XtX = XtX;
     p->Xty = Xty;
     p->regressionRounds = regressionRounds;
@@ -251,5 +260,6 @@ Player* Player::clone() const {
     if (bettingStrategy) p->bettingStrategy = std::unique_ptr<BettingStrategy>(bettingStrategy->clone());
     p->countFactor = countFactor;
     p->countBias   = countBias;
+    p->continuousBettingCount = continuousBettingCount;
     return p;
 }

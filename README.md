@@ -82,6 +82,28 @@ Main test targets include:
   sweep graphs. DDM supports `--version 1|2|3`; blackjack-only rule flags are
   ignored with warnings in DDM mode.
 
+  Count fitting selects an objective independently from its constraints. Use
+  `--count-classical-ols` or `--count-quadratic-kelly`, then optionally select
+  `--count-unconstrained`, `--count-sum-zero`,
+  `--count-sum-zero-fixed-b1`, or `--count-sum-zero-fixed-p0-edge`. The default
+  remains classical OLS with sum-zero weights and the `W1` bias fixed for `W2+`.
+  For example:
+
+  ```bash
+  ./build/bin/AlternatingOptimization --game blackjack \
+      --count-classical-ols --count-sum-zero
+  ./build/bin/AlternatingOptimization --game ddm \
+      --count-quadratic-kelly --count-sum-zero-fixed-b1
+  ```
+
+  Quadratic-Kelly direct-wager mode streams
+  `A = sum(X^2 cc^T)` and `b = sum(Xc)` from flat rounds and solves `Aw=b`, where
+  `c` is the pre-round normalized removed-card vector and `X` is complete unit-wager
+  round profit. The feature vector includes a constant entry, so the fit learns
+  its bias together with the rank weights and evaluates `max(0,w^Tc)` continuously.
+  Learned rank tags are normalized so the average 10/J/Q/K value is `-1`, with
+  inverse factor scaling preserving the fitted signal.
+
 - `CompareCountStrategies`
   Uses the same `--game <blackjack|ddm>` selection. Blackjack compares basic
   strategy, Illustrious 18, and full deviations. DDM compares its known
@@ -100,12 +122,21 @@ Both apps accept `--kelly-fraction-min`, `--kelly-fraction-max`, and
 `1/E[X^2]` to the nearest fraction step, spans `+/-0.25` around that center, clamps
 the lower endpoint at zero, and uses increments of `0.05`. Explicit minimum and
 maximum flags override their respective dynamic endpoints.
+For `--count-quadratic-kelly`, the learned signal is already a wager fraction, so
+its multiplier sweep is centered at `1.0` instead of `1/E[X^2]`.
 Each fraction runs 10 independent experiments by default, configurable with
 `--kelly-measurements`. Kelly graphs show the mean growth with error bars equal to
 the sample standard deviation across those experiments.
 Because `KellyBetting` uses `bet / bankroll = multiplier * estimatedEV`, the
 small-edge prediction for the optimal multiplier is `1 / E[X^2]`, where `X` is
 the net unit-bet return for one complete blackjack round.
+
+DDM permits repeated doubling, so an initially small bankroll fraction can
+become a catastrophic single-hand exposure after multiplication by `2^d`.
+Quadratic Kelly is only a second-order approximation and does not currently
+enforce `1+fX>0`. A ruined worker has log bankroll `-infinity`, which makes that
+entire parallel Kelly experiment report zero growth. Treat DDM Kelly curves with
+large standard deviations as ruin mixtures, not ordinary Monte Carlo noise.
 
 ## Checkpoints And Run Artifacts
 

@@ -8,19 +8,20 @@
 
 // Index mapping: 0=2, 1=3, 2=4, 3=5, 4=6, 5=7, 6=8, 7=9, 8=10, 9=J, 10=Q, 11=K, 12=A
 
-// A counting system fully describes how to compute the expected game value:
-//   E[game] = bias + factor * trueCount
+// A counting system describes the signal used for betting:
+//   signal = bias + factor * trueCount
 //   trueCount = dot(weights, removedCards) / remainingDecks
 //
 // For OLS-derived systems: set weights = w[0..12], factor = 1.0, bias = w[13].
 //   The weights already encode expectancy directly, so no extra scaling is needed.
-// For traditional systems (Hi-Lo etc.): weights are integer rank tags, factor converts
+// For traditional systems (Hi-Lo etc.): the signal is estimated EV; factor converts
 //   each true-count unit into an E[game] delta (e.g. 0.005 = 0.5% per count point),
 //   and bias is the E[game] at neutral count (game-specific, typically ≈ -house_edge).
 struct CountingSystem {
     std::array<double, 13> weights{};  // per-rank counting weights
-    double factor = 1.0;               // E[game] change per unit of true count
-    double bias   = 0.0;               // E[game] at neutral count (game-specific)
+    double factor = 1.0;               // signal change per unit of true count
+    double bias   = 0.0;               // signal at neutral count
+    bool continuousBettingCount = false; // true when w'c is a directly fitted wager fraction
 };
 
 namespace CountingMethods {

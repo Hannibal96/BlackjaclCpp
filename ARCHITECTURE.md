@@ -185,11 +185,47 @@ quadratic approximation, the optimal multiplier is therefore `k = 1/E[X^2]`.
 The apps compare that prediction with empirical growth over a configurable
 fraction grid.
 
+Alternating optimization separates the count objective from its constraints.
+Classical OLS streams `A=E[cc^T]`, `d=E[Xc]`; quadratic Kelly streams
+`A=E[X^2cc^T]`, `d=E[Xc]`. Both minimize the quadratic form
+`0.5 theta^T A theta-d^T theta`, with `theta=[w,b]`, so they share the same
+streaming-compatible constraint solvers:
+
+- Unconstrained: `A theta=d`.
+- Sum-zero: solve `[A q; q^T 0][theta;lambda]=[d;0]`, where
+  `q=[1,...,1,0]` excludes the bias.
+- Sum-zero with fixed bias `b0`: solve
+  `[Aww 1; 1^T 0][w;lambda]=[dw-Awb*b0;0]`.
+- Fixed `b1`: `W1` estimates a free bias and `W2+` reuse it.
+- Fixed `P0` edge: `W1+` use the measured flat edge of `P0`.
+
+The objective flags are `--count-classical-ols` and
+`--count-quadratic-kelly`. Constraint flags are `--count-unconstrained`,
+`--count-sum-zero`, `--count-sum-zero-fixed-b1`, and
+`--count-sum-zero-fixed-p0-edge`. Checkpoints store
+`count_regression_objective` and `count_regression_constraint` separately and
+still load legacy combined-mode metadata.
+
+For quadratic Kelly, pre-round normalized removed-card features `c` and
+unit-wager round profit `X` produce the second-order approximation
+`log(1+theta^Tc X) ~= theta^Tc X - 0.5(theta^Tc X)^2`. Learned rank weights
+are scaled so the average 10/J/Q/K tag is `-1`, with the betting factor scaled
+inversely to preserve `w^Tc` exactly, while policy lookup remains discretized. Bet sizing uses the continuous
+signal and clamps negative fractions to zero. Because the signal is already a
+quadratic-Kelly fraction, its empirical multiplier sweep is centered at `1.0`.
+
+DDM's repeated doubling can multiply the initial wager by `2^d`. The current
+quadratic approximation has no admissibility constraint ensuring `1+fX>0`, so
+rare long double chains can ruin a worker. Parallel log aggregation propagates
+that worker's `-infinity`, yielding a zero-growth experiment and a characteristic
+near-Bernoulli standard deviation. This remains an open research issue.
+
 ## Important Architectural Notes
 
 - Count logic lives in `Player`, not in the strategy classes.
 - Learned Q policies are converted to greedy `BasicStrategy` tables before evaluation apps use them.
 - Regression and EV-count graph collection use pre-round shoe state with round outcome as the target.
+- Quadratic-Kelly matrices are tagged separately in `W*_data.json`; their EV/count graphs omit the OLS regression line because the fitted line represents wager fraction, not expectancy.
 - Round-return variance includes the complete round result, including splits, doubles, surrender, blackjack payout, and the selected wager size.
 - Parallel simulations merge players and strategies through averaging operators.
 - `RunLogger` mirrors terminal output into the same run folder used by checkpoints or graph artifacts.
