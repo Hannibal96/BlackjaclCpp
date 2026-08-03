@@ -451,6 +451,7 @@ struct AlternatingOptimizationApp {
             auto [strategyMinCount, strategyMaxCount] = strategy.getCountRange();
             player->setCountRange(strategyMinCount, strategyMaxCount);
             player->setBettingStrategy(std::make_unique<KellyBetting>(kellyFraction));
+            player->setEnforceBankrollActionLimits(true);
 
             std::vector<Player*> results =
                 runParallelSimulation(rules, {player}, kKellyMeasurementRounds, g_num_threads);

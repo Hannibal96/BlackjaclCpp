@@ -23,8 +23,10 @@ DoubleDownMadnessTable::DoubleDownMadnessTable(
       suitedBlackjackPayout(rules.blackjackPayoutFor(true)),
       unsuitedBlackjackPayout(rules.blackjackPayoutFor(false)) {
     moneyBeforeScratch.resize(players.size());
-    for (auto* player : players)
+    for (auto* player : players) {
         playerHands.emplace(player, Hand{});
+        committedWagers.emplace(player, 0.0);
+    }
 }
 
 void DoubleDownMadnessTable::round() {
@@ -88,8 +90,8 @@ void DoubleDownMadnessTable::round() {
 void DoubleDownMadnessTable::clearHands() {
     dealerHand.clear();
     for (auto& [player, hand] : playerHands) {
-        (void)player;
         hand.clear();
+        committedWagers[player] = 0.0;
     }
 }
 
@@ -98,6 +100,8 @@ void DoubleDownMadnessTable::collectBets() {
         const double bet =
             std::clamp(player->getBet(shoe->getRemovedCards()), minBet, maxBet);
         playerHands.at(player).setBet(bet);
+        if (player->shouldEnforceBankrollActionLimits())
+            committedWagers[player] = bet;
     }
 }
 
@@ -113,13 +117,14 @@ bool DoubleDownMadnessTable::dealInitialCards() {
     return dealerHand.isBlackjack();
 }
 
-std::vector<Action> DoubleDownMadnessTable::getAllowedActions(const Hand& hand) const {
+std::vector<Action> DoubleDownMadnessTable::getAllowedActions(
+        const Hand& hand) const {
     if (hand.isBust() || hand.getValue() >= 21) return {};
 
-    if (hand.cardCount() == 1 && hand[0].rank == Rank::ACE)
-        return {Action::HIT, Action::DOUBLE_DOWN};
-
-    return {Action::HIT, Action::STAND, Action::DOUBLE_DOWN};
+    return
+        hand.cardCount() == 1 && hand[0].rank == Rank::ACE
+            ? std::vector<Action>{Action::HIT, Action::DOUBLE_DOWN}
+            : std::vector<Action>{Action::HIT, Action::STAND, Action::DOUBLE_DOWN};
 }
 
 std::vector<std::tuple<Player*, Hand*, State, Action>>
@@ -134,10 +139,20 @@ DoubleDownMadnessTable::playersPlay() {
             if (allowedActions.empty())
                 throw std::logic_error("Double Down Madness hand has no legal action");
 
+            std::vector<Action> affordableActions = allowedActions;
+            if (player->shouldEnforceBankrollActionLimits() &&
+                !player->canAffordAdditionalWager(
+                    hand.getBet(), committedWagers.at(player))) {
+                affordableActions.erase(
+                    std::remove(affordableActions.begin(), affordableActions.end(),
+                                Action::DOUBLE_DOWN),
+                    affordableActions.end());
+            }
+
             State state(hand, dealerUpCard, allowedActions, shoe->getRemovedCards());
-            const Action action = player->getAction(state);
-            if (std::find(allowedActions.begin(), allowedActions.end(), action) ==
-                allowedActions.end()) {
+            const Action action = player->getAction(state, affordableActions);
+            if (std::find(affordableActions.begin(), affordableActions.end(), action) ==
+                affordableActions.end()) {
                 throw std::logic_error("Strategy selected an illegal Double Down Madness action");
             }
 
@@ -150,8 +165,11 @@ DoubleDownMadnessTable::playersPlay() {
                 action == Action::DOUBLE_DOWN &&
                 hand.cardCount() == 1 &&
                 hand[0].rank == Rank::ACE;
-            if (action == Action::DOUBLE_DOWN)
+            if (action == Action::DOUBLE_DOWN) {
+                if (player->shouldEnforceBankrollActionLimits())
+                    committedWagers[player] += hand.getBet();
                 hand.multiplyBet(2.0f);
+            }
             hand.addCard(shoe->dealCard());
 
             State terminalState(hand, dealerUpCard, {}, shoe->getRemovedCards());
@@ -159,12 +177,16 @@ DoubleDownMadnessTable::playersPlay() {
                 player->updateMoney(
                     -hand.getBet(), state, action, terminalState,
                     learningWager(state));
+                if (player->shouldEnforceBankrollActionLimits())
+                    committedWagers[player] = 0.0;
                 break;
             }
             if (hand.isBlackjack()) {
                 player->updateMoney(
                     hand.getBet() * blackjackPayout(hand), state, action, terminalState,
                     learningWager(state));
+                if (player->shouldEnforceBankrollActionLimits())
+                    committedWagers[player] = 0.0;
                 break;
             }
             // Hitting an initial Ace may continue (A,A becomes soft 12), but
@@ -230,6 +252,8 @@ void DoubleDownMadnessTable::evaluate(
         }
         player->updateMoney(
             reward, state, action, nextState, learningWager(state));
+        if (player->shouldEnforceBankrollActionLimits())
+            committedWagers[player] = 0.0;
     }
 }
 

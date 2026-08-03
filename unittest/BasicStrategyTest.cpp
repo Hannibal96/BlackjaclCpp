@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "Game/Player.h"
 #include "RL/BasicStrategy.h"
 #include <sstream>
 
@@ -118,4 +119,36 @@ TEST_F(BasicStrategyTest, LoadAndPrintFromJson) {
         // If file doesn't exist, just verify the strategy is not loaded
         EXPECT_FALSE(strategy.isLoaded());
     }
+}
+
+TEST_F(BasicStrategyTest, UnaffordableSplitUsesPairFallback) {
+    auto strategy = std::make_unique<BasicStrategy>();
+    strategy->setAction(
+        0, HandType::PAIR, 8, 10,
+        ActionWithFallback(Action::SPLIT, Action::HIT));
+    Player player(1.0, std::move(strategy));
+    player.setEnforceBankrollActionLimits(true);
+
+    Hand pair(1.0);
+    pair.addCard(Card(Rank::EIGHT, Suit::CLUBS));
+    pair.addCard(Card(Rank::EIGHT, Suit::HEARTS));
+    State state(
+        pair, Card(Rank::TEN, Suit::SPADES),
+        {Action::HIT, Action::STAND, Action::SPLIT});
+
+    EXPECT_FALSE(player.canAffordAdditionalWager(1.0, 1.0));
+    EXPECT_EQ(player.getAction(state, {Action::HIT, Action::STAND}), Action::HIT);
+}
+
+TEST_F(BasicStrategyTest, BankrollActionLimitIsOptionalAndCloned) {
+    Player player(2.0, std::make_unique<BasicStrategy>());
+    EXPECT_TRUE(player.canAffordAdditionalWager(10.0, 2.0));
+
+    player.setEnforceBankrollActionLimits(true);
+    EXPECT_TRUE(player.canAffordAdditionalWager(1.0, 1.0));
+    EXPECT_FALSE(player.canAffordAdditionalWager(1.01, 1.0));
+
+    std::unique_ptr<Player> clone(player.clone());
+    EXPECT_TRUE(clone->shouldEnforceBankrollActionLimits());
+    EXPECT_FALSE(clone->canAffordAdditionalWager(1.01, 1.0));
 }

@@ -36,6 +36,11 @@ protected:
     // Betting strategy — nullptr means fixed unit bet of 1.0
     std::unique_ptr<BettingStrategy> bettingStrategy;
 
+    // When enabled, actions requiring another wager are removed if the
+    // bankroll is already committed to the current round. Kelly simulations
+    // enable this; training and fixed/spread edge simulations leave it off.
+    bool enforceBankrollActionLimits = false;
+
     // Betting signal = countBias + countFactor * trueCount. Usually this is EV;
     // quadratic-Kelly counts fit the wager fraction directly.
     // For OLS-derived systems: countFactor=1.0, countBias=w[13] (weights already in EV units).
@@ -84,6 +89,7 @@ public:
 
     // Get action based on game state (delegates to strategy via StateKey)
     virtual Action getAction(const State& state);
+    Action getAction(const State& state, const std::vector<Action>& allowedActions);
 
     // Get bet amount — receives current shoe removed-cards for count-aware sizing.
     // Currently always returns 1.0; override or extend for count-based betting.
@@ -119,6 +125,14 @@ public:
     // --- Betting strategy ---
     void setBettingStrategy(std::unique_ptr<BettingStrategy> bs);
     bool hasBettingStrategy() const { return bettingStrategy != nullptr; }
+    void setEnforceBankrollActionLimits(bool enforce) {
+        enforceBankrollActionLimits = enforce;
+    }
+    bool shouldEnforceBankrollActionLimits() const {
+        return enforceBankrollActionLimits;
+    }
+    bool canAffordAdditionalWager(double additionalWager,
+                                  double committedWager) const;
 
     // Set E[game] model parameters individually or from a CountingSystem.
     void setCountFactor(double f) { countFactor = f; }

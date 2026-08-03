@@ -50,6 +50,11 @@ Action Player::getAction(const State& state) {
     return strategy->getAction(stateToKey(state), state.allowedActions);
 }
 
+Action Player::getAction(const State& state,
+                         const std::vector<Action>& allowedActions) {
+    return strategy->getAction(stateToKey(state), allowedActions);
+}
+
 // Get bet amount — computes BettingContext and delegates to bettingStrategy
 double Player::getBet(const std::array<int, 13>& removedCards) {
     if (!bettingStrategy) return 1.0;
@@ -90,6 +95,14 @@ double Player::getLogMoney() const {
 
 void Player::setBettingStrategy(std::unique_ptr<BettingStrategy> bs) {
     bettingStrategy = std::move(bs);
+}
+
+bool Player::canAffordAdditionalWager(double additionalWager,
+                                     double committedWager) const {
+    if (!enforceBankrollActionLimits) return true;
+
+    constexpr double tolerance = 1e-12;
+    return additionalWager <= money - committedWager + tolerance;
 }
 
 // Update the player's money with SARS parameters for learning strategies
@@ -258,6 +271,7 @@ Player* Player::clone() const {
     p->roundRewardSum = roundRewardSum;
     p->roundRewardSumSq = roundRewardSumSq;
     if (bettingStrategy) p->bettingStrategy = std::unique_ptr<BettingStrategy>(bettingStrategy->clone());
+    p->enforceBankrollActionLimits = enforceBankrollActionLimits;
     p->countFactor = countFactor;
     p->countBias   = countBias;
     p->continuousBettingCount = continuousBettingCount;
