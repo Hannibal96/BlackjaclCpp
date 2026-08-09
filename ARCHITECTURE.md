@@ -11,28 +11,34 @@ BlackjaclCpp/
 │   ├── Game/          # Game mechanics, table flow, betting, player state
 │   ├── RL/            # Strategies and reinforcement learning
 │   └── Utils/         # Parallel simulation + run logging
-├── apps/              # Standalone training / evaluation executables
-├── unittest/          # Unit, regression, and benchmark tests
+├── apps/              # AlternatingOptimization + CompareCountStrategies (both games)
+├── unittest/          # Unit tests and benchmarks (GoogleTest)
+├── regression/        # Regression tests: sim output vs. reference JSON tables
 ├── basic_strategy_tables/
+│   ├── blackjack/
+│   └── double_down_madness/
 ├── checkpoints/
 │   ├── alternating-checkpoints/
 │   ├── double-down-madness-alternating-checkpoints/
-│   ├── checkpoints_QLearning/
-│   ├── checkpoints_ols/
 │   ├── CompareCountStrategies/
-│   └── MeasureEdge/
+│   └── DoubleDownMadnessCompareCountStrategies/
 └── CMakeLists.txt
 ```
 
 ## Main App Targets
 
+There are exactly two app binaries, each a `template <typename Game>` engine
+instantiated over `BlackjackGame`/`DoubleDownMadnessGame` (`apps/GameTraits.h`):
+
 | App | Purpose | Output Root |
 |---|---|---|
-| `FindDeviations` | Train/resume Q-learning playing deviations | `checkpoints/checkpoints_QLearning/` |
-| `FindOptimalCount` | Fit OLS count weights | `checkpoints/checkpoints_ols/` |
-| `MeasureEdge` | Evaluate fixed strategy + betting model | `checkpoints/MeasureEdge/` |
-| `AlternatingOptimization` | Unified blackjack/DDM RL and OLS pipeline selected by `--game` | Game-specific alternating checkpoint root |
-| `CompareCountStrategies` | Unified blackjack/DDM strategy comparison selected by `--game` | Game-specific comparison checkpoint root |
+| `AlternatingOptimization` | Blackjack/DDM RL and count-regression pipeline selected by `--game` | Game-specific alternating checkpoint root |
+| `CompareCountStrategies` | Blackjack/DDM strategy comparison selected by `--game` | Game-specific comparison checkpoint root |
+
+The older standalone `FindDeviations`, `FindOptimalCount`, and `MeasureEdge`
+apps have been removed; `AlternatingOptimization` covers their training
+workflows and `CompareCountStrategies` reads its checkpoints directly via
+`--deviations-checkpoint`.
 
 ## Class / Type Hierarchy
 
@@ -120,20 +126,6 @@ size, while DDM permits repeated doubling.
 
 ## Learning / Analysis Data
 
-### Q-learning checkpoints
-
-- `meta.json`
-- `<agent>_agent.json`
-- `<agent>_strategy.json`
-
-### OLS checkpoints
-
-- `meta.json`
-- `data.json` containing:
-  - `XtX`
-  - `Xty`
-  - sampled rounds
-
 ### Alternating optimization checkpoints
 
 - `meta.json`
@@ -161,10 +153,14 @@ the paytable version in addition to decks, H17/S17, and penetration.
 - `count_histograms.json/svg`
 - `second_moment_count_graph.json/svg` overlaying all compared policies
 - `kelly_fraction_graph.json/svg` overlaying all compared policies
+- `full_deviations_strategy.json` + `full_deviations_meta.json`, written
+  whenever full deviations were trained fresh this run (skipped when loaded
+  from either `--deviations-checkpoint` or `--strategy-checkpoint`)
 
 The DDM comparison app writes the same artifact families for known basic
 strategy and full deviations. A loaded alternating policy `Pk` is paired with
-`Wk` by default so both policies use the same count and betting model.
+`Wk` by default so both policies use the same count and betting model; a
+loaded `--strategy-checkpoint` is paired with its own saved count the same way.
 
 ### Return moments and Kelly sweeps
 
@@ -232,15 +228,12 @@ near-Bernoulli standard deviation. This remains an open research issue.
 
 ## Files To Read First
 
-- [src/Game/BlackjackTable.cpp](/home/neria/Desktop/BlackjaclCpp/src/Game/BlackjackTable.cpp)
-- [src/Game/DoubleDownMadnessTable.cpp](/home/neria/Desktop/BlackjaclCpp/src/Game/DoubleDownMadnessTable.cpp)
-- [src/Game/Player.cpp](/home/neria/Desktop/BlackjaclCpp/src/Game/Player.cpp)
-- [src/Game/BettingStrategy.h](/home/neria/Desktop/BlackjaclCpp/src/Game/BettingStrategy.h)
-- [src/RL/BasicStrategy.h](/home/neria/Desktop/BlackjaclCpp/src/RL/BasicStrategy.h)
-- [src/RL/QLearningStrategy.h](/home/neria/Desktop/BlackjaclCpp/src/RL/QLearningStrategy.h)
-- [apps/AlternatingOptimization.cpp](/home/neria/Desktop/BlackjaclCpp/apps/AlternatingOptimization.cpp)
-- [apps/BlackjackAlternatingOptimization.cpp](/home/neria/Desktop/BlackjaclCpp/apps/BlackjackAlternatingOptimization.cpp)
-- [apps/DoubleDownMadnessAlternatingOptimization.cpp](/home/neria/Desktop/BlackjaclCpp/apps/DoubleDownMadnessAlternatingOptimization.cpp)
-- [apps/CompareCountStrategies.cpp](/home/neria/Desktop/BlackjaclCpp/apps/CompareCountStrategies.cpp)
-- [apps/BlackjackCompareCountStrategies.cpp](/home/neria/Desktop/BlackjaclCpp/apps/BlackjackCompareCountStrategies.cpp)
-- [apps/DoubleDownMadnessCompareCountStrategies.cpp](/home/neria/Desktop/BlackjaclCpp/apps/DoubleDownMadnessCompareCountStrategies.cpp)
+- [src/Game/BlackjackTable.cpp](src/Game/BlackjackTable.cpp)
+- [src/Game/DoubleDownMadnessTable.cpp](src/Game/DoubleDownMadnessTable.cpp)
+- [src/Game/Player.cpp](src/Game/Player.cpp)
+- [src/Game/BettingStrategy.h](src/Game/BettingStrategy.h)
+- [src/RL/BasicStrategy.h](src/RL/BasicStrategy.h)
+- [src/RL/QLearningStrategy.h](src/RL/QLearningStrategy.h)
+- [apps/GameTraits.h](apps/GameTraits.h) — everything that differs between blackjack and DDM
+- [apps/AlternatingOptimization.cpp](apps/AlternatingOptimization.cpp) — engine + both instantiations + main()
+- [apps/CompareCountStrategies.cpp](apps/CompareCountStrategies.cpp) — engine + both instantiations + main()

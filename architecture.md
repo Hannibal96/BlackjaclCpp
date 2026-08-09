@@ -143,13 +143,15 @@ Key properties:
 
 ### OLS Count Fitting
 
-`FindOptimalCount` and the count-learning half of `AlternatingOptimization` accumulate:
+The count-learning half of `AlternatingOptimization` accumulates:
 
 - `XtX` (14 x 14)
 - `Xty` (14)
 - sampled round count
 
-The 14th parameter is the bias term. OLS checkpoints can be resumed and later converted into a count system.
+The 14th parameter is the bias term. These normal-equation statistics are
+streamed (never retaining round histories) and saved per-step in `W*_data.json`,
+resumable and later converted into a count system.
 
 ## EV-Count Graphing
 
@@ -175,26 +177,24 @@ This is used heavily by:
 
 ## Apps Layer
 
-### `FindDeviations`
-
-- trains or resumes Q-learning checkpoints
-- supports fixed-round stopping or diff-based stopping
-- stores checkpoints under `checkpoints/checkpoints_QLearning/`
-- logs terminal output into the same run folder
-
-### `FindOptimalCount`
-
-- collects OLS regression data
-- solves for count weights and bias
-- stores checkpoints under `checkpoints/checkpoints_ols/`
-- logs terminal output into the same run folder
-
-### `MeasureEdge`
-
-- evaluates fixed policies with flat betting, spread betting, or Kelly betting
-- can load named counts, explicit count weights, or OLS-derived counts
-- converts learned Q checkpoints into fixed `BasicStrategy` tables before simulation
-- writes run logs under `checkpoints/MeasureEdge/`
+The app surface is exactly two binaries, each exactly one file:
+`apps/AlternatingOptimization.cpp` and `apps/CompareCountStrategies.cpp`.
+Each file is a `template <typename Game>` engine, its two instantiations
+(`Game = BlackjackGame` / `DoubleDownMadnessGame`), and `main()` — nothing
+else needs the engine, so there's no separate header for it. Game selection
+is dispatched by `--game` through the header-only `apps/GameAppDispatcher.h`
+(shared by both apps, since the routing logic is identical). Everything that
+differs between the two games — `Rules` construction, the `Case` parameter
+struct, CLI rule flags, meta.json fields, checkpoint-root naming, basic-strategy
+loading, and whether Illustrious 18 applies — lives in the shared
+`apps/GameTraits.h`; the rest of the app logic is written once. Earlier
+standalone precursors —
+`FindDeviations` (Q-learning checkpoints under `checkpoints/checkpoints_QLearning/`),
+`FindOptimalCount` (OLS checkpoints under `checkpoints/checkpoints_ols/`), and
+`MeasureEdge` (fixed-strategy evaluation under `checkpoints/MeasureEdge/`) —
+have been removed; `AlternatingOptimization`'s loop and
+`CompareCountStrategies` reading its checkpoints directly now cover that
+ground.
 
 ### `AlternatingOptimization`
 
@@ -229,7 +229,18 @@ This is used heavily by:
 - selects classic blackjack or Double Down Madness with `--game`
 - blackjack compares basic strategy, Illustrious 18, and full deviations
 - DDM compares its known version-specific strategy and full deviations
-- can train full deviations fresh or load them from a `FindDeviations` checkpoint
+  (Illustrious 18 is Hi-Lo/blackjack-specific, so it's skipped for DDM)
+- full deviations come from one of three sources:
+  - `--deviations-checkpoint <dir> --deviations-agent Pk`: that game's own
+    `AlternatingOptimization` checkpoint folder (`Pk_agent.json` plus,
+    unless the count was explicitly overridden, the matching `Wk.json`/`W0`
+    count config)
+  - `--strategy-checkpoint <dir>`: a `full_deviations_strategy.json` +
+    `full_deviations_meta.json` pair saved by a previous
+    `CompareCountStrategies` fresh-training run (mutually exclusive with
+    `--deviations-checkpoint`)
+  - neither flag: trained fresh, then auto-saved as the pair above into this
+    run's own output folder
 - writes:
   - `run.log`
   - `ev_count_graph.json/svg`
@@ -244,11 +255,10 @@ The project now keeps run output beside the relevant checkpoint family instead o
 
 Examples:
 
-- `checkpoints/checkpoints_QLearning/<folder>/`
-- `checkpoints/checkpoints_ols/<folder>/`
-- `checkpoints/alternating-checkpoints/<folder>/`
-- `checkpoints/CompareCountStrategies/<run-name>/`
-- `checkpoints/MeasureEdge/<run-name>/`
+- `checkpoints/alternating-checkpoints/<folder>/` (blackjack)
+- `checkpoints/double-down-madness-alternating-checkpoints/<folder>/` (DDM)
+- `checkpoints/CompareCountStrategies/<run-name>/` (blackjack)
+- `checkpoints/DoubleDownMadnessCompareCountStrategies/<run-name>/` (DDM)
 
 `RunLogger` mirrors `stdout` and `stderr` into `run.log` inside those folders.
 

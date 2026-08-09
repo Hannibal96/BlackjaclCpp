@@ -69,7 +69,7 @@ bool runSimulation(const BlackjackRules& rules, std::vector<Player*>& players, u
         int lastHandCount = 0;
         
         // Run the simulation with optional progress bar
-        for (int i = 1; i <= numRounds; ++i) {
+        for (uint64_t i = 1; i <= numRounds; ++i) {
             table.round();
             // std::cout << table << std::endl;
         }

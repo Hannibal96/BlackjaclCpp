@@ -82,7 +82,7 @@ static bool loadStrategyData(
 bool BasicStrategy::loadFromJson(const std::string& filepath) {
     try {
         namespace fs = std::filesystem;
-        fs::path full_path = fs::path(PROJECT_ROOT) / "basic_strategy_tables" / (filepath + ".json");
+        fs::path full_path = fs::path(PROJECT_ROOT) / "basic_strategy_tables" / "blackjack" / (filepath + ".json");
         std::ifstream file(full_path);
 
         if (!file.is_open()) {
@@ -286,7 +286,7 @@ static std::string handTypeToString(HandType handType) {
     }
 }
 
-// Serialize lookup table to JSON (same format as basic_strategy_tables/*.json)
+// Serialize lookup table to JSON (same format as basic_strategy_tables/blackjack/*.json)
 json BasicStrategy::toJson() const {
     json result;
     if (!lookupTable) return result;

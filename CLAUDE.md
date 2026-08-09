@@ -112,15 +112,20 @@ The project compiles all production code once as `blackjack_objs` (object librar
 
 ## Testing Strategy
 
-Tests use Google Test framework (auto-fetched via CMake). Test categories:
+`unittest/` holds GoogleTest-based tests (auto-fetched via CMake) and is
+where new low-level tests would go, but per-component unit coverage isn't
+the priority here — regression tests catching simulation-accuracy drift are:
 
-- **Unit Tests**: `ShoeTest`, `HandTest` - test individual components
-- **Integration Tests**: `BlackjackTableTest` - test full game flow
-- **Strategy Tests**: `BasicStrategyTest` - validate strategy decision logic
-- **Regression Tests**: Compare generated strategy tables against reference JSON files
+- **Unit Tests** (`unittest/`): `ShoeTest`, `HandTest` - test individual components
+- **Integration Tests** (`unittest/`): `BlackjackTableTest` - test full game flow
+- **Strategy Tests** (`unittest/`): `BasicStrategyTest` - validate strategy decision logic
+- **Regression Tests** (`regression/`): standalone executables (no GoogleTest,
+  not run by `ctest` — run directly) that compare generated strategy tables
+  against reference JSON files
   - `BasicStrategyRegressionTest`: Validates optimal basic strategy tables
   - `QLearningRegressionTest`: Checks Q-learning convergence
-- **Benchmarks**: `PerformanceBenchmark`, `BlackjackBenchmark` - measure simulation speed
+  - `DoubleDownMadnessEdgeRegressionTest`, `DoubleDownMadnessQLearningRegressionTest`: same, for DDM
+- **Benchmarks** (`unittest/`): `PerformanceBenchmark`, `BlackjackBenchmark` - measure simulation speed
 
 ## Important Implementation Details
 
@@ -146,8 +151,11 @@ Tests use Google Test framework (auto-fetched via CMake). Test categories:
 - Can convert Q-table to BasicStrategy via `toBasicStrategy()`
 
 ### Basic Strategy Tables
-- Stored as JSON files in `basic_strategy_tables/`
-- Filename encodes rules: `decks=N_ss17=BOOL_das=BOOL_surr=X_peek=BOOL.json`
+- Stored as JSON files under `basic_strategy_tables/`, one subfolder per game
+  so neither game's tables sit in the shared root: `basic_strategy_tables/blackjack/`
+  and `basic_strategy_tables/double_down_madness/`
+- Blackjack filename encodes rules: `decks=N_ss17=BOOL_das=BOOL_surr=X_peek=BOOL.json`
+- DDM has a base `basic_strategy.json` plus a `version_<N>.json` override merged on top
 - Used for regression testing and as reference strategies
 
 ## Debug Mode and Reproducibility
@@ -202,6 +210,21 @@ See [DEBUG_MODE.md](DEBUG_MODE.md) for comprehensive guide on debug mode and Pyt
 
 ## Current Alternating-Optimization Research
 
+The app surface is exactly two executables, each exactly one file:
+`apps/AlternatingOptimization.cpp` and `apps/CompareCountStrategies.cpp`.
+Each holds a `template <typename Game>` engine, its two instantiations
+(`Game = BlackjackGame` / `DoubleDownMadnessGame`), and `main()`. Nothing
+else includes those engines, so there's no header/source split for them.
+Game-specific behavior (Rules construction, CLI rule flags, meta.json
+fields, checkpoint-root naming, basic-strategy loading, whether Illustrious
+18 applies) lives in the shared `apps/GameTraits.h`. `apps/GameAppDispatcher.h`
+is a header-only helper (also shared, since it's identical for both apps)
+that does the `--game`/`--table-type` argv routing and filters out
+irrelevant game-specific flags before calling into the right instantiation.
+The older standalone `FindDeviations`, `FindOptimalCount`, and `MeasureEdge`
+apps are gone — superseded by `AlternatingOptimization`'s loop and by
+`CompareCountStrategies` reading its checkpoints directly.
+
 `AlternatingOptimization` is the unified CLI for classic blackjack and Double
 Down Madness:
 
@@ -218,7 +241,23 @@ Kelly-multiplier graphs. Count objective and constraints are independent:
 - Constraints: `--count-unconstrained`, `--count-sum-zero`,
   `--count-sum-zero-fixed-b1`, `--count-sum-zero-fixed-p0-edge`.
 - Default: classical OLS plus `--count-sum-zero-fixed-b1`.
-- Legacy DDM `--count-quadratic-kelly-zero-bias` remains accepted.
+- Legacy `--count-quadratic-kelly-zero-bias` alias remains accepted (both games).
+
+`CompareCountStrategies --deviations-checkpoint <dir> --deviations-agent Pk`
+reads full deviations straight from an `AlternatingOptimization` checkpoint
+folder for the same game (`Pk_agent.json` plus the matching `Wk.json`/`W0`
+count) — this is now the only supported checkpoint format for both games.
+
+`CompareCountStrategies` also owns its own, separate checkpoint format for
+whatever count it trained full deviations against fresh (Hi-Lo by default,
+or any `--count`/`--count-weights`) — every fresh-training run auto-saves
+`full_deviations_strategy.json` + `full_deviations_meta.json` (the greedy
+`BasicStrategy` plus its count/game config) into that run's own output
+folder. `--strategy-checkpoint <dir>` reloads one instead of retraining
+(`<dir>` is a folder name under `checkpoints/CompareCountStrategies/` /
+`checkpoints/DoubleDownMadnessCompareCountStrategies/`, or an absolute path
+to any prior run's output folder). Mutually exclusive with
+`--deviations-checkpoint`.
 
 Both objectives use streamed normal-equation statistics. OLS has
 `A=E[cc^T]`; quadratic Kelly has `A=E[X^2cc^T]`; both use `d=E[Xc]`. Sum-zero

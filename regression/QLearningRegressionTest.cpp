@@ -59,7 +59,7 @@ std::pair<int, int> countStrategyDifferences(const QLearningStrategy& learned, c
     int totalCompared = 0;
 
     // Try to open the JSON file
-    std::string filepath = "basic_strategy_tables/" + jsonFileName + ".json";
+    std::string filepath = "basic_strategy_tables/blackjack/" + jsonFileName + ".json";
     std::ifstream file(filepath);
     if (!file.is_open()) {
         std::cerr << "Could not open strategy file: " << filepath << std::endl;

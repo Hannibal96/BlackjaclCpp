@@ -29,9 +29,6 @@ endfunction()
 
 add_compile_definitions(PROJECT_ROOT="${PROJECT_ROOT_PATH}")
 
-# Regression tests subdirectory
-add_subdirectory(regression)
-
 # Standard unit tests
 add_gtest(ShoeTest ${CMAKE_CURRENT_SOURCE_DIR}/ShoeTest.cpp)
 add_gtest(HandTest ${CMAKE_CURRENT_SOURCE_DIR}/HandTest.cpp)
@@ -41,20 +38,3 @@ add_gtest(PerformanceBenchmark ${CMAKE_CURRENT_SOURCE_DIR}/PerformanceBenchmark.
 add_gtest(BlackjackBenchmark ${CMAKE_CURRENT_SOURCE_DIR}/BlackjackBenchmark.cpp)
 add_gtest(DebugShoeTest ${CMAKE_CURRENT_SOURCE_DIR}/DebugShoeTest.cpp)
 add_gtest(SimulationAnalysisTest ${CMAKE_CURRENT_SOURCE_DIR}/SimulationAnalysisTest.cpp)
-
-# Convenient meta-target to build all tests
-add_custom_target(tests ALL
-  DEPENDS
-    ShoeTest
-    HandTest
-    BlackjackTableTest
-    BasicStrategyTest
-    PerformanceBenchmark
-    BlackjackBenchmark
-    DebugShoeTest
-    SimulationAnalysisTest
-    BasicStrategyRegressionTest
-    QLearningRegressionTest
-    DoubleDownMadnessEdgeRegressionTest
-    DoubleDownMadnessQLearningRegressionTest
-)

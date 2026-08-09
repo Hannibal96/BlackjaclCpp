@@ -40,8 +40,30 @@ target_include_directories(blackjack_objs
 include(CTest)
 enable_testing()
 
-# NOTE: your tests dir is named 'unittest'
+# Regression tests: compare simulation output against reference JSON tables.
+# Must come before add_subdirectory(unittest) — the "tests" meta-target below
+# depends on target names these define.
+add_subdirectory(regression)
+
+# Unit tests
 add_subdirectory(unittest)
+
+# Convenience meta-target to build all tests (unit + regression)
+add_custom_target(tests ALL
+  DEPENDS
+    ShoeTest
+    HandTest
+    BlackjackTableTest
+    BasicStrategyTest
+    PerformanceBenchmark
+    BlackjackBenchmark
+    DebugShoeTest
+    SimulationAnalysisTest
+    BasicStrategyRegressionTest
+    QLearningRegressionTest
+    DoubleDownMadnessEdgeRegressionTest
+    DoubleDownMadnessQLearningRegressionTest
+)
 
 # Standalone training/analysis apps
 add_subdirectory(apps)
