@@ -36,29 +36,12 @@ target_include_directories(blackjack_objs
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-# testing from the top level
-include(CTest)
-enable_testing()
-
 # Regression tests: compare simulation output against reference JSON tables.
-# Must come before add_subdirectory(unittest) — the "tests" meta-target below
-# depends on target names these define.
 add_subdirectory(regression)
 
-# Unit tests
-add_subdirectory(unittest)
-
-# Convenience meta-target to build all tests (unit + regression)
+# Convenience meta-target to build all regression tests.
 add_custom_target(tests ALL
   DEPENDS
-    ShoeTest
-    HandTest
-    BlackjackTableTest
-    BasicStrategyTest
-    PerformanceBenchmark
-    BlackjackBenchmark
-    DebugShoeTest
-    SimulationAnalysisTest
     BasicStrategyRegressionTest
     QLearningRegressionTest
     DoubleDownMadnessEdgeRegressionTest

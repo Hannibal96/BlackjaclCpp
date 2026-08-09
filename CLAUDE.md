@@ -21,30 +21,21 @@ cmake --build build/release
 
 ### Running Tests
 ```bash
-# Run all tests using CTest
-ctest --test-dir build/debug
-ctest --test-dir build/release
+# Build all regression tests
+cmake --build build/debug --target tests
+cmake --build build/release --target tests
 
-# Run specific test executable
-./build/debug/bin/ShoeTest
-./build/debug/bin/HandTest
-./build/debug/bin/BlackjackTableTest
-./build/debug/bin/BasicStrategyTest
+# Run a regression executable
 ./build/debug/bin/BasicStrategyRegressionTest
 ./build/debug/bin/QLearningRegressionTest
-
-# Run performance benchmarks
-./build/release/bin/PerformanceBenchmark
-./build/release/bin/BlackjackBenchmark
+./build/debug/bin/DoubleDownMadnessEdgeRegressionTest
+./build/debug/bin/DoubleDownMadnessQLearningRegressionTest
 ```
 
 ### Development Workflow
 ```bash
 # Rebuild after changes
 cmake --build build/debug
-
-# Run single test
-./build/debug/bin/HandTest --gtest_filter=HandTest.SoftHandAceAs11
 
 # Run regression tests (compares against reference JSON tables)
 ./build/debug/bin/BasicStrategyRegressionTest
@@ -108,24 +99,16 @@ The Q-learning agent uses a simplified state key:
 
 ### Object Library Pattern
 
-The project compiles all production code once as `blackjack_objs` (object library), then links it into multiple test executables. This avoids recompiling source files for each test target.
+The project compiles all production code once as `blackjack_objs` (object library), then links it into the apps and regression executables. This avoids recompiling source files for each target.
 
 ## Testing Strategy
 
-`unittest/` holds GoogleTest-based tests (auto-fetched via CMake) and is
-where new low-level tests would go, but per-component unit coverage isn't
-the priority here — regression tests catching simulation-accuracy drift are:
+`regression/` contains standalone executables (no GoogleTest) that compare
+simulation results and generated strategy tables against reference data:
 
-- **Unit Tests** (`unittest/`): `ShoeTest`, `HandTest` - test individual components
-- **Integration Tests** (`unittest/`): `BlackjackTableTest` - test full game flow
-- **Strategy Tests** (`unittest/`): `BasicStrategyTest` - validate strategy decision logic
-- **Regression Tests** (`regression/`): standalone executables (no GoogleTest,
-  not run by `ctest` — run directly) that compare generated strategy tables
-  against reference JSON files
   - `BasicStrategyRegressionTest`: Validates optimal basic strategy tables
   - `QLearningRegressionTest`: Checks Q-learning convergence
   - `DoubleDownMadnessEdgeRegressionTest`, `DoubleDownMadnessQLearningRegressionTest`: same, for DDM
-- **Benchmarks** (`unittest/`): `PerformanceBenchmark`, `BlackjackBenchmark` - measure simulation speed
 
 ## Important Implementation Details
 
@@ -181,7 +164,7 @@ auto qlearning = std::make_unique<QLearningStrategy>(
 
 ### Running Reproducibility Test
 
-The ReproducibilityTest is a **standalone executable** (not a unittest) that demonstrates deterministic Q-learning training using DebugShoe and explicit seeds. It runs single-threaded for full reproducibility.
+The ReproducibilityTest is a **standalone executable** that demonstrates deterministic Q-learning training using DebugShoe and explicit seeds. It runs single-threaded for full reproducibility.
 
 ```bash
 # Build and run the reproducibility test

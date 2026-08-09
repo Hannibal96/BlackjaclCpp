@@ -8,7 +8,7 @@ A C++20 blackjack simulation and research project with:
 - Card-count-aware betting and regression tooling
 - Two research apps — `AlternatingOptimization` and `CompareCountStrategies` —
   each shared between both games via a `Game` traits template (see `apps/GameTraits.h`)
-- GoogleTest-based unit, regression, and benchmark targets
+- Standalone simulation regression targets
 
 ## Repository Layout
 
@@ -31,7 +31,6 @@ A C++20 blackjack simulation and research project with:
 │   ├── RL/                       # Strategy interfaces and learning implementations
 │   ├── Shoe/                     # Cards, decks, shoes, debug shoe
 │   └── Utils/                    # Parallel simulation helpers and run logging
-├── unittest/                     # Unit tests and benchmarks
 └── CMakeLists.txt
 ```
 
@@ -42,24 +41,20 @@ cmake -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
 ```
 
-Production code is compiled once into the `blackjack_objs` object library and reused by apps and tests.
+Production code is compiled once into the `blackjack_objs` object library and reused by apps and regression tests.
 
 ## Test
 
 ```bash
-ctest --test-dir build
+cmake --build build --target tests
 ```
 
-Main test targets include:
+Regression targets include:
 
-- `ShoeTest`, `HandTest`, `BlackjackTableTest`, `BasicStrategyTest`,
-  `DebugShoeTest` — GoogleTest unit tests, in `unittest/`
 - `BasicStrategyRegressionTest`, `QLearningRegressionTest`,
   `DoubleDownMadnessEdgeRegressionTest`, `DoubleDownMadnessQLearningRegressionTest`
   — standalone regression executables (no GoogleTest) that compare simulated
   output against reference JSON tables, in `regression/`
-- `PerformanceBenchmark`
-- `BlackjackBenchmark`
 
 ## Quick Start
 

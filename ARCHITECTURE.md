@@ -12,7 +12,6 @@ BlackjaclCpp/
 │   ├── RL/            # Strategies and reinforcement learning
 │   └── Utils/         # Parallel simulation + run logging
 ├── apps/              # AlternatingOptimization + CompareCountStrategies (both games)
-├── unittest/          # Unit tests and benchmarks (GoogleTest)
 ├── regression/        # Regression tests: sim output vs. reference JSON tables
 ├── basic_strategy_tables/
 │   ├── blackjack/
