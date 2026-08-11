@@ -16,7 +16,8 @@ readonly SUITE_NAME="h17c03_5b"
 readonly SUITE_LOG_DIR="${PROJECT_DIR}/checkpoints/performance-suites/${SUITE_NAME}"
 
 readonly NUM_ROUNDS=5000000000
-readonly EVAL_ROUNDS=500000000
+readonly EVAL_ROUNDS=5000000000
+readonly GRAPH_ROUNDS=500000000
 readonly KELLY_MEASUREMENTS=1000
 
 GAME_FLAGS=(
@@ -37,19 +38,20 @@ RL_FLAGS=(
   --num-threads "${NUM_THREADS}"
   --stop-mode diff
   --sample-rounds 100000000
-  --diff-threshold 0.03
+  --diff-threshold 0.005
 )
 
 EVALUATION_FLAGS=(
   --num-rounds "${NUM_ROUNDS}"
   --eval-rounds "${EVAL_ROUNDS}"
+  --graph-rounds "${GRAPH_ROUNDS}"
   --kelly-measurements "${KELLY_MEASUREMENTS}"
   --kelly-fraction-step 0.05
 )
 
 ALTERNATING_FLAGS=(
   --iterations 3
-  --sample-every 1
+  --sample-every 5
 )
 
 require_executable() {
