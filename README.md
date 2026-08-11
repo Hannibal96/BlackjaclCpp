@@ -112,6 +112,10 @@ evaluation) — have been removed; their functionality is fully covered by
   sweep graphs. DDM supports `--version 1|2|3`; blackjack-only rule flags are
   ignored with warnings in DDM mode.
 
+  Use `--graph-rounds <N>` to choose the number of rounds used to form EV/count,
+  histogram, and conditional-second-moment graphs independently of
+  `--eval-rounds`. If omitted, graph rounds default to the evaluation rounds.
+
   Count fitting selects an objective independently from its constraints. Use
   `--count-classical-ols` or `--count-quadratic-kelly`, then optionally select
   `--count-unconstrained`, `--count-sum-zero`,

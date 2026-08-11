@@ -117,6 +117,7 @@ struct CompareCountStrategiesApp {
 
     static inline uint64_t    g_num_rounds   = 1'000'000'000ULL;   // training rounds for full deviations
     static inline uint64_t    g_eval_rounds  = 0;                  // 0 => use g_num_rounds for spread eval
+    static inline uint64_t    g_graph_rounds = 0;                  // 0 => use resolved eval rounds
     static inline int         g_num_threads  = 10;
     static inline double      g_penetration  = 75.0;
     static inline int         g_kelly_measurements = 10;
@@ -637,6 +638,14 @@ struct CompareCountStrategiesApp {
         return static_cast<double>(rounds) / static_cast<double>(threads);
     }
 
+    static uint64_t resolvedEvalRounds() {
+        return g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds;
+    }
+
+    static uint64_t resolvedGraphRounds() {
+        return g_graph_rounds == 0 ? resolvedEvalRounds() : g_graph_rounds;
+    }
+
     static StrategyGraphArtifact measureEvCountGraph(const Case& c,
                                               const std::string& label,
                                               const BasicStrategy& strategy,
@@ -1122,7 +1131,7 @@ struct CompareCountStrategiesApp {
         EvalResult result;
         result.label = label;
         result.note = note;
-        const uint64_t evalRounds = (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds);
+        const uint64_t evalRounds = resolvedEvalRounds();
         const EdgeStatistics spread = evaluateSpreadEdge(c, strategy, count, evalRounds);
         result.spreadEdge = spread.mean;
         result.spreadStddev = spread.stddev;
@@ -1170,12 +1179,14 @@ struct CompareCountStrategiesApp {
             : std::filesystem::path(g_output_dir);
         if (outputPath.is_relative()) outputPath = std::filesystem::path(PROJECT_ROOT) / outputPath;
         RunLogger logger(outputPath.parent_path(), outputPath.filename().string());
-        const uint64_t evalRounds = (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds);
+        const uint64_t evalRounds = resolvedEvalRounds();
+        const uint64_t graphRounds = resolvedGraphRounds();
         std::cout << "\n=== " << Game::kBannerLabel << "CompareCountStrategies ===\n";
         std::cout << "Command:       " << g_command_line << "\n";
         std::cout << "Scenario:      " << ToString(c)
                   << "_penetration=" << g_penetration << "%\n";
         std::cout << "Eval rounds:   " << evalRounds << "  Threads: " << g_num_threads << "\n";
+        std::cout << "Graph rounds:  " << graphRounds << "\n";
         std::cout << "Kelly eval:    " << g_kelly_measurements << " x " << kKellyMeasurementRounds << " rounds\n";
         std::cout << "Kelly sweep:   centered at nearest step to 1/E[X^2] +/- 0.25 (minimum 0)";
         if (g_kelly_fraction_min) std::cout << "  min override=" << *g_kelly_fraction_min;
@@ -1292,7 +1303,7 @@ struct CompareCountStrategiesApp {
 
         auto basicStrategy = loadBasicStrategyForCase(c);
         graphs.push_back(measureEvCountGraph(
-            c, "Known basic strategy", *basicStrategy, requestedCount, evalRounds));
+            c, "Known basic strategy", *basicStrategy, requestedCount, graphRounds));
         results.push_back(evaluateCase(
             "Known basic strategy", "", c, *basicStrategy, requestedCount,
             graphs.back().flatStatistics.secondMoment > 0.0
@@ -1309,7 +1320,7 @@ struct CompareCountStrategiesApp {
                            "your game is H17 so exact rule-specific indices may differ.";
                 }
                 graphs.push_back(measureEvCountGraph(
-                    c, "Illustrious 18", *i18Strategy, requestedCount, evalRounds));
+                    c, "Illustrious 18", *i18Strategy, requestedCount, graphRounds));
                 results.push_back(evaluateCase(
                     "Illustrious 18", note, c, *i18Strategy, requestedCount,
                     graphs.back().flatStatistics.secondMoment > 0.0
@@ -1341,7 +1352,7 @@ struct CompareCountStrategiesApp {
         logger.fileStream() << *fullDeviations;
         logger.fileStream() << "===============================\n";
         graphs.push_back(measureEvCountGraph(
-            c, "Full deviations", *fullDeviations, requestedCount, evalRounds));
+            c, "Full deviations", *fullDeviations, requestedCount, graphRounds));
         results.push_back(evaluateCase(
             "Full deviations", fullNote, c, *fullDeviations, requestedCount,
             graphs.back().flatStatistics.secondMoment > 0.0
@@ -1411,6 +1422,7 @@ struct CompareCountStrategiesApp {
 
         std::cout << "EVALUATION:\n";
         std::cout << "  --eval-rounds <N>      Spread 1:10 evaluation rounds (default: --num-rounds)\n";
+        std::cout << "  --graph-rounds <N>     EV/count graph sampling rounds (default: --eval-rounds)\n";
         std::cout << "  --num-rounds <N>       Training rounds for fresh full deviations (default: 1000000000)\n";
         std::cout << "  --num-threads <N>      Threads (default: 10)\n";
         std::cout << "  --penetration <val>    Shoe penetration % (default: 75.0)\n";
@@ -1476,6 +1488,7 @@ struct CompareCountStrategiesApp {
 
         else if (arg == "--num-rounds"       && i+1<argc) g_num_rounds = std::stoull(argv[++i]);
         else if (arg == "--eval-rounds"      && i+1<argc) g_eval_rounds = std::stoull(argv[++i]);
+        else if (arg == "--graph-rounds"     && i+1<argc) g_graph_rounds = std::stoull(argv[++i]);
         else if (arg == "--num-threads"      && i+1<argc) g_num_threads = std::stoi(argv[++i]);
         else if (arg == "--penetration"      && i+1<argc) g_penetration = std::stod(argv[++i]);
         else if (arg == "--kelly-measurements" && i+1<argc) g_kelly_measurements = std::stoi(argv[++i]);

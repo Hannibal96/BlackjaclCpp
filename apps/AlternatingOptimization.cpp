@@ -167,6 +167,7 @@ struct AlternatingOptimizationApp {
 
     static inline uint64_t    g_num_rounds          = 1'000'000'000ULL;
     static inline uint64_t    g_eval_rounds         = 0;   // 0 => use g_num_rounds
+    static inline uint64_t    g_graph_rounds        = 0;   // 0 => use resolved eval rounds
     static inline uint64_t    g_iterations          = 3;   // number of loop iterations k producing P_k from W_k, then W_{k+1}
     static inline int         g_num_threads         = 10;
     static inline double      g_penetration         = 75.0;
@@ -261,7 +262,16 @@ struct AlternatingOptimizationApp {
         return (mode == TrainingStopMode::TABLE_DIFF) ? "diff" : "rounds";
     }
 
-    static std::string buildRunHeader(const Case& c, const std::string& folder, uint64_t evalRounds) {
+    static uint64_t resolvedEvalRounds() {
+        return g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds;
+    }
+
+    static uint64_t resolvedGraphRounds() {
+        return g_graph_rounds == 0 ? resolvedEvalRounds() : g_graph_rounds;
+    }
+
+    static std::string buildRunHeader(const Case& c, const std::string& folder,
+                                      uint64_t evalRounds, uint64_t graphRounds) {
         std::ostringstream os;
         os << "\n=== " << Game::kBannerLabel << "AlternatingOptimization ===\n";
         os << "Command:       " << g_command_line << "\n";
@@ -278,6 +288,7 @@ struct AlternatingOptimizationApp {
            << "  (record every " << g_sample_every << " => target "
            << g_num_rounds << " recorded samples)\n";
         os << "Eval rounds:   " << evalRounds << "\n";
+        os << "Graph rounds:  " << graphRounds << "\n";
         os << "Iterations:    " << g_iterations << "  (each iteration learns P_k then W_{k+1})\n";
         os << "Count objective: "
            << countRegressionObjectiveToString(g_count_regression_objective) << "\n";
@@ -311,7 +322,8 @@ struct AlternatingOptimizationApp {
         meta["game"]["penetration"] = g_penetration;
 
         meta["algorithm_config"]["num_rounds_per_phase"] = g_num_rounds;
-        meta["algorithm_config"]["eval_rounds"]          = (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds);
+        meta["algorithm_config"]["eval_rounds"]          = resolvedEvalRounds();
+        meta["algorithm_config"]["graph_rounds"]         = resolvedGraphRounds();
         meta["algorithm_config"]["iterations"]           = g_iterations;
         meta["algorithm_config"]["sample_every"]         = g_sample_every;
         meta["algorithm_config"]["num_threads"]          = g_num_threads;
@@ -2175,10 +2187,11 @@ struct AlternatingOptimizationApp {
             : (g_checkpoint_name.empty()
                 ? currentTimestamp() + "_" + checkpointFolderName(c)
                 : g_checkpoint_name + "_" + checkpointFolderName(c));
-        const uint64_t evalRounds = (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds);
+        const uint64_t evalRounds = resolvedEvalRounds();
+        const uint64_t graphRounds = resolvedGraphRounds();
         const std::filesystem::path outputPath = runDirectory(folder);
         RunLogger logger(outputPath.parent_path(), outputPath.filename().string());
-        const std::string runHeader = buildRunHeader(c, folder, evalRounds);
+        const std::string runHeader = buildRunHeader(c, folder, evalRounds, graphRounds);
 
         std::cout << runHeader;
 
@@ -2266,7 +2279,6 @@ struct AlternatingOptimizationApp {
             if (!g_no_save)
                 saveCountArtifact(folder, wLabel, countArtifact, countRounds);
 
-            const uint64_t graphRounds = (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds);
             EvCountGraphArtifact graphArtifact = measureEvCountGraph(c, *currentPolicy, countArtifact.count, graphRounds);
             printEvCountGraphSummary(wLabel, graphArtifact);
             saveEvCountGraphArtifact(logger.runDir(), wLabel, graphArtifact);
@@ -2326,6 +2338,7 @@ struct AlternatingOptimizationApp {
         std::cout << "  --eval-rounds <N>     Edge evaluation rounds after each step (default: num-rounds)\n";
         std::cout << "                        P0 reports flat edge; P1+ also report spread edge and Kelly growth.\n";
         std::cout << "                        Count steps report spread edge and Kelly growth.\n";
+        std::cout << "  --graph-rounds <N>    EV/count graph sampling rounds (default: eval-rounds)\n";
         std::cout << "  --iterations <N>      Number of loop iterations k (default: 3)\n";
         std::cout << "  --num-threads <N>     Threads (default: 10)\n";
         std::cout << "  --penetration <val>   Shoe penetration % (default: 75.0)\n";
@@ -2401,6 +2414,7 @@ struct AlternatingOptimizationApp {
         else if (arg == "--sample-rounds"    && i + 1 < argc) g_sample_rounds = std::stoull(argv[++i]);
         else if (arg == "--diff-threshold"   && i + 1 < argc) g_diff_threshold = std::stod(argv[++i]);
         else if (arg == "--eval-rounds"      && i + 1 < argc) g_eval_rounds = std::stoull(argv[++i]);
+        else if (arg == "--graph-rounds"     && i + 1 < argc) g_graph_rounds = std::stoull(argv[++i]);
         else if (arg == "--iterations"       && i + 1 < argc) g_iterations = std::stoull(argv[++i]);
         else if (arg == "--num-threads"      && i + 1 < argc) g_num_threads = std::stoi(argv[++i]);
         else if (arg == "--penetration"      && i + 1 < argc) g_penetration = std::stod(argv[++i]);
