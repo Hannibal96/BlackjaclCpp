@@ -12,6 +12,11 @@
 #include <algorithm>
 #include <cmath>
 
+enum class RegressionObjective {
+    EXPECTED_VALUE_OLS,
+    QUADRATIC_KELLY
+};
+
 // Player class - can be used directly or inherited for advanced behavior
 class Player {
 protected:
@@ -31,16 +36,25 @@ protected:
     // Betting strategy — nullptr means fixed unit bet of 1.0
     std::unique_ptr<BettingStrategy> bettingStrategy;
 
-    // E[game] model parameters: E[game] = countBias + countFactor * trueCount
+    // When enabled, actions requiring another wager are removed if the
+    // bankroll is already committed to the current round. Kelly simulations
+    // enable this; training and fixed/spread edge simulations leave it off.
+    bool enforceBankrollActionLimits = false;
+
+    // Betting signal = countBias + countFactor * trueCount. Usually this is EV;
+    // quadratic-Kelly counts fit the wager fraction directly.
     // For OLS-derived systems: countFactor=1.0, countBias=w[13] (weights already in EV units).
     // For traditional systems (Hi-Lo etc.): countFactor≈0.005, countBias≈-(house edge).
     double countFactor = 1.0;
     double countBias   = 0.0;
+    bool continuousBettingCount = false;
 
-    // OLS regression accumulation:  w = (X^T X)^-1 X^T y
+    // Streaming regression accumulation. OLS stores X^T X; quadratic Kelly
+    // stores sum(y^2 X^T X). Both store X^T y in Xty.
     // X row: [removedCards[i]/remainingDecks (13-dim), 1.0 bias]  (14-dim total)
     // y: net outcome of the round summed over all hands
     bool regressionEnabled = false;
+    RegressionObjective regressionObjective = RegressionObjective::EXPECTED_VALUE_OLS;
     std::array<std::array<double, 14>, 14> XtX{};  // accumulated X^T X  (14×14, last = bias)
     std::array<double, 14> Xty{};                   // accumulated X^T y  (14×1)
     uint64_t regressionRounds = 0;
@@ -75,13 +89,17 @@ public:
 
     // Get action based on game state (delegates to strategy via StateKey)
     virtual Action getAction(const State& state);
+    Action getAction(const State& state, const std::vector<Action>& allowedActions);
 
     // Get bet amount — receives current shoe removed-cards for count-aware sizing.
     // Currently always returns 1.0; override or extend for count-based betting.
     virtual double getBet(const std::array<int, 13>& removedCards);
 
     // Update the player's money with SARS parameters for learning strategies
-    void updateMoney(double reward, const State& state, Action action, const State& nextState);
+    void updateMoney(double reward, const State& state, Action action,
+                     const State& nextState,
+                     double learningRewardDivisor = 1.0,
+                     double nextValueMultiplier = 1.0);
 
     // Update money only — no Q-table update. Use when the player made no decision
     // (e.g. dealer blackjack resolved before player acts in a peek game).
@@ -107,6 +125,14 @@ public:
     // --- Betting strategy ---
     void setBettingStrategy(std::unique_ptr<BettingStrategy> bs);
     bool hasBettingStrategy() const { return bettingStrategy != nullptr; }
+    void setEnforceBankrollActionLimits(bool enforce) {
+        enforceBankrollActionLimits = enforce;
+    }
+    bool shouldEnforceBankrollActionLimits() const {
+        return enforceBankrollActionLimits;
+    }
+    bool canAffordAdditionalWager(double additionalWager,
+                                  double committedWager) const;
 
     // Set E[game] model parameters individually or from a CountingSystem.
     void setCountFactor(double f) { countFactor = f; }
@@ -115,6 +141,7 @@ public:
         setCountWeights(cs.weights);
         setCountFactor(cs.factor);
         setCountBias(cs.bias);
+        continuousBettingCount = cs.continuousBettingCount;
     }
 
     // Set card counting weights (rank tags only; resolution is separate)
@@ -130,8 +157,13 @@ public:
     void setNumDecks(int decks);
 
     // --- Regression ---
-    void enableRegression() { regressionEnabled = true; }
+    void enableRegression(
+        RegressionObjective objective = RegressionObjective::EXPECTED_VALUE_OLS) {
+        regressionEnabled = true;
+        regressionObjective = objective;
+    }
     bool isRegressionEnabled() const { return regressionEnabled; }
+    RegressionObjective getRegressionObjective() const { return regressionObjective; }
     void enableCountGraph(double resolution) {
         countGraphEnabled = true;
         countGraphResolution = (resolution > 0.0 ? resolution : 0.25);

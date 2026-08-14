@@ -22,6 +22,10 @@ static HandType parseHandType(const std::string& handTypeStr) {
         return HandType::SOFT;
     } else if (handTypeStr == "HandType.PAIR") {
         return HandType::PAIR;
+    } else if (handTypeStr == "HandType.ZOMBIE") {
+        return HandType::ZOMBIE;
+    } else if (handTypeStr == "HandType.BLACKJACK") {
+        return HandType::BLACKJACK;
     } else {
         std::cerr << "Warning: Unknown HandType string '" << handTypeStr << "', defaulting to HARD" << std::endl;
         return HandType::HARD;
@@ -30,8 +34,9 @@ static HandType parseHandType(const std::string& handTypeStr) {
 
 static bool loadStrategyData(
     const json& jsonData,
-    std::shared_ptr<std::map<int, std::map<HandType, std::map<int, std::map<int, ActionWithFallback>>>>>& lookupTable) {
-    lookupTable->clear();
+    std::shared_ptr<std::map<int, std::map<HandType, std::map<int, std::map<int, ActionWithFallback>>>>>& lookupTable,
+    bool clearExisting = true) {
+    if (clearExisting) lookupTable->clear();
 
     for (auto& [countStr, handTypes] : jsonData.items()) {
         int count = std::stoi(countStr);
@@ -77,7 +82,7 @@ static bool loadStrategyData(
 bool BasicStrategy::loadFromJson(const std::string& filepath) {
     try {
         namespace fs = std::filesystem;
-        fs::path full_path = fs::path(PROJECT_ROOT) / "basic_strategy_tables" / (filepath + ".json");
+        fs::path full_path = fs::path(PROJECT_ROOT) / "basic_strategy_tables" / "blackjack" / (filepath + ".json");
         std::ifstream file(full_path);
 
         if (!file.is_open()) {
@@ -117,15 +122,31 @@ bool BasicStrategy::loadFromFile(const std::string& filepath) {
     }
 }
 
+bool BasicStrategy::mergeFromFile(const std::string& filepath) {
+    try {
+        namespace fs = std::filesystem;
+        fs::path fullPath = fs::path(PROJECT_ROOT) / filepath;
+        std::ifstream file(fullPath);
+        if (!file.is_open()) {
+            std::cerr << "Error: Could not open file " << fullPath << std::endl;
+            return false;
+        }
+
+        json jsonData;
+        file >> jsonData;
+        return loadStrategyData(jsonData, lookupTable, /*clearExisting=*/false);
+    } catch (const std::exception& e) {
+        std::cerr << "Error merging strategy file: " << e.what() << std::endl;
+        return false;
+    }
+}
+
 Action BasicStrategy::getAction(const StateKey& key, const std::vector<Action>& allowedActions) {
     const auto& [count, handType, playerSum, dealerValue] = key;
 
     if(handType == HandType::BLACKJACK)
         return Action::STAND;
 
-    if (handType == HandType::ZOMBIE) {
-        return Action::HIT;
-    }
     if (allowedActions.size() == 1) {
         return allowedActions[0];
     }
@@ -176,6 +197,10 @@ HandType BasicStrategy::stringToHandType(const std::string& handTypeStr) const {
         return HandType::SOFT;
     } else if (handTypeStr == "HandType.PAIR") {
         return HandType::PAIR;
+    } else if (handTypeStr == "HandType.ZOMBIE") {
+        return HandType::ZOMBIE;
+    } else if (handTypeStr == "HandType.BLACKJACK") {
+        return HandType::BLACKJACK;
     } else {
         std::cerr << "Warning: Unknown HandType string '" << handTypeStr << "', defaulting to HARD" << std::endl;
         return HandType::HARD;
@@ -255,12 +280,13 @@ static std::string handTypeToString(HandType handType) {
         case HandType::HARD:      return "Hard";
         case HandType::SOFT:      return "Soft";
         case HandType::PAIR:      return "Pair";
+        case HandType::ZOMBIE:    return "One card";
         case HandType::BLACKJACK: return "BlackJack";
         default:                  return "Unknown";
     }
 }
 
-// Serialize lookup table to JSON (same format as basic_strategy_tables/*.json)
+// Serialize lookup table to JSON (same format as basic_strategy_tables/blackjack/*.json)
 json BasicStrategy::toJson() const {
     json result;
     if (!lookupTable) return result;
@@ -268,12 +294,13 @@ json BasicStrategy::toJson() const {
     for (const auto& [count, handTypes] : *lookupTable) {
         std::string countStr = std::to_string(count);
         for (const auto& [handType, playerSums] : handTypes) {
-            if (handType == HandType::ZOMBIE || handType == HandType::BLACKJACK) continue;
+            if (handType == HandType::BLACKJACK) continue;
             std::string handTypeStr;
             switch (handType) {
                 case HandType::HARD: handTypeStr = "HandType.HARD"; break;
                 case HandType::SOFT: handTypeStr = "HandType.SOFT"; break;
                 case HandType::PAIR: handTypeStr = "HandType.PAIR"; break;
+                case HandType::ZOMBIE: handTypeStr = "HandType.ZOMBIE"; break;
                 default: continue;
             }
             for (const auto& [playerSum, dealerCards] : playerSums) {
@@ -317,11 +344,8 @@ std::ostream& operator<<(std::ostream& os, const BasicStrategy& strategy) {
     for (const auto& [count, handTypes] : *strategy.lookupTable) {
         os << "\n========== Count: " << count << " ==========\n";
         
-        // Iterate through hand types (HARD, SOFT, PAIR)
+        // Iterate through hand types.
         for (const auto& [handType, playerSums] : handTypes) {
-            if(handType == HandType::ZOMBIE) {
-                continue; // Skip ZOMBIE hand type
-            }
             os << "\n" << handTypeToString(handType) << "\n";
             
             // Find all unique dealer cards and player sums
@@ -338,13 +362,18 @@ std::ostream& operator<<(std::ostream& os, const BasicStrategy& strategy) {
             // Print header row (dealer cards)
             os << "    ";
             for (int dealerCard : dealerCards) {
-                os << std::setw(4) << dealerCard;
+                os << std::setw(4)
+                   << (dealerCard == 11 ? "A" : std::to_string(dealerCard));
             }
             os << "\n";
             
             // Print each row (player sum)
             for (int playerSum : playerSumValues) {
-                os << std::setw(3) << playerSum << " ";
+                const std::string playerLabel =
+                    handType == HandType::ZOMBIE && playerSum == 11
+                        ? "A"
+                        : std::to_string(playerSum);
+                os << std::setw(3) << playerLabel << " ";
                 
                 for (int dealerCard : dealerCards) {
                     auto dealerIt = playerSums.at(playerSum).find(dealerCard);

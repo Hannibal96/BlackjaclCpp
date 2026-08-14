@@ -198,7 +198,7 @@ If both implementations are correct, final bankroll should match within floating
 
 ## Testing Reproducibility
 
-The `ReproducibilityTest` executable demonstrates deterministic Q-learning training. It's a standalone program (not a unittest) that uses:
+The `ReproducibilityTest` executable demonstrates deterministic Q-learning training. It's a standalone program that uses:
 - DebugShoe with explicit seed for deterministic card dealing
 - QLearningStrategy with explicit seed for deterministic exploration
 - Single-threaded execution for full reproducibility
@@ -219,40 +219,12 @@ diff run1.txt run2.txt  # Should be identical
 ./build/debug/bin/ReproducibilityTest | tail -10
 ```
 
-### Example: Testing Card Sequence Reproducibility
-
-For unit tests of card sequences, use DebugShoeTest:
-
-```cpp
-TEST(DebugShoeTest, SameSeedProducesSameResults) {
-    // First run
-    DebugShoe shoe1(1, 75.0, 42);
-    std::vector<Card> cards1;
-    for (int i = 0; i < 10; ++i) {
-        cards1.push_back(shoe1.dealCard());
-    }
-
-    // Second run with same seed
-    DebugShoe shoe2(1, 75.0, 42);
-    std::vector<Card> cards2;
-    for (int i = 0; i < 10; ++i) {
-        cards2.push_back(shoe2.dealCard());
-    }
-
-    // Should be identical
-    for (int i = 0; i < 10; ++i) {
-        EXPECT_EQ(cards1[i].rank, cards2[i].rank);
-        EXPECT_EQ(cards1[i].suit, cards2[i].suit);
-    }
-}
-```
-
 ## Best Practices
 
 1. **Use DebugShoe for exact reproducibility** - The LCG is simpler to replicate across languages
 2. **Use Shoe with seed for approximate reproducibility** - MT19937 is more random but harder to match exactly
-3. **Use RandomSeedManager for tests** - Centralized seed management
-4. **Document seeds in tests** - Make it easy to reproduce failures
+3. **Use RandomSeedManager for regression runs** - Centralized seed management
+4. **Document seeds in regressions** - Make it easy to reproduce failures
 5. **Verify with Python** - Cross-validate critical algorithms
 
 ## Common Pitfalls

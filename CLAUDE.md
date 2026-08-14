@@ -21,30 +21,21 @@ cmake --build build/release
 
 ### Running Tests
 ```bash
-# Run all tests using CTest
-ctest --test-dir build/debug
-ctest --test-dir build/release
+# Build all regression tests
+cmake --build build/debug --target tests
+cmake --build build/release --target tests
 
-# Run specific test executable
-./build/debug/bin/ShoeTest
-./build/debug/bin/HandTest
-./build/debug/bin/BlackjackTableTest
-./build/debug/bin/BasicStrategyTest
+# Run a regression executable
 ./build/debug/bin/BasicStrategyRegressionTest
 ./build/debug/bin/QLearningRegressionTest
-
-# Run performance benchmarks
-./build/release/bin/PerformanceBenchmark
-./build/release/bin/BlackjackBenchmark
+./build/debug/bin/DoubleDownMadnessEdgeRegressionTest
+./build/debug/bin/DoubleDownMadnessQLearningRegressionTest
 ```
 
 ### Development Workflow
 ```bash
 # Rebuild after changes
 cmake --build build/debug
-
-# Run single test
-./build/debug/bin/HandTest --gtest_filter=HandTest.SoftHandAceAs11
 
 # Run regression tests (compares against reference JSON tables)
 ./build/debug/bin/BasicStrategyRegressionTest
@@ -108,19 +99,16 @@ The Q-learning agent uses a simplified state key:
 
 ### Object Library Pattern
 
-The project compiles all production code once as `blackjack_objs` (object library), then links it into multiple test executables. This avoids recompiling source files for each test target.
+The project compiles all production code once as `blackjack_objs` (object library), then links it into the apps and regression executables. This avoids recompiling source files for each target.
 
 ## Testing Strategy
 
-Tests use Google Test framework (auto-fetched via CMake). Test categories:
+`regression/` contains standalone executables (no GoogleTest) that compare
+simulation results and generated strategy tables against reference data:
 
-- **Unit Tests**: `ShoeTest`, `HandTest` - test individual components
-- **Integration Tests**: `BlackjackTableTest` - test full game flow
-- **Strategy Tests**: `BasicStrategyTest` - validate strategy decision logic
-- **Regression Tests**: Compare generated strategy tables against reference JSON files
   - `BasicStrategyRegressionTest`: Validates optimal basic strategy tables
   - `QLearningRegressionTest`: Checks Q-learning convergence
-- **Benchmarks**: `PerformanceBenchmark`, `BlackjackBenchmark` - measure simulation speed
+  - `DoubleDownMadnessEdgeRegressionTest`, `DoubleDownMadnessQLearningRegressionTest`: same, for DDM
 
 ## Important Implementation Details
 
@@ -146,8 +134,11 @@ Tests use Google Test framework (auto-fetched via CMake). Test categories:
 - Can convert Q-table to BasicStrategy via `toBasicStrategy()`
 
 ### Basic Strategy Tables
-- Stored as JSON files in `basic_strategy_tables/`
-- Filename encodes rules: `decks=N_ss17=BOOL_das=BOOL_surr=X_peek=BOOL.json`
+- Stored as JSON files under `basic_strategy_tables/`, one subfolder per game
+  so neither game's tables sit in the shared root: `basic_strategy_tables/blackjack/`
+  and `basic_strategy_tables/double_down_madness/`
+- Blackjack filename encodes rules: `decks=N_ss17=BOOL_das=BOOL_surr=X_peek=BOOL.json`
+- DDM has a base `basic_strategy.json` plus a `version_<N>.json` override merged on top
 - Used for regression testing and as reference strategies
 
 ## Debug Mode and Reproducibility
@@ -173,7 +164,7 @@ auto qlearning = std::make_unique<QLearningStrategy>(
 
 ### Running Reproducibility Test
 
-The ReproducibilityTest is a **standalone executable** (not a unittest) that demonstrates deterministic Q-learning training using DebugShoe and explicit seeds. It runs single-threaded for full reproducibility.
+The ReproducibilityTest is a **standalone executable** that demonstrates deterministic Q-learning training using DebugShoe and explicit seeds. It runs single-threaded for full reproducibility.
 
 ```bash
 # Build and run the reproducibility test
@@ -199,6 +190,75 @@ cards = [shoe.deal_card() for _ in range(20)]
 ```
 
 See [DEBUG_MODE.md](DEBUG_MODE.md) for comprehensive guide on debug mode and Python alignment.
+
+## Current Alternating-Optimization Research
+
+The app surface is exactly two executables, each exactly one file:
+`apps/AlternatingOptimization.cpp` and `apps/CompareCountStrategies.cpp`.
+Each holds a `template <typename Game>` engine, its two instantiations
+(`Game = BlackjackGame` / `DoubleDownMadnessGame`), and `main()`. Nothing
+else includes those engines, so there's no header/source split for them.
+Game-specific behavior (Rules construction, CLI rule flags, meta.json
+fields, checkpoint-root naming, basic-strategy loading, whether Illustrious
+18 applies) lives in the shared `apps/GameTraits.h`. `apps/GameAppDispatcher.h`
+is a header-only helper (also shared, since it's identical for both apps)
+that does the `--game`/`--table-type` argv routing and filters out
+irrelevant game-specific flags before calling into the right instantiation.
+The older standalone `FindDeviations`, `FindOptimalCount`, and `MeasureEdge`
+apps are gone — superseded by `AlternatingOptimization`'s loop and by
+`CompareCountStrategies` reading its checkpoints directly.
+
+`AlternatingOptimization` is the unified CLI for classic blackjack and Double
+Down Madness:
+
+```bash
+./build/bin/AlternatingOptimization --game blackjack [game/options]
+./build/bin/AlternatingOptimization --game ddm --version 1 [game/options]
+```
+
+It alternates `W0 -> P0 -> W1 -> P1 -> ...`, saves resumable policy/count
+artifacts, and generates EV/count, histogram, conditional second-moment, and
+Kelly-multiplier graphs. Count objective and constraints are independent:
+
+- Objectives: `--count-classical-ols`, `--count-quadratic-kelly`.
+- Constraints: `--count-unconstrained`, `--count-sum-zero`,
+  `--count-sum-zero-fixed-b1`, `--count-sum-zero-fixed-p0-edge`.
+- Default: classical OLS plus `--count-sum-zero-fixed-b1`.
+- Legacy `--count-quadratic-kelly-zero-bias` alias remains accepted (both games).
+
+`CompareCountStrategies --deviations-checkpoint <dir> --deviations-agent Pk`
+reads full deviations straight from an `AlternatingOptimization` checkpoint
+folder for the same game (`Pk_agent.json` plus the matching `Wk.json`/`W0`
+count) — this is now the only supported checkpoint format for both games.
+
+`CompareCountStrategies` also owns its own, separate checkpoint format for
+whatever count it trained full deviations against fresh (Hi-Lo by default,
+or any `--count`/`--count-weights`) — every fresh-training run auto-saves
+`full_deviations_strategy.json` + `full_deviations_meta.json` (the greedy
+`BasicStrategy` plus its count/game config) into that run's own output
+folder. `--strategy-checkpoint <dir>` reloads one instead of retraining
+(`<dir>` is a folder name under `checkpoints/CompareCountStrategies/` /
+`checkpoints/DoubleDownMadnessCompareCountStrategies/`, or an absolute path
+to any prior run's output folder). Mutually exclusive with
+`--deviations-checkpoint`.
+
+Both objectives use streamed normal-equation statistics. OLS has
+`A=E[cc^T]`; quadratic Kelly has `A=E[X^2cc^T]`; both use `d=E[Xc]`. Sum-zero
+and fixed-bias modes solve KKT systems directly from `A,d`, without retaining
+round histories. New metadata stores `count_regression_objective` and
+`count_regression_constraint` separately while retaining legacy checkpoint
+loading.
+
+Known limitation: DDM allows repeated doubling, so exposure becomes `2^d` times
+the initial Kelly wager. The quadratic approximation does not enforce
+`1+fX>0`; rare ruin produces `-infinity` log bankroll and zero growth for the
+whole parallel experiment. Large DDM Kelly standard deviations are usually a
+mixture of near-one growth and ruined zero-growth trials. Do not interpret them
+as ordinary estimator noise.
+
+The user prefers regression tests over low-value unit tests for simulation
+accuracy and never wants more than one 10-thread research simulation running at
+once because concurrent runs overheat the machine.
 
 ## Branch Strategy
 

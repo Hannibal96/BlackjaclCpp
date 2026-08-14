@@ -144,9 +144,13 @@ public:
     }
 
     // Update Q-table using Q-learning update rule:
-    // Q(s,a) = Q(s,a) + α * [r + γ * max_a' Q(s',a') - Q(s,a)]
+    // Q(s,a) = Q(s,a) + α * [r + γ*m*max_a' Q(s',a') - Q(s,a)]
+    // m is normally 1. DDM uses m=2 when doubling continues into another
+    // decision because its Q-values are normalized to the wager entering s.
     void updateTable(const StateKey& currentKey, Action action, double reward,
-                     const StateKey& nextKey, const std::vector<Action>& nextAllowedActions) override {
+                     const StateKey& nextKey,
+                     const std::vector<Action>& nextAllowedActions,
+                     double nextValueMultiplier = 1.0) override {
         DecayingParameter& stateAlpha = getOrCreateParam(currentKey, alphaMap, alphaTemplate);
 
         double currentQ = getQValue(currentKey, action);
@@ -154,10 +158,11 @@ public:
 
         // Special handling for SPLIT: we play two hands, so expected value doubles
         if (action == Action::SPLIT) {
-            maxNextQ *= 2.0;
+            nextValueMultiplier *= 2.0;
         }
 
-        double newQ = currentQ + stateAlpha.getValue() * (reward + gamma * maxNextQ - currentQ);
+        double newQ = currentQ + stateAlpha.getValue() *
+            (reward + gamma * nextValueMultiplier * maxNextQ - currentQ);
         qTable[std::make_pair(currentKey, action)] = newQ;
         stateAlpha.updateValue();
     }

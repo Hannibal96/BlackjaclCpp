@@ -21,8 +21,10 @@ add_library(blackjack_objs OBJECT
     src/Game/Player.cpp
     src/Game/Table.cpp
     src/Game/BlackjackTable.cpp
+    src/Game/DoubleDownMadnessTable.cpp
     src/RL/RandomStrategy.cpp
     src/RL/BasicStrategy.cpp
+    src/RL/DoubleDownMadnessStrategy.cpp
     src/RL/QLearningStrategy.cpp
     src/Utils/RunLogger.cpp
     src/Utils/SimulationAnalysis.cpp
@@ -34,12 +36,17 @@ target_include_directories(blackjack_objs
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-# testing from the top level
-include(CTest)
-enable_testing()
+# Regression tests: compare simulation output against reference JSON tables.
+add_subdirectory(regression)
 
-# NOTE: your tests dir is named 'unittest'
-add_subdirectory(unittest)
+# Convenience meta-target to build all regression tests.
+add_custom_target(tests ALL
+  DEPENDS
+    BasicStrategyRegressionTest
+    QLearningRegressionTest
+    DoubleDownMadnessEdgeRegressionTest
+    DoubleDownMadnessQLearningRegressionTest
+)
 
 # Standalone training/analysis apps
 add_subdirectory(apps)

@@ -11,27 +11,33 @@ BlackjaclCpp/
 │   ├── Game/          # Game mechanics, table flow, betting, player state
 │   ├── RL/            # Strategies and reinforcement learning
 │   └── Utils/         # Parallel simulation + run logging
-├── apps/              # Standalone training / evaluation executables
-├── unittest/          # Unit, regression, and benchmark tests
+├── apps/              # AlternatingOptimization + CompareCountStrategies (both games)
+├── regression/        # Regression tests: sim output vs. reference JSON tables
 ├── basic_strategy_tables/
+│   ├── blackjack/
+│   └── double_down_madness/
 ├── checkpoints/
 │   ├── alternating-checkpoints/
-│   ├── checkpoints_QLearning/
-│   ├── checkpoints_ols/
+│   ├── double-down-madness-alternating-checkpoints/
 │   ├── CompareCountStrategies/
-│   └── MeasureEdge/
+│   └── DoubleDownMadnessCompareCountStrategies/
 └── CMakeLists.txt
 ```
 
 ## Main App Targets
 
+There are exactly two app binaries, each a `template <typename Game>` engine
+instantiated over `BlackjackGame`/`DoubleDownMadnessGame` (`apps/GameTraits.h`):
+
 | App | Purpose | Output Root |
 |---|---|---|
-| `FindDeviations` | Train/resume Q-learning playing deviations | `checkpoints/checkpoints_QLearning/` |
-| `FindOptimalCount` | Fit OLS count weights | `checkpoints/checkpoints_ols/` |
-| `MeasureEdge` | Evaluate fixed strategy + betting model | `checkpoints/MeasureEdge/` |
-| `AlternatingOptimization` | Alternate between RL policy learning and OLS count learning | `checkpoints/alternating-checkpoints/` |
-| `CompareCountStrategies` | Compare basic / I18 / full deviations for one count | `checkpoints/CompareCountStrategies/` |
+| `AlternatingOptimization` | Blackjack/DDM RL and count-regression pipeline selected by `--game` | Game-specific alternating checkpoint root |
+| `CompareCountStrategies` | Blackjack/DDM strategy comparison selected by `--game` | Game-specific comparison checkpoint root |
+
+The older standalone `FindDeviations`, `FindOptimalCount`, and `MeasureEdge`
+apps have been removed; `AlternatingOptimization` covers their training
+workflows and `CompareCountStrategies` reads its checkpoints directly via
+`--deviations-checkpoint`.
 
 ## Class / Type Hierarchy
 
@@ -50,11 +56,13 @@ BlackjaclCpp/
 |---|---|---|
 | `Rules` | `struct` | — |
 | `BlackjackRules` | `struct` | `Rules` |
+| `DoubleDownMadnessRules` | `struct` | `Rules` |
 | `Hand` | `class` | — |
 | `Slot` | `class` | — |
 | `Player` | `class` | — |
 | `Table` | `abstract class` | — |
 | `BlackjackTable` | `class` | `Table` |
+| `DoubleDownMadnessTable` | `class` | `Table` |
 
 ### `src/RL`
 
@@ -104,21 +112,18 @@ BlackjackTable::round()
 └── record round outcome for moments, regression, and graph bins
 ```
 
+`DoubleDownMadnessTable::round()` follows the same outer tracking skeleton but
+uses a one-card player start, a covered dealer hole card, repeated doubling,
+continued decisions after hitting an initial Ace, a one-card limit after
+doubling that Ace, immediate two-card blackjack settlement, and a push when the
+dealer busts with exactly 22.
+
+DDM Q-values are normalized to the wager entering each state. A hit carries
+`V(next)` forward, while a double that continues carries `2 * V(next)`. This is
+required because the strategy state intentionally excludes bankroll and wager
+size, while DDM permits repeated doubling.
+
 ## Learning / Analysis Data
-
-### Q-learning checkpoints
-
-- `meta.json`
-- `<agent>_agent.json`
-- `<agent>_strategy.json`
-
-### OLS checkpoints
-
-- `meta.json`
-- `data.json` containing:
-  - `XtX`
-  - `Xty`
-  - sampled rounds
 
 ### Alternating optimization checkpoints
 
@@ -136,6 +141,10 @@ BlackjackTable::round()
 - `W*_kelly_graph.json/svg`
 - `W*_kelly_graph_overlay.*` containing cumulative W1 through Wk curves
 
+The Double Down Madness optimizer writes the same artifact set beneath
+`checkpoints/double-down-madness-alternating-checkpoints/`; its metadata records
+the paytable version in addition to decks, H17/S17, and penetration.
+
 ### Compare artifacts
 
 - `run.log`
@@ -143,6 +152,14 @@ BlackjackTable::round()
 - `count_histograms.json/svg`
 - `second_moment_count_graph.json/svg` overlaying all compared policies
 - `kelly_fraction_graph.json/svg` overlaying all compared policies
+- `full_deviations_strategy.json` + `full_deviations_meta.json`, written
+  whenever full deviations were trained fresh this run (skipped when loaded
+  from either `--deviations-checkpoint` or `--strategy-checkpoint`)
+
+The DDM comparison app writes the same artifact families for known basic
+strategy and full deviations. A loaded alternating policy `Pk` is paired with
+`Wk` by default so both policies use the same count and betting model; a
+loaded `--strategy-checkpoint` is paired with its own saved count the same way.
 
 ### Return moments and Kelly sweeps
 
@@ -163,21 +180,59 @@ quadratic approximation, the optimal multiplier is therefore `k = 1/E[X^2]`.
 The apps compare that prediction with empirical growth over a configurable
 fraction grid.
 
+Alternating optimization separates the count objective from its constraints.
+Classical OLS streams `A=E[cc^T]`, `d=E[Xc]`; quadratic Kelly streams
+`A=E[X^2cc^T]`, `d=E[Xc]`. Both minimize the quadratic form
+`0.5 theta^T A theta-d^T theta`, with `theta=[w,b]`, so they share the same
+streaming-compatible constraint solvers:
+
+- Unconstrained: `A theta=d`.
+- Sum-zero: solve `[A q; q^T 0][theta;lambda]=[d;0]`, where
+  `q=[1,...,1,0]` excludes the bias.
+- Sum-zero with fixed bias `b0`: solve
+  `[Aww 1; 1^T 0][w;lambda]=[dw-Awb*b0;0]`.
+- Fixed `b1`: `W1` estimates a free bias and `W2+` reuse it.
+- Fixed `P0` edge: `W1+` use the measured flat edge of `P0`.
+
+The objective flags are `--count-classical-ols` and
+`--count-quadratic-kelly`. Constraint flags are `--count-unconstrained`,
+`--count-sum-zero`, `--count-sum-zero-fixed-b1`, and
+`--count-sum-zero-fixed-p0-edge`. Checkpoints store
+`count_regression_objective` and `count_regression_constraint` separately and
+still load legacy combined-mode metadata.
+
+For quadratic Kelly, pre-round normalized removed-card features `c` and
+unit-wager round profit `X` produce the second-order approximation
+`log(1+theta^Tc X) ~= theta^Tc X - 0.5(theta^Tc X)^2`. Learned rank weights
+are scaled so the average 10/J/Q/K tag is `-1`, with the betting factor scaled
+inversely to preserve `w^Tc` exactly, while policy lookup remains discretized. Bet sizing uses the continuous
+signal and clamps negative fractions to zero. Because the signal is already a
+quadratic-Kelly fraction, its empirical multiplier sweep is centered at `1.0`.
+
+DDM's repeated doubling can multiply the initial wager by `2^d`. The current
+quadratic approximation has no admissibility constraint ensuring `1+fX>0`, so
+rare long double chains can ruin a worker. Parallel log aggregation propagates
+that worker's `-infinity`, yielding a zero-growth experiment and a characteristic
+near-Bernoulli standard deviation. This remains an open research issue.
+
 ## Important Architectural Notes
 
 - Count logic lives in `Player`, not in the strategy classes.
 - Learned Q policies are converted to greedy `BasicStrategy` tables before evaluation apps use them.
 - Regression and EV-count graph collection use pre-round shoe state with round outcome as the target.
+- Quadratic-Kelly matrices are tagged separately in `W*_data.json`; their EV/count graphs omit the OLS regression line because the fitted line represents wager fraction, not expectancy.
 - Round-return variance includes the complete round result, including splits, doubles, surrender, blackjack payout, and the selected wager size.
 - Parallel simulations merge players and strategies through averaging operators.
 - `RunLogger` mirrors terminal output into the same run folder used by checkpoints or graph artifacts.
 
 ## Files To Read First
 
-- [src/Game/BlackjackTable.cpp](/home/neria/Desktop/BlackjaclCpp/src/Game/BlackjackTable.cpp)
-- [src/Game/Player.cpp](/home/neria/Desktop/BlackjaclCpp/src/Game/Player.cpp)
-- [src/Game/BettingStrategy.h](/home/neria/Desktop/BlackjaclCpp/src/Game/BettingStrategy.h)
-- [src/RL/BasicStrategy.h](/home/neria/Desktop/BlackjaclCpp/src/RL/BasicStrategy.h)
-- [src/RL/QLearningStrategy.h](/home/neria/Desktop/BlackjaclCpp/src/RL/QLearningStrategy.h)
-- [apps/AlternatingOptimization.cpp](/home/neria/Desktop/BlackjaclCpp/apps/AlternatingOptimization.cpp)
-- [apps/CompareCountStrategies.cpp](/home/neria/Desktop/BlackjaclCpp/apps/CompareCountStrategies.cpp)
+- [src/Game/BlackjackTable.cpp](src/Game/BlackjackTable.cpp)
+- [src/Game/DoubleDownMadnessTable.cpp](src/Game/DoubleDownMadnessTable.cpp)
+- [src/Game/Player.cpp](src/Game/Player.cpp)
+- [src/Game/BettingStrategy.h](src/Game/BettingStrategy.h)
+- [src/RL/BasicStrategy.h](src/RL/BasicStrategy.h)
+- [src/RL/QLearningStrategy.h](src/RL/QLearningStrategy.h)
+- [apps/GameTraits.h](apps/GameTraits.h) — everything that differs between blackjack and DDM
+- [apps/AlternatingOptimization.cpp](apps/AlternatingOptimization.cpp) — engine + both instantiations + main()
+- [apps/CompareCountStrategies.cpp](apps/CompareCountStrategies.cpp) — engine + both instantiations + main()

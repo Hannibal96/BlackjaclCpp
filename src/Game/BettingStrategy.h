@@ -10,7 +10,7 @@
 // Pre-computed values passed from Player to BettingStrategy each round.
 struct BettingContext {
     double trueCount;     // dot(countWeights, removedCards) / remainingDecks
-    double expectedValue; // E[game] = w[13] + sum(w[i] * removedCards[i] / remainingDecks)
+    double expectedValue; // EV estimate, or a directly fitted wager fraction for quadratic Kelly
     double bankroll;      // player's current money
 };
 

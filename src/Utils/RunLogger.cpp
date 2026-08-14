@@ -10,6 +10,10 @@ int RunLogger::TeeBuf::overflow(int c) {
     if (c == EOF) return !EOF;
     const int p = primaryBuf ? primaryBuf->sputc(static_cast<char>(c)) : c;
     const int s = secondaryBuf ? secondaryBuf->sputc(static_cast<char>(c)) : c;
+    if (c == '\n') {
+        if (primaryBuf) primaryBuf->pubsync();
+        if (secondaryBuf) secondaryBuf->pubsync();
+    }
     return (p == EOF || s == EOF) ? EOF : c;
 }
 

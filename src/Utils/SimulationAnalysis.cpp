@@ -50,6 +50,106 @@ std::vector<double> makeKellyFractionGrid(double minimum, double maximum, double
     return values;
 }
 
+KellyFractionRange resolveKellyFractionRange(
+        double predictedOptimalFraction,
+        std::optional<double> minimumOverride,
+        std::optional<double> maximumOverride,
+        double step,
+        double radius) {
+    if (!std::isfinite(predictedOptimalFraction) || predictedOptimalFraction < 0.0 ||
+        !std::isfinite(step) || step <= 0.0 ||
+        !std::isfinite(radius) || radius < 0.0) {
+        throw std::invalid_argument(
+            "Kelly range center/radius must be non-negative and step must be positive");
+    }
+
+    const double snappedCenter =
+        std::round(predictedOptimalFraction / step) * step;
+    KellyFractionRange range;
+    range.minimum = minimumOverride.value_or(
+        std::max(0.0, snappedCenter - radius));
+    range.maximum = maximumOverride.value_or(snappedCenter + radius);
+
+    // Reuse grid validation so mixed dynamic/explicit endpoints fail consistently.
+    (void)makeKellyFractionGrid(range.minimum, range.maximum, 1.0);
+    return range;
+}
+
+RegressionVector14 solveQuadraticKellyRegression(
+        const RegressionMatrix14& weightedSecondMoment,
+        const RegressionVector14& outcomeFeatureMoment) {
+    // Maximize the second-order approximation
+    // E[log(1 + X w'c)] ~= w'E[Xc] - 0.5 w'E[X^2 cc']w,
+    // with c augmented by a constant feature so the bias is learned as w[13].
+    std::array<std::array<double, 15>, 14> augmented{};
+    for (int i = 0; i < 14; ++i) {
+        for (int j = 0; j < 14; ++j)
+            augmented[i][j] = weightedSecondMoment[i][j];
+        augmented[i][14] = outcomeFeatureMoment[i];
+    }
+
+    for (int col = 0; col < 14; ++col) {
+        int pivot = col;
+        for (int row = col + 1; row < 14; ++row) {
+            if (std::abs(augmented[row][col]) > std::abs(augmented[pivot][col]))
+                pivot = row;
+        }
+        if (pivot != col) std::swap(augmented[pivot], augmented[col]);
+
+        const double diagonal = augmented[col][col];
+        if (std::abs(diagonal) < 1e-15) {
+            throw std::runtime_error(
+                "Singular quadratic-Kelly moment matrix - not enough feature variation");
+        }
+        for (int j = col; j <= 14; ++j)
+            augmented[col][j] /= diagonal;
+
+        for (int row = 0; row < 14; ++row) {
+            if (row == col) continue;
+            const double factor = augmented[row][col];
+            for (int j = col; j <= 14; ++j)
+                augmented[row][j] -= factor * augmented[col][j];
+        }
+    }
+
+    RegressionVector14 solution{};
+    for (int i = 0; i < 14; ++i) solution[i] = augmented[i][14];
+    return solution;
+}
+
+RegressionVector14 solveQuadraticKellyRegressionWithFixedBias(
+        const RegressionMatrix14& weightedSecondMoment,
+        const RegressionVector14& outcomeFeatureMoment,
+        double fixedBias) {
+    RegressionMatrix14 constrainedMoment = weightedSecondMoment;
+    RegressionVector14 constrainedOutcome = outcomeFeatureMoment;
+
+    // Substitute the fixed intercept into the 13 rank-feature equations, then
+    // replace its own equation with beta = fixedBias.
+    for (int i = 0; i < 13; ++i) {
+        constrainedOutcome[i] -= weightedSecondMoment[i][13] * fixedBias;
+        constrainedMoment[i][13] = 0.0;
+        constrainedMoment[13][i] = 0.0;
+    }
+    constrainedMoment[13][13] = 1.0;
+    constrainedOutcome[13] = fixedBias;
+    return solveQuadraticKellyRegression(constrainedMoment, constrainedOutcome);
+}
+
+double learnedCountNormalizationScale(
+        const RegressionVector14& rawWeights,
+        double targetTenValueTag) {
+    const double tenValueAverage =
+        (rawWeights[8] + rawWeights[9] + rawWeights[10] + rawWeights[11]) / 4.0;
+    if (!std::isfinite(targetTenValueTag) ||
+        !std::isfinite(tenValueAverage) ||
+        std::abs(tenValueAverage) < 1e-15) {
+        throw std::invalid_argument(
+            "Cannot normalize learned count with a zero or non-finite 10/J/Q/K average");
+    }
+    return targetTenValueTag / tenValueAverage;
+}
+
 nlohmann::json kellyGrowthCurvesToJson(const std::vector<KellyGrowthCurve>& curves) {
     nlohmann::json root;
     root["error_bar"] = "mean_plus_minus_sample_stddev";

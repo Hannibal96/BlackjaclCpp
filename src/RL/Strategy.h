@@ -25,7 +25,9 @@ public:
     // Virtual method to update strategy table (for learning strategies).
     // nextAllowedActions is needed to compute max Q-value for the next state.
     virtual void updateTable(const StateKey& currentKey, Action action, double reward,
-                             const StateKey& nextKey, const std::vector<Action>& nextAllowedActions) {
+                             const StateKey& nextKey,
+                             const std::vector<Action>& nextAllowedActions,
+                             double nextValueMultiplier = 1.0) {
         // Empty implementation for strategies that don't learn
     }
 

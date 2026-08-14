@@ -39,6 +39,9 @@ public:
 
     // Load strategy from a project-relative file path.
     bool loadFromFile(const std::string& filepath);
+
+    // Merge entries from a project-relative JSON file into the current table.
+    bool mergeFromFile(const std::string& filepath);
     
     // Get action based on state key and allowed actions (implements pure virtual from Strategy)
     Action getAction(const StateKey& key, const std::vector<Action>& allowedActions) override;
@@ -60,7 +63,7 @@ public:
     // Return the minimum and maximum count keys currently present in the table.
     std::pair<int, int> getCountRange() const;
 
-    // Serialize the lookup table to a JSON object (same format as basic_strategy_tables/*.json)
+    // Serialize the lookup table to a JSON object (same format as basic_strategy_tables/blackjack/*.json)
     nlohmann::json toJson() const;
 
     // Save the lookup table to a JSON file (path is relative to PROJECT_ROOT)

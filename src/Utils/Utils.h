@@ -1,5 +1,6 @@
 #pragma once
 #include "../Game/BlackjackRules.h"
+#include "../Game/DoubleDownMadnessRules.h"
 #include "../Game/Player.h"
 #include <string>
 #include <vector>
@@ -27,5 +28,15 @@ std::vector<Player*> runParallelSimulation(const BlackjackRules& rules,
                                                const std::vector<Player*>& players, 
                                                uint64_t numRounds, 
                                                int numThreads);
+
+bool runSimulation(const DoubleDownMadnessRules& rules,
+                   std::vector<Player*>& players,
+                   uint64_t numRounds);
+
+std::vector<Player*> runParallelSimulation(
+    const DoubleDownMadnessRules& rules,
+    const std::vector<Player*>& players,
+    uint64_t numRounds,
+    int numThreads);
 
 std::string commandLineFromArgs(int argc, char** argv);

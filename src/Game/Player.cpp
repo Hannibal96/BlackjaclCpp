@@ -50,6 +50,11 @@ Action Player::getAction(const State& state) {
     return strategy->getAction(stateToKey(state), state.allowedActions);
 }
 
+Action Player::getAction(const State& state,
+                         const std::vector<Action>& allowedActions) {
+    return strategy->getAction(stateToKey(state), allowedActions);
+}
+
 // Get bet amount — computes BettingContext and delegates to bettingStrategy
 double Player::getBet(const std::array<int, 13>& removedCards) {
     if (!bettingStrategy) return 1.0;
@@ -67,7 +72,7 @@ double Player::getBet(const std::array<int, 13>& removedCards) {
             rawCount += countWeights[i] * static_cast<double>(removedCards[i]);
         double tc = rawCount / remainingDecks;
         // Discretize to the same resolution used for strategy state keys
-        if (countResolution > 0.0)
+        if (!continuousBettingCount && countResolution > 0.0)
             tc = std::round(tc / countResolution) * countResolution;
         ctx.trueCount = tc;
     } else {
@@ -92,12 +97,27 @@ void Player::setBettingStrategy(std::unique_ptr<BettingStrategy> bs) {
     bettingStrategy = std::move(bs);
 }
 
+bool Player::canAffordAdditionalWager(double additionalWager,
+                                     double committedWager) const {
+    if (!enforceBankrollActionLimits) return true;
+
+    constexpr double tolerance = 1e-12;
+    return additionalWager <= money - committedWager + tolerance;
+}
+
 // Update the player's money with SARS parameters for learning strategies
-void Player::updateMoney(double reward, const State& state, Action action, const State& nextState) {
+void Player::updateMoney(double reward, const State& state, Action action,
+                         const State& nextState,
+                         double learningRewardDivisor,
+                         double nextValueMultiplier) {
+    if (learningRewardDivisor <= 0.0)
+        throw std::invalid_argument("Learning reward divisor must be positive");
+
     money += reward;
     logMoneyDirty = true;
-    strategy->updateTable(stateToKey(state), action, reward,
-                          stateToKey(nextState), nextState.allowedActions);
+    strategy->updateTable(
+        stateToKey(state), action, reward / learningRewardDivisor,
+        stateToKey(nextState), nextState.allowedActions, nextValueMultiplier);
 }
 
 void Player::resetPlayer(double m) {
@@ -156,10 +176,12 @@ void Player::recordRound(const std::array<double, 13>& x, double y) {
     std::array<double, 14> xb;
     for (int i = 0; i < 13; ++i) xb[i] = x[i];
     xb[13] = 1.0;  // bias term
+    const double covarianceWeight =
+        regressionObjective == RegressionObjective::QUADRATIC_KELLY ? y * y : 1.0;
 
     for (int i = 0; i < 14; ++i) {
         for (int j = 0; j < 14; ++j)
-            XtX[i][j] += xb[i] * xb[j];
+            XtX[i][j] += covarianceWeight * xb[i] * xb[j];
         Xty[i] += xb[i] * y;
     }
     ++regressionRounds;
@@ -175,7 +197,13 @@ Player& Player::operator+=(const Player& other) {
     if (strategy && other.strategy) {
         *strategy += *other.strategy;
     }
-    if (regressionEnabled) {
+    if (regressionEnabled && other.regressionEnabled &&
+        regressionObjective != other.regressionObjective) {
+        throw std::logic_error("Cannot combine players with different regression objectives");
+    }
+    if (regressionEnabled || other.regressionEnabled) {
+        if (!regressionEnabled) regressionObjective = other.regressionObjective;
+        regressionEnabled = true;
         for (int i = 0; i < 14; ++i) {
             for (int j = 0; j < 14; ++j)
                 XtX[i][j] += other.XtX[i][j];
@@ -229,6 +257,7 @@ Player* Player::clone() const {
     p->maxCount = maxCount;
     p->numDecks = numDecks;
     p->regressionEnabled = regressionEnabled;
+    p->regressionObjective = regressionObjective;
     p->XtX = XtX;
     p->Xty = Xty;
     p->regressionRounds = regressionRounds;
@@ -242,7 +271,9 @@ Player* Player::clone() const {
     p->roundRewardSum = roundRewardSum;
     p->roundRewardSumSq = roundRewardSumSq;
     if (bettingStrategy) p->bettingStrategy = std::unique_ptr<BettingStrategy>(bettingStrategy->clone());
+    p->enforceBankrollActionLimits = enforceBankrollActionLimits;
     p->countFactor = countFactor;
     p->countBias   = countBias;
+    p->continuousBettingCount = continuousBettingCount;
     return p;
 }

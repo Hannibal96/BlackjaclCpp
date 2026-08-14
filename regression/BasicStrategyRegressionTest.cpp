@@ -51,14 +51,14 @@ private:
 public:
     void SetUp() {
         namespace fs = std::filesystem;
-        fs::path csm_full_path = fs::path(PROJECT_ROOT) / "basic_strategy_tables" / "json_wod_edge_csm.json";
+        fs::path csm_full_path = fs::path(PROJECT_ROOT) / "basic_strategy_tables" / "blackjack" / "json_wod_edge_csm.json";
         std::ifstream csm_file(csm_full_path);
         if (!csm_file.is_open()) {
             throw std::runtime_error("Cannot open edge JSON file: " + csm_full_path.string());
         }
         csm_file >> csm_data;
 
-        fs::path cc_full_path = fs::path(PROJECT_ROOT) / "basic_strategy_tables" / "json_wod_edge.json";
+        fs::path cc_full_path = fs::path(PROJECT_ROOT) / "basic_strategy_tables" / "blackjack" / "json_wod_edge.json";
         std::ifstream cc_file(cc_full_path);
         if (!cc_file.is_open()) {
             throw std::runtime_error("Cannot open edge JSON file: " + cc_full_path.string());

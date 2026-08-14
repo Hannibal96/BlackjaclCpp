@@ -30,12 +30,15 @@ private:
     // Game state
     Hand dealerHand;
     std::map<Player*, std::vector<Slot>> playerSlots;
+    std::map<Player*, double> committedWagers;
     std::vector<double> moneyBeforeScratch;
     
     // Helper methods
     void clearHands();
     bool shouldDealerHit() const;
-    std::vector<Action> getAllowedActions(const Hand& hand, size_t handsInSlot) const;
+    std::vector<Action> getAllowedActions(const Hand& hand,
+                                          size_t handsInSlot) const;
+    void releaseCommittedWager(Player* player, double wager);
     
 protected:
     // Implement abstract methods from Table
