@@ -8,8 +8,10 @@
 #include "RegressionTestUtils.h"
 #include "Game/BlackjackRules.h"
 #include "Game/DoubleDownMadnessRules.h"
+#include "Game/SpanishRules.h"
 #include "RL/BasicStrategy.h"
 #include "RL/DoubleDownMadnessStrategy.h"
+#include "RL/SpanishStrategy.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <memory>
@@ -28,6 +30,9 @@ struct BlackjackGame {
 
     static constexpr bool kSupportsIllustrious18 = true;
     static constexpr bool kDefaultStandSoft17 = true;
+    // StateKey's cardCount field: only Spanish 21 needs it to carry the real
+    // (capped-at-6) hand size (see Player::trackHandCardCount).
+    static constexpr bool kTracksHandCardCount = false;
     static constexpr const char* kBannerLabel        = "";
     static constexpr const char* kAlgorithmPrefix     = "";
     static constexpr const char* kCheckpointDirPrefix  = "";  // alternating-checkpoints
@@ -155,6 +160,7 @@ struct DoubleDownMadnessGame {
 
     static constexpr bool kSupportsIllustrious18 = false;
     static constexpr bool kDefaultStandSoft17 = false;
+    static constexpr bool kTracksHandCardCount = false;
     static constexpr const char* kBannerLabel        = "DoubleDownMadness";
     static constexpr const char* kAlgorithmPrefix     = "double_down_madness_";
     static constexpr const char* kCheckpointDirPrefix  = "double-down-madness-";
@@ -229,6 +235,121 @@ struct DoubleDownMadnessGame {
         if (version != static_cast<int>(c.version)) {
             mismatches.push_back("version: simulation=" + std::to_string(static_cast<int>(c.version)) +
                                  ", checkpoint=" + std::to_string(version));
+        }
+    }
+};
+
+// ---------------------------------------------------------------------------
+// Spanish 21
+// ---------------------------------------------------------------------------
+struct Spanish21Game {
+    using Rules = SpanishRules;
+
+    struct Case {
+        int deckSize = 8;
+        bool standSoft17 = true;
+        int maxRedoubles = 0;  // 0 = redoubling off; see SpanishRules::maxRedoubles
+        bool allowDoubleDownRescue = true;
+    };
+
+    static constexpr bool kSupportsIllustrious18 = false;
+    static constexpr bool kDefaultStandSoft17 = true;
+    // Spanish 21's 5/6/7+-card 21 bonus makes card count strategically relevant,
+    // so its Players must carry the real hand size in StateKey's cardCount field.
+    static constexpr bool kTracksHandCardCount = true;
+    static constexpr const char* kBannerLabel        = "Spanish21";
+    static constexpr const char* kAlgorithmPrefix     = "spanish21_";
+    static constexpr const char* kCheckpointDirPrefix  = "spanish21-";
+    static constexpr const char* kComparePrefix        = "Spanish21";
+
+    // --redouble defaults off: it's WoO's separate "Variable Rule" with its
+    // own published edge figures, and is the less commonly offered table
+    // variant (see SpanishRules::maxRedoubles). --ddr defaults ON: WoO lists
+    // it under "The Rules" (standard, always-on), so the published S17/H17
+    // edges already assume it's in play (see SpanishRules' default
+    // constructor). Both remain exposed for research/experimentation via
+    // their flags.
+    static inline std::vector<int> g_redouble = {0};
+    static inline std::vector<bool> g_ddr = {true};
+
+    static Rules buildRules(const Case& c, double penetration, double minBet, double maxBet) {
+        Rules rules(c.standSoft17, c.deckSize, penetration, /*maxSplit=*/4,
+                    /*doubleAfterSplit=*/true, /*resplitAces=*/true, /*hitSplitAces=*/true,
+                    /*surrender=*/true, /*peek=*/true, c.maxRedoubles,
+                    c.allowDoubleDownRescue, /*suitedBonus=*/true);
+        rules.minBet = minBet;
+        rules.maxBet = maxBet;
+        return rules;
+    }
+
+    static std::string toString(const Case& c) {
+        std::ostringstream os;
+        os << "decks=" << c.deckSize
+           << "_ss17=" << std::boolalpha << c.standSoft17
+           << "_redouble=" << c.maxRedoubles
+           << "_ddr=" << c.allowDoubleDownRescue;
+        return os.str();
+    }
+
+    static std::string toStringTableName(const Case& c) { return toString(c); }
+    static std::string checkpointFolderName(const Case& c) { return toString(c); }
+
+    static std::unique_ptr<BasicStrategy> loadBasicStrategy(const Case& c) {
+        Rules rules(c.standSoft17, c.deckSize, 75.0, 4, true, true, true, true, true,
+                    c.maxRedoubles, c.allowDoubleDownRescue, true);
+        return loadSpanishBasicStrategy(rules);
+    }
+
+    static std::vector<Case> generateCases(const std::vector<int>& decks,
+                                           const std::vector<bool>& ss17) {
+        std::vector<Case> cases;
+        for (int d : decks) {
+            if (d <= 0)
+                throw std::invalid_argument("Deck count must be positive");
+            for (bool s : ss17)
+                for (int r : g_redouble)
+                    for (bool ddr : g_ddr)
+                        cases.push_back({d, s, r, ddr});
+        }
+        return cases;
+    }
+
+    static bool parseArg(const std::string& arg, int& i, int argc, char** argv) {
+        if (arg == "--redouble" && i + 1 < argc) { g_redouble = parseList<int>(argv[++i]); return true; }
+        if (arg == "--ddr" && i + 1 < argc)      { g_ddr       = parseList<bool>(argv[++i]); return true; }
+        return false;
+    }
+
+    static void printGameHelp() {
+        std::cout << "  --redouble <list>         Number of allowed redoubles beyond the first\n";
+        std::cout << "                             double, e.g. [0,2] (default: [0] -- off)\n";
+        std::cout << "  --ddr <list>              Allow double-down rescue (default: true)\n";
+    }
+
+    static void writeMetaGameSection(json& meta, const Case& c) {
+        meta["game"]["redouble"] = c.maxRedoubles;
+        meta["game"]["ddr"]      = c.allowDoubleDownRescue;
+    }
+
+    static Case readMetaGameSection(const json& g) {
+        Case c;
+        c.deckSize             = g.at("decks").get<int>();
+        c.standSoft17          = g.at("ss17").get<bool>();
+        c.maxRedoubles          = g.at("redouble").get<int>();
+        c.allowDoubleDownRescue = g.at("ddr").get<bool>();
+        return c;
+    }
+
+    static void appendMetaMismatch(const json& g, const Case& c, std::vector<std::string>& mismatches) {
+        const int redouble = g.at("redouble").get<int>();
+        if (redouble != c.maxRedoubles) {
+            mismatches.push_back("redouble: simulation=" + std::to_string(c.maxRedoubles) +
+                                 ", checkpoint=" + std::to_string(redouble));
+        }
+        const bool ddr = g.at("ddr").get<bool>();
+        if (ddr != c.allowDoubleDownRescue) {
+            mismatches.push_back("ddr: simulation=" + std::string(c.allowDoubleDownRescue ? "true" : "false") +
+                                 ", checkpoint=" + std::string(ddr ? "true" : "false"));
         }
     }
 };

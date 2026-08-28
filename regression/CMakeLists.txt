@@ -61,3 +61,31 @@ target_include_directories(DoubleDownMadnessQLearningRegressionTest
         ${CMAKE_SOURCE_DIR}/include
 )
 set_property(TARGET DoubleDownMadnessQLearningRegressionTest PROPERTY CXX_STANDARD 20)
+
+add_executable(Spanish21EdgeRegressionTest
+    ${CMAKE_CURRENT_SOURCE_DIR}/Spanish21EdgeRegressionTest.cpp
+)
+target_link_libraries(Spanish21EdgeRegressionTest
+    PRIVATE
+        $<TARGET_OBJECTS:blackjack_objs>
+)
+target_include_directories(Spanish21EdgeRegressionTest
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+)
+set_property(TARGET Spanish21EdgeRegressionTest PROPERTY CXX_STANDARD 20)
+
+add_executable(Spanish21QLearningRegressionTest
+    ${CMAKE_CURRENT_SOURCE_DIR}/Spanish21QLearningRegressionTest.cpp
+)
+target_link_libraries(Spanish21QLearningRegressionTest
+    PRIVATE
+        $<TARGET_OBJECTS:blackjack_objs>
+)
+target_include_directories(Spanish21QLearningRegressionTest
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+)
+set_property(TARGET Spanish21QLearningRegressionTest PROPERTY CXX_STANDARD 20)

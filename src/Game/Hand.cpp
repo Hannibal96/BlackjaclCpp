@@ -2,11 +2,11 @@
 #include <stdexcept>
 
 // Default constructor
-Hand::Hand() : bet(0), isSplit(false) {
+Hand::Hand() : bet(0), isSplit(false), doubleCount(0) {
 }
 
 // Constructor with bet amount
-Hand::Hand(double betAmount) : bet(betAmount), isSplit(false) {
+Hand::Hand(double betAmount) : bet(betAmount), isSplit(false), doubleCount(0) {
 }
 
 // Add a card to the hand
@@ -40,6 +40,7 @@ void Hand::clear() {
     cards.clear();
     bet = 0;
     isSplit = false;
+    doubleCount = 0;
 }
 
 // Calculate hand value (handles soft/hard totals)
@@ -138,6 +139,8 @@ Hand Hand::split() {
 HandType Hand::getHandType(bool pairAllowed) const {
     if(cardCount() == 1){
         return HandType::ZOMBIE;
+    } else if (doubleCount > 0) {
+        return isSoft() ? HandType::AFTER_DOUBLE_SOFT : HandType::AFTER_DOUBLE;
     } else if (isBlackjack()) {
         return HandType::BLACKJACK;
     } else if (isPair() and pairAllowed) {

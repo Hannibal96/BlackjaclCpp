@@ -38,3 +38,23 @@ target_include_directories(CompareCountStrategies
         ${CMAKE_SOURCE_DIR}/regression
 )
 set_property(TARGET CompareCountStrategies PROPERTY CXX_STANDARD 20)
+
+# DebugPlayerBehavior — single-threaded, verbose behavior debugger: plays a
+# small number of rounds against a given basic strategy/count (--game
+# blackjack|ddm|spanish21) and prints every hand decision and outcome. No
+# training, no metrics — same GameTraits.h/GameAppDispatcher.h plumbing as
+# the other two apps, trimmed to just what a readable single run needs.
+add_executable(DebugPlayerBehavior
+    ${CMAKE_CURRENT_SOURCE_DIR}/DebugPlayerBehavior.cpp
+)
+target_link_libraries(DebugPlayerBehavior
+    PRIVATE
+        $<TARGET_OBJECTS:blackjack_objs>
+)
+target_include_directories(DebugPlayerBehavior
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/regression
+)
+set_property(TARGET DebugPlayerBehavior PROPERTY CXX_STANDARD 20)

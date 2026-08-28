@@ -1,6 +1,7 @@
 #include "Utils.h"
 #include "../Game/BlackjackTable.h"
 #include "../Game/DoubleDownMadnessTable.h"
+#include "../Game/SpanishTable.h"
 #include "RL/QLearningStrategy.h"
 #include <iostream>
 #include <iomanip>
@@ -181,6 +182,21 @@ std::vector<Player*> runParallelSimulation(const BlackjackRules& rules,
     return resultPlayers;
 }
 
+bool runSimulationVerbose(const BlackjackRules& rules, std::vector<Player*>& players,
+                          uint64_t numRounds, std::ostream& out) {
+    if (players.empty() || numRounds == 0) return false;
+    try {
+        BlackjackTable table(rules, players);
+        table.setVerbose(true, &out);
+        for (uint64_t i = 1; i <= numRounds; ++i)
+            table.round();
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "Error during simulation: " << e.what() << std::endl;
+        return false;
+    }
+}
+
 bool runSimulation(const DoubleDownMadnessRules& rules,
                    std::vector<Player*>& players,
                    uint64_t numRounds) {
@@ -227,6 +243,106 @@ std::vector<Player*> runParallelSimulation(
         futures.push_back(std::async(
             std::launch::async,
             static_cast<bool (*)(const DoubleDownMadnessRules&,
+                                 std::vector<Player*>&,
+                                 uint64_t)>(runSimulation),
+            std::cref(rules),
+            std::ref(threadData[t].players),
+            threadData[t].rounds));
+    }
+    for (auto& future : futures)
+        future.get();
+
+    for (size_t p = 0; p < players.size(); ++p)
+        resultPlayers.push_back(threadData[0].players[p]->clone());
+    for (int t = 1; t < numThreads; ++t) {
+        for (size_t p = 0; p < players.size(); ++p)
+            *resultPlayers[p] += *threadData[t].players[p];
+    }
+    for (auto* player : resultPlayers)
+        *player *= 1.0 / static_cast<double>(numThreads);
+
+    for (auto& data : threadData) {
+        for (auto* player : data.players)
+            delete player;
+    }
+    return resultPlayers;
+}
+
+bool runSimulationVerbose(const DoubleDownMadnessRules& rules, std::vector<Player*>& players,
+                          uint64_t numRounds, std::ostream& out) {
+    if (players.empty() || numRounds == 0) return false;
+    try {
+        DoubleDownMadnessTable table(rules, players);
+        table.setVerbose(true, &out);
+        for (uint64_t i = 0; i < numRounds; ++i)
+            table.round();
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "Error during Double Down Madness simulation: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+bool runSimulation(const SpanishRules& rules,
+                   std::vector<Player*>& players,
+                   uint64_t numRounds) {
+    if (players.empty() || numRounds == 0) return false;
+    try {
+        SpanishTable table(rules, players);
+        for (uint64_t i = 0; i < numRounds; ++i)
+            table.round();
+        return true;
+    } catch (const std::exception& e) {
+        std::lock_guard<std::mutex> lock(g_consoleMutex);
+        std::cerr << "Error during Spanish 21 simulation: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+bool runSimulationVerbose(const SpanishRules& rules, std::vector<Player*>& players,
+                          uint64_t numRounds, std::ostream& out) {
+    if (players.empty() || numRounds == 0) return false;
+    try {
+        SpanishTable table(rules, players);
+        table.setVerbose(true, &out);
+        for (uint64_t i = 0; i < numRounds; ++i)
+            table.round();
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "Error during Spanish 21 simulation: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+std::vector<Player*> runParallelSimulation(
+        const SpanishRules& rules,
+        const std::vector<Player*>& players,
+        uint64_t numRounds,
+        int numThreads) {
+    std::vector<Player*> resultPlayers;
+    if (players.empty() || numRounds == 0 || numThreads <= 0)
+        return resultPlayers;
+
+    struct ThreadData {
+        std::vector<Player*> players;
+        uint64_t rounds = 0;
+    };
+    std::vector<ThreadData> threadData(numThreads);
+    const uint64_t roundsPerThread = numRounds / static_cast<uint64_t>(numThreads);
+    const uint64_t remainingRounds = numRounds % static_cast<uint64_t>(numThreads);
+    for (int t = 0; t < numThreads; ++t) {
+        for (const auto* player : players)
+            threadData[t].players.push_back(player->clone());
+        threadData[t].rounds =
+            roundsPerThread + (static_cast<uint64_t>(t) < remainingRounds ? 1 : 0);
+    }
+
+    std::vector<std::future<bool>> futures;
+    futures.reserve(numThreads);
+    for (int t = 0; t < numThreads; ++t) {
+        futures.push_back(std::async(
+            std::launch::async,
+            static_cast<bool (*)(const SpanishRules&,
                                  std::vector<Player*>&,
                                  uint64_t)>(runSimulation),
             std::cref(rules),

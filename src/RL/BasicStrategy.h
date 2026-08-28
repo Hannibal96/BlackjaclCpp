@@ -20,9 +20,12 @@ struct ActionWithFallback {
 // BasicStrategy class that uses a lookup table from JSON
 class BasicStrategy : public Strategy {
 private:
-    // Nested map structure: count -> hand_type -> player_sum -> dealer_card -> action
+    // Nested map structure: count -> hand_type -> player_sum -> dealer_card -> card_count -> action
+    // card_count distinguishes hands that used different numbers of cards to reach the same
+    // total (Spanish 21's card-count-dependent bonus payouts). Games that don't need this
+    // distinction always look up (and store) under the constant card_count key 2.
     // Using shared_ptr so clones can share the same lookup table (it's read-only during gameplay)
-    std::shared_ptr<std::map<int, std::map<HandType, std::map<int, std::map<int, ActionWithFallback>>>>> lookupTable;
+    std::shared_ptr<std::map<int, std::map<HandType, std::map<int, std::map<int, std::map<int, ActionWithFallback>>>>>> lookupTable;
     
     // Helper function to convert string to HandType
     HandType stringToHandType(const std::string& handTypeStr) const;
@@ -54,11 +57,14 @@ public:
     // Check if the lookup table is loaded
     bool isLoaded() const { return lookupTable && !lookupTable->empty(); }
     
-    // Set action in the lookup table for a specific state
-    void setAction(int count, HandType handType, unsigned int playerSum, unsigned int dealerHand, ActionWithFallback action);
-    
+    // Set action in the lookup table for a specific state. cardCount defaults to 2 (the
+    // constant every non-Spanish-21 game uses).
+    void setAction(int count, HandType handType, unsigned int playerSum, unsigned int dealerHand,
+                   ActionWithFallback action, unsigned int cardCount = 2);
+
     // Get action directly from lookup table by keys (returns HIT/HIT if not found)
-    ActionWithFallback getActionFromTable(int count, HandType handType, int playerSum, int dealerCard) const;
+    ActionWithFallback getActionFromTable(int count, HandType handType, int playerSum, int dealerCard,
+                                          int cardCount = 2) const;
 
     // Return the minimum and maximum count keys currently present in the table.
     std::pair<int, int> getCountRange() const;

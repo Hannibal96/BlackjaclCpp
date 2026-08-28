@@ -141,10 +141,13 @@ std::pair<int, int> countStrategyDifferences(const QLearningStrategy& learned, c
                 if ((handType == HandType::HARD && playerSum == 4) ||
                     (handType == HandType::SOFT && playerSum == 12)) continue;
 
-                for (auto& [dealerCardStr, actionStr] : dealerCards.items()) {
+                for (auto& [dealerCardStr, cardCounts] : dealerCards.items()) {
                     int dealerCard = std::stoi(dealerCardStr);
+
+                    for (auto& [cardCountStr, actionStr] : cardCounts.items()) {
+                    int cardCount = std::stoi(cardCountStr);
                     ActionWithFallback knownAction   = stringToAction(actionStr.get<std::string>());
-                    ActionWithFallback learnedAction = learnedBasic->getActionFromTable(count, handType, playerSum, dealerCard);
+                    ActionWithFallback learnedAction = learnedBasic->getActionFromTable(count, handType, playerSum, dealerCard, cardCount);
 
                     totalCompared++;
                     if ((learnedAction.primary != knownAction.primary) ||
@@ -157,8 +160,8 @@ std::pair<int, int> countStrategyDifferences(const QLearningStrategy& learned, c
                         // trivially be 0 — compare the fallback Q-values instead.
                         Action deltaChosen   = primaryWrong ? learnedAction.primary : learnedAction.fallback;
                         Action deltaExpected = primaryWrong ? knownAction.primary   : knownAction.fallback;
-                        double q_chosen   = learned.getQValueDebug(handType, playerSum, dealerCard, deltaChosen);
-                        double q_expected = learned.getQValueDebug(handType, playerSum, dealerCard, deltaExpected);
+                        double q_chosen   = learned.getQValueDebug(handType, playerSum, dealerCard, deltaChosen, cardCount);
+                        double q_expected = learned.getQValueDebug(handType, playerSum, dealerCard, deltaExpected, cardCount);
                         double delta      = q_chosen - q_expected;
                         // delta > 0: agent genuinely prefers the wrong action (algorithmic issue)
                         // delta ≈ 0: two actions have similar Q-values (likely noise)
@@ -180,7 +183,7 @@ std::pair<int, int> countStrategyDifferences(const QLearningStrategy& learned, c
                         // Q-values column: one entry per action
                         std::ostringstream qSS;
                         for (Action a : kAllActions) {
-                            double q = learned.getQValueDebug(handType, playerSum, dealerCard, a);
+                            double q = learned.getQValueDebug(handType, playerSum, dealerCard, a, cardCount);
                             qSS << shortName(a) << "=" << std::fixed << std::setprecision(3)
                                 << std::showpos << q << std::noshowpos << " ";
                         }
@@ -191,6 +194,7 @@ std::pair<int, int> countStrategyDifferences(const QLearningStrategy& learned, c
                                   << kSep << std::setw(W_ACT) << fmtAction(knownAction)
                                   << kSep << std::setw(W_DELTA) << deltaSS.str()
                                   << kSep << qSS.str() << "\n";
+                    }
                     }
                 }
             }

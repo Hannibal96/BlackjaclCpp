@@ -50,16 +50,19 @@ std::string Card::toString() const {
 }
 
 // Deck methods
-Deck::Deck() {
+Deck::Deck(bool spanishDeck) : spanish(spanishDeck) {
     initialize();
 }
 
 void Deck::initialize() {
     cards.clear();
-    
-    // Create all 52 cards (13 ranks × 4 suits)
+
+    // Create all cards (13 ranks x 4 suits, or 12 ranks x 4 suits for a Spanish deck
+    // that omits rank TEN — J/Q/K remain and still count as 10).
     for (int suit = 0; suit < 4; ++suit) {
         for (int rank = 2; rank <= 14; ++rank) {  // 2-10, 11=J, 12=Q, 13=K, 14=A
+            if (spanish && rank == 10) continue;  // Spanish deck has no rank-TEN cards
+
             Rank cardRank;
             switch (rank) {
                 case 2:  cardRank = Rank::TWO; break;
@@ -77,7 +80,7 @@ void Deck::initialize() {
                 case 14: cardRank = Rank::ACE; break;
                 default: cardRank = Rank::TWO; break;
             }
-            
+
             Suit cardSuit = static_cast<Suit>(suit);
             cards.emplace_back(cardRank, cardSuit);
         }

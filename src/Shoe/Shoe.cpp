@@ -92,6 +92,26 @@ void DebugShoe::reset() {
     calculatePenetrationThreshold();
 }
 
+// SpanishShoe methods
+SpanishShoe::SpanishShoe(int numDecks, double penetration) : Shoe(numDecks, penetration) {
+    // Shoe's constructor already ran initializeFromDecks()/calculatePenetrationThreshold()/
+    // shuffle(), but virtual dispatch during base construction always resolves to
+    // Shoe::initializeFromDecks() (a standard 52-card deck), never the override below —
+    // this object wasn't a SpanishShoe yet at that point. Redo the setup now that it is.
+    initializeFromDecks();
+    calculatePenetrationThreshold();
+    shuffle();
+}
+
+void SpanishShoe::initializeFromDecks() {
+    cards.clear();
+    for (int i = 0; i < numDecks; ++i) {
+        Deck deck(/*spanish=*/true);
+        const std::vector<Card>& deckCards = deck.getCards();
+        cards.insert(cards.end(), deckCards.begin(), deckCards.end());
+    }
+}
+
 Card DebugShoe::dealCard(bool covered) {
     if (cards.empty()) {
         reset();

@@ -85,7 +85,7 @@ private:
 public:
     using QTableSnapshot = std::map<QTableKey, double>;
 
-    __attribute__((noinline)) double getQValueDebug(const HandType handType, int playerSum, int dealerHand, Action action) const;
+    __attribute__((noinline)) double getQValueDebug(const HandType handType, int playerSum, int dealerHand, Action action, int cardCount = 2) const;
 
     // Constructor — exploration_param is epsilon for EPSILON_GREEDY, temperature for BOLTZMANN
     QLearningStrategy(std::unique_ptr<DecayingParameter> alpha_param,
@@ -280,9 +280,9 @@ public:
                 }
             }
 
-            const auto& [count, handType, playerSum, dealerHand] = stateKey;
+            const auto& [count, handType, playerSum, dealerHand, cardCount] = stateKey;
             basicStrategy->setAction(count, handType, playerSum, dealerHand,
-                ActionWithFallback(bestAction, fallbackAction));
+                ActionWithFallback(bestAction, fallbackAction), cardCount);
         }
 
         return basicStrategy;

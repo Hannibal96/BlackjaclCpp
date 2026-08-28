@@ -1,7 +1,9 @@
 #pragma once
 #include "../Game/BlackjackRules.h"
 #include "../Game/DoubleDownMadnessRules.h"
+#include "../Game/SpanishRules.h"
 #include "../Game/Player.h"
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -39,4 +41,25 @@ std::vector<Player*> runParallelSimulation(
     uint64_t numRounds,
     int numThreads);
 
+bool runSimulation(const SpanishRules& rules,
+                   std::vector<Player*>& players,
+                   uint64_t numRounds);
+
+std::vector<Player*> runParallelSimulation(
+    const SpanishRules& rules,
+    const std::vector<Player*>& players,
+    uint64_t numRounds,
+    int numThreads);
+
 std::string commandLineFromArgs(int argc, char** argv);
+
+// Single-threaded, verbose variants: same round loop as runSimulation, but each
+// hand decision and outcome is printed to `out` (see Table::setVerbose). Intended
+// for the DebugPlayerBehavior app — no metrics/training semantics beyond what
+// the ordinary runSimulation already does via the players passed in.
+bool runSimulationVerbose(const BlackjackRules& rules, std::vector<Player*>& players,
+                          uint64_t numRounds, std::ostream& out);
+bool runSimulationVerbose(const DoubleDownMadnessRules& rules, std::vector<Player*>& players,
+                          uint64_t numRounds, std::ostream& out);
+bool runSimulationVerbose(const SpanishRules& rules, std::vector<Player*>& players,
+                          uint64_t numRounds, std::ostream& out);

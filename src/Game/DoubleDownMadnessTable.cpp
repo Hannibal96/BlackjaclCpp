@@ -1,4 +1,5 @@
 #include "DoubleDownMadnessTable.h"
+#include "VerboseTrace.h"
 
 #include <algorithm>
 #include <stdexcept>
@@ -60,8 +61,14 @@ void DoubleDownMadnessTable::round() {
     const bool dealerBlackjack = dealInitialCards();
     std::vector<std::tuple<Player*, Hand*, State, Action>> aliveHands;
     if (dealerBlackjack) {
-        for (auto* player : players)
-            player->addReward(-playerHands.at(player).getBet());
+        for (auto* player : players) {
+            Hand& hand = playerHands.at(player);
+            double reward = -hand.getBet();
+            player->addReward(reward);
+            if (verbose) {
+                VerboseTrace::printOutcome(*verboseOut, roundNumber, *player, hand, dealerHand, reward);
+            }
+        }
     } else {
         aliveHands = playersPlay();
     }
@@ -156,6 +163,12 @@ DoubleDownMadnessTable::playersPlay() {
                 throw std::logic_error("Strategy selected an illegal Double Down Madness action");
             }
 
+            if (verbose) {
+                int trueCount = player->computeTrueCount(state.removedCards);
+                VerboseTrace::printDecision(*verboseOut, roundNumber, *player, hand,
+                                             dealerUpCard, trueCount, action);
+            }
+
             if (action == Action::STAND) {
                 aliveHands.emplace_back(player, &hand, state, action);
                 break;
@@ -174,19 +187,29 @@ DoubleDownMadnessTable::playersPlay() {
 
             State terminalState(hand, dealerUpCard, {}, shoe->getRemovedCards());
             if (hand.isBust()) {
+                const double reward = -hand.getBet();
                 player->updateMoney(
-                    -hand.getBet(), state, action, terminalState,
+                    reward, state, action, terminalState,
                     learningWager(state));
                 if (player->shouldEnforceBankrollActionLimits())
                     committedWagers[player] = 0.0;
+                if (verbose) {
+                    VerboseTrace::printOutcome(*verboseOut, roundNumber, *player, hand,
+                                                dealerHand, reward);
+                }
                 break;
             }
             if (hand.isBlackjack()) {
+                const double reward = hand.getBet() * blackjackPayout(hand);
                 player->updateMoney(
-                    hand.getBet() * blackjackPayout(hand), state, action, terminalState,
+                    reward, state, action, terminalState,
                     learningWager(state));
                 if (player->shouldEnforceBankrollActionLimits())
                     committedWagers[player] = 0.0;
+                if (verbose) {
+                    VerboseTrace::printOutcome(*verboseOut, roundNumber, *player, hand,
+                                                dealerHand, reward);
+                }
                 break;
             }
             // Hitting an initial Ace may continue (A,A becomes soft 12), but
@@ -254,6 +277,9 @@ void DoubleDownMadnessTable::evaluate(
             reward, state, action, nextState, learningWager(state));
         if (player->shouldEnforceBankrollActionLimits())
             committedWagers[player] = 0.0;
+        if (verbose) {
+            VerboseTrace::printOutcome(*verboseOut, roundNumber, *player, *hand, dealerHand, reward);
+        }
     }
 }
 

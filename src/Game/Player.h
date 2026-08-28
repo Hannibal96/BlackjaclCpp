@@ -33,6 +33,11 @@ protected:
     int maxCount = 0;                       // Upper clamp bound for the discretized count
     int numDecks = 1;                       // Total decks in the shoe (needed to compute remaining decks)
 
+    // When true, StateKey's cardCount field carries the real (capped at 6) number
+    // of cards in the player's hand. Games that don't need this distinction (all
+    // but Spanish 21) leave this false, so the field is always the constant 2.
+    bool trackHandCardCount = false;
+
     // Betting strategy — nullptr means fixed unit bet of 1.0
     std::unique_ptr<BettingStrategy> bettingStrategy;
 
@@ -86,6 +91,10 @@ public:
 
     // Convert a raw State to a StateKey by computing and discretizing the count
     StateKey stateToKey(const State& state) const;
+
+    // Compute the discretized true count for a removed-cards snapshot (same
+    // formula stateToKey uses internally) — exposed for verbose debug tracing.
+    int computeTrueCount(const std::array<int, 13>& removedCards) const;
 
     // Get action based on game state (delegates to strategy via StateKey)
     virtual Action getAction(const State& state);
@@ -155,6 +164,11 @@ public:
 
     // Set the total number of decks in the shoe (needed for true-count normalization)
     void setNumDecks(int decks);
+
+    // Set whether StateKey's cardCount field should carry the hand's real card
+    // count (Spanish 21) instead of the constant 2 (every other game).
+    void setTrackHandCardCount(bool track) { trackHandCardCount = track; }
+    bool getTrackHandCardCount() const { return trackHandCardCount; }
 
     // --- Regression ---
     void enableRegression(

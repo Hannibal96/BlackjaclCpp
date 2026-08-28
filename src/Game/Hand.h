@@ -8,7 +8,9 @@ enum class HandType {
     SOFT,
     PAIR,
     ZOMBIE,
-    BLACKJACK
+    BLACKJACK,
+    AFTER_DOUBLE,      // Hand has been doubled at least once, hard total (Spanish 21 redouble/rescue)
+    AFTER_DOUBLE_SOFT  // Same, but the doubled hand is soft (an Ace still counted as 11)
 };
 
 // Hand class representing a player's hand in blackjack
@@ -17,7 +19,8 @@ private:
     std::vector<Card> cards;
     double bet;
     bool isSplit;
-    
+    int doubleCount;  // Number of times this hand has been doubled (0 = not doubled)
+
 public:
     // Constructors
     Hand();
@@ -44,10 +47,20 @@ public:
     
     // Check if this hand is from a split
     bool getIsSplit() const { return isSplit; }
-    
+
     // Set the split flag
     void setIsSplit(bool split) { isSplit = split; }
-    
+
+    // Check if this hand has been doubled at least once (Spanish 21 redouble/rescue)
+    bool getIsDoubled() const { return doubleCount > 0; }
+
+    // Number of times this hand has been doubled (0 = not doubled; >1 = redoubled)
+    int getDoubleCount() const { return doubleCount; }
+
+    // Record that the hand has been doubled (call once per DOUBLE_DOWN action taken)
+    void incrementDoubleCount() { ++doubleCount; }
+
+
     // Get the number of cards in the hand
     size_t cardCount() const { return cards.size(); }
     
@@ -70,7 +83,7 @@ public:
     bool isSoft() const;
     bool isHard() const;
     
-    // Get the type of hand (HARD, SOFT, PAIR, or ZOMBIE)
+    // Get the type of hand (HARD, SOFT, PAIR, ZOMBIE, BLACKJACK, or AFTER_DOUBLE)
     HandType getHandType(bool pairAllowed = true) const;
     
     // Split the hand into two hands

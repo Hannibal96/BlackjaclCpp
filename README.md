@@ -3,26 +3,29 @@
 A C++20 blackjack simulation and research project with:
 
 - A reusable blackjack engine
-- Classic blackjack and Double Down Madness table variants
+- Classic blackjack, Double Down Madness, and Spanish 21 table variants
 - Table-driven and learned playing strategies
 - Card-count-aware betting and regression tooling
 - Two research apps — `AlternatingOptimization` and `CompareCountStrategies` —
-  each shared between both games via a `Game` traits template (see `apps/GameTraits.h`)
+  each shared between all three games via a `Game` traits template (see `apps/GameTraits.h`)
 - Standalone simulation regression targets
 
 ## Repository Layout
 
 ```text
 .
-├── apps/                         # AlternatingOptimization + CompareCountStrategies (both games)
+├── apps/                         # AlternatingOptimization + CompareCountStrategies (all games)
 ├── basic_strategy_tables/
 │   ├── blackjack/                # One JSON table per classic-blackjack rule combo
-│   └── double_down_madness/      # Base table + per-version overrides
+│   ├── double_down_madness/      # Base table + per-version overrides
+│   └── spanish21/                # S17/H17 base tables + H17-redouble overrides
 ├── checkpoints/
 │   ├── alternating-checkpoints/  # AlternatingOptimization runs and resumable state (blackjack)
 │   ├── double-down-madness-alternating-checkpoints/  # same, for DDM
+│   ├── spanish21-alternating-checkpoints/             # same, for Spanish 21
 │   ├── CompareCountStrategies/   # Compare app logs + graph artifacts (blackjack)
-│   └── DoubleDownMadnessCompareCountStrategies/       # same, for DDM
+│   ├── DoubleDownMadnessCompareCountStrategies/       # same, for DDM
+│   └── Spanish21CompareCountStrategies/               # same, for Spanish 21
 ├── hpo/                          # Python hyperparameter tuning helpers
 ├── include/                      # Third-party headers
 ├── regression/                   # Regression tests: sim output vs. reference JSON tables
@@ -52,7 +55,8 @@ cmake --build build --target tests
 Regression targets include:
 
 - `BasicStrategyRegressionTest`, `QLearningRegressionTest`,
-  `DoubleDownMadnessEdgeRegressionTest`, `DoubleDownMadnessQLearningRegressionTest`
+  `DoubleDownMadnessEdgeRegressionTest`, `DoubleDownMadnessQLearningRegressionTest`,
+  `Spanish21EdgeRegressionTest`, `Spanish21QLearningRegressionTest`
   — standalone regression executables (no GoogleTest) that compare simulated
   output against reference JSON tables, in `regression/`
 
@@ -67,6 +71,9 @@ Regression targets include:
 # Same, but Double Down Madness paytable version 2:
 ./build/bin/AlternatingOptimization --game ddm --version 2
 
+# Spanish 21, dealer stands on soft 17 (the more commonly cited configuration):
+./build/bin/AlternatingOptimization --game spanish21 --ss17 true
+
 # Resume an interrupted/previous run by its checkpoint folder name:
 ./build/bin/AlternatingOptimization --game blackjack --load-checkpoint <folder-name>
 
@@ -78,24 +85,25 @@ Regression targets include:
 ./build/bin/CompareCountStrategies --game blackjack \
     --deviations-checkpoint <folder-name> --deviations-agent P1
 
-# Full flag reference for either app, either game:
-./build/bin/AlternatingOptimization --game <blackjack|ddm> --help
-./build/bin/CompareCountStrategies --game <blackjack|ddm> --help
+# Full flag reference for any app, any game:
+./build/bin/AlternatingOptimization --game <blackjack|ddm|spanish21> --help
+./build/bin/CompareCountStrategies --game <blackjack|ddm|spanish21> --help
 ```
 
 `<folder-name>` is whatever `AlternatingOptimization` printed after `Folder:`
 when it started (or `--checkpoint-name` if you set one) — both apps look for
-it under `checkpoints/alternating-checkpoints/` for blackjack and
-`checkpoints/double-down-madness-alternating-checkpoints/` for DDM.
+it under `checkpoints/alternating-checkpoints/` for blackjack,
+`checkpoints/double-down-madness-alternating-checkpoints/` for DDM, and
+`checkpoints/spanish21-alternating-checkpoints/` for Spanish 21.
 
 ## Apps
 
 The app surface is deliberately just two executables, and just two files:
 `apps/AlternatingOptimization.cpp` and `apps/CompareCountStrategies.cpp`.
-Both used to be built twice — once per game — as near-duplicate `.cpp`
-files; each is now a `template <typename Game>` engine instantiated over a
-`Game` traits type (`BlackjackGame` / `DoubleDownMadnessGame` in the shared
-`apps/GameTraits.h`), with the two instantiations and `main()` in the same
+Both used to be built once per game as near-duplicate `.cpp` files; each is
+now a `template <typename Game>` engine instantiated over a `Game` traits type
+(`BlackjackGame` / `DoubleDownMadnessGame` / `Spanish21Game` in the shared
+`apps/GameTraits.h`), with all three instantiations and `main()` in the same
 file (nothing else needs the engine, so there's no separate header for it).
 Earlier, standalone precursors — `FindDeviations` (Q-learning checkpoints),
 `FindOptimalCount` (OLS count checkpoints), and `MeasureEdge` (fixed-strategy
@@ -104,13 +112,15 @@ evaluation) — have been removed; their functionality is fully covered by
 `CompareCountStrategies` reading its checkpoints directly.
 
 - `AlternatingOptimization`
-  Selects classic blackjack with `--game blackjack` (the default) or Double
-  Down Madness with `--game ddm`, then alternates between policy and count learning:
+  Selects classic blackjack with `--game blackjack` (the default), Double
+  Down Madness with `--game ddm`, or Spanish 21 with `--game spanish21`, then
+  alternates between policy and count learning:
   `W0 -> P0 -> W1 -> P1 -> ...`
   with resumable checkpoints, EV-vs-count graphs, cumulative overlays, histogram artifacts,
   conditional `E[X^2 | count]` graphs, round-return variance, and Kelly-multiplier
-  sweep graphs. DDM supports `--version 1|2|3`; blackjack-only rule flags are
-  ignored with warnings in DDM mode.
+  sweep graphs. DDM supports `--version 1|2|3`; Spanish 21 supports `--ss17`,
+  `--redouble`, and `--ddr`; other-game-only rule flags are ignored with
+  warnings.
 
   Use `--graph-rounds <N>` to choose the number of rounds used to form EV/count,
   histogram, and conditional-second-moment graphs independently of
@@ -139,10 +149,11 @@ evaluation) — have been removed; their functionality is fully covered by
   inverse factor scaling preserving the fitted signal.
 
 - `CompareCountStrategies`
-  Uses the same `--game <blackjack|ddm>` selection. Blackjack compares basic
-  strategy, Illustrious 18, and full deviations; DDM compares its known
-  version-specific policy with full deviations (Illustrious 18 is Hi-Lo/blackjack-specific,
-  so it's skipped for DDM). Full deviations come from one of three sources:
+  Uses the same `--game <blackjack|ddm|spanish21>` selection. Blackjack compares
+  basic strategy, Illustrious 18, and full deviations; DDM and Spanish 21 compare
+  their known basic strategy with full deviations (Illustrious 18 is
+  Hi-Lo/blackjack-specific, so it's skipped for both). Full deviations come from
+  one of three sources:
   - `--deviations-checkpoint <dir> --deviations-agent Pk` loads a policy
     straight from an `AlternatingOptimization` checkpoint folder for the
     same game — `Pk_agent.json` for the policy and, unless the count was
@@ -201,9 +212,15 @@ large standard deviations as ruin mixtures, not ordinary Monte Carlo noise.
   Uses the same resumable policy, count, EV, second-moment, histogram, and Kelly
   artifact layout for Double Down Madness.
 
+- `checkpoints/spanish21-alternating-checkpoints/<folder>/`
+  Same layout again, for Spanish 21.
+
 - `checkpoints/DoubleDownMadnessCompareCountStrategies/<run-name>/`
   DDM policy-comparison logs and EV/count, histogram, second-moment, and Kelly
   graph artifacts.
+
+- `checkpoints/Spanish21CompareCountStrategies/<run-name>/`
+  Same, for Spanish 21.
 
 - `checkpoints/CompareCountStrategies/<run-name>/`
   `run.log`, `ev_count_graph.json/svg`, `count_histograms.json/svg`,
@@ -225,6 +242,11 @@ validate and inspect the resulting checkpoints against reference strategies.
   continued play after hitting an initial Ace, a one-card limit when doubling
   that Ace, immediate version-specific blackjack payouts, a hidden dealer hole
   card, and a dealer-22 push.
+- `SpanishTable` models a 48-card no-tens shoe, player 21 always winning (no
+  push, even vs. a dealer 21), player blackjack always beating a dealer
+  blackjack, card-count-dependent bonus payouts on 21 (5/6/7+ cards, and the
+  6-7-8/7-7-7 suited bonus), and doubling on any card count via a new
+  `HandType::AFTER_DOUBLE[_SOFT]` decision node for redoubling/rescue.
 - `CompareCountStrategies` is an evaluation app; it should not leave a live `QLearningStrategy` exploring during measurement.
 
 ## Architecture Notes

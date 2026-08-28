@@ -7,8 +7,8 @@
 using json = nlohmann::json;
 
 __attribute__((noinline)) double QLearningStrategy::getQValueDebug(
-        const HandType handType, int playerSum, int dealerHand, Action action) const {
-    StateKey key = std::make_tuple(0, handType, playerSum, dealerHand);
+        const HandType handType, int playerSum, int dealerHand, Action action, int cardCount) const {
+    StateKey key = std::make_tuple(0, handType, playerSum, dealerHand, cardCount);
     auto it = qTable.find(std::make_pair(key, action));
     return (it != qTable.end()) ? it->second : 0.0;
 }
@@ -19,11 +19,12 @@ __attribute__((noinline)) double QLearningStrategy::getQValueDebug(
 namespace {
 
 std::string keyToStr(const StateKey& k) {
-    const auto& [count, handType, playerSum, dealerCard] = k;
+    const auto& [count, handType, playerSum, dealerCard, cardCount] = k;
     return std::to_string(count)      + "|" +
            std::to_string(static_cast<int>(handType)) + "|" +
            std::to_string(playerSum)  + "|" +
-           std::to_string(dealerCard);
+           std::to_string(dealerCard) + "|" +
+           std::to_string(cardCount);
 }
 
 StateKey strToKey(const std::string& s) {
@@ -33,7 +34,11 @@ StateKey strToKey(const std::string& s) {
     std::getline(ss, tok, '|'); int handType = std::stoi(tok);
     std::getline(ss, tok, '|'); unsigned int playerSum  = std::stoul(tok);
     std::getline(ss, tok, '|'); unsigned int dealerCard = std::stoul(tok);
-    return std::make_tuple(count, static_cast<HandType>(handType), playerSum, dealerCard);
+    // Older checkpoints don't carry a card-count field; default to the constant
+    // every non-Spanish-21 game uses so old checkpoints still load.
+    unsigned int cardCount = 2;
+    if (std::getline(ss, tok, '|')) cardCount = std::stoul(tok);
+    return std::make_tuple(count, static_cast<HandType>(handType), playerSum, dealerCard, cardCount);
 }
 
 std::string actionToStr(Action a) {

@@ -57,10 +57,13 @@ inline std::ostream& operator<<(std::ostream& os, const Card& card) {
 class Deck {
 private:
     std::vector<Card> cards;
+    bool spanish;
     void initialize();
 
 public:
-    Deck();
+    // spanish=true builds a 48-card "Spanish" deck (no rank-TEN cards; J/Q/K
+    // remain and still count as 10) used by Spanish 21.
+    explicit Deck(bool spanish = false);
     const std::vector<Card>& getCards() const { return cards; }
     size_t size() const { return cards.size(); }
 };

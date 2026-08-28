@@ -19,7 +19,8 @@ namespace {
 
 enum class GameType {
     BLACKJACK,
-    DOUBLE_DOWN_MADNESS
+    DOUBLE_DOWN_MADNESS,
+    SPANISH_21
 };
 
 struct Option {
@@ -34,13 +35,22 @@ inline GameType parseGameType(std::string_view value) {
         value == "double_down_madness") {
         return GameType::DOUBLE_DOWN_MADNESS;
     }
+    if (value == "spanish21" || value == "spanish-21" ||
+        value == "spanish_21" || value == "spanish") {
+        return GameType::SPANISH_21;
+    }
     throw std::invalid_argument(
         "Unknown game type '" + std::string(value) +
-        "'. Expected blackjack or ddm.");
+        "'. Expected blackjack, ddm, or spanish21.");
 }
 
 inline const char* gameName(GameType game) {
-    return game == GameType::BLACKJACK ? "blackjack" : "ddm";
+    switch (game) {
+        case GameType::BLACKJACK:            return "blackjack";
+        case GameType::DOUBLE_DOWN_MADNESS:  return "ddm";
+        case GameType::SPANISH_21:           return "spanish21";
+    }
+    return "blackjack";
 }
 
 inline Option splitOption(const std::string& argument) {
@@ -95,6 +105,9 @@ inline std::vector<std::string> filterArguments(int argc,
     static const std::unordered_set<std::string> ddmOnly = {
         "--version"
     };
+    static const std::unordered_set<std::string> spanishOnly = {
+        "--redouble", "--ddr"
+    };
 
     std::vector<std::string> filtered;
     filtered.reserve(static_cast<size_t>(argc) + 2);
@@ -113,17 +126,15 @@ inline std::vector<std::string> filterArguments(int argc,
         }
 
         const bool unsupported =
-            (selected == GameType::BLACKJACK && ddmOnly.contains(option.name)) ||
-            (selected == GameType::DOUBLE_DOWN_MADNESS &&
-             blackjackOnly.contains(option.name));
+            (selected != GameType::BLACKJACK && blackjackOnly.contains(option.name)) ||
+            (selected != GameType::DOUBLE_DOWN_MADNESS && ddmOnly.contains(option.name)) ||
+            (selected != GameType::SPANISH_21 && spanishOnly.contains(option.name));
         if (!unsupported) {
             filtered.push_back(argument);
             continue;
         }
 
-        std::cerr << "WARNING: ignoring "
-                  << (selected == GameType::BLACKJACK ? "DDM-only" : "blackjack-only")
-                  << " option " << option.name
+        std::cerr << "WARNING: ignoring option " << option.name
                   << " for game " << gameName(selected) << ".\n";
         if (!option.inlineValue && i + 1 < argc &&
             !std::string_view(argv[i + 1]).starts_with("--")) {
@@ -147,12 +158,13 @@ inline int dispatchGameApp(int argc,
                           char** argv,
                           const char* appName,
                           GameAppMain blackjackMain,
-                          GameAppMain doubleDownMadnessMain) {
+                          GameAppMain doubleDownMadnessMain,
+                          GameAppMain spanish21Main) {
     try {
         const GameType selected = selectGame(argc, argv);
         if (hasHelp(argc, argv)) {
             std::cout << appName << " game selection:\n"
-                      << "  --game <blackjack|ddm>  Table implementation "
+                      << "  --game <blackjack|ddm|spanish21>  Table implementation "
                          "(default: blackjack)\n"
                       << "  --table-type is accepted as an alias for --game.\n"
                       << "  Irrelevant game-specific options are ignored with a warning.\n\n";
@@ -160,9 +172,12 @@ inline int dispatchGameApp(int argc,
 
         std::vector<std::string> filtered =
             filterArguments(argc, argv, selected);
-        return selected == GameType::BLACKJACK
-            ? invoke(blackjackMain, filtered)
-            : invoke(doubleDownMadnessMain, filtered);
+        switch (selected) {
+            case GameType::BLACKJACK:           return invoke(blackjackMain, filtered);
+            case GameType::DOUBLE_DOWN_MADNESS:  return invoke(doubleDownMadnessMain, filtered);
+            case GameType::SPANISH_21:           return invoke(spanish21Main, filtered);
+        }
+        return 1;
     } catch (const std::exception& error) {
         std::cerr << "Error: " << error.what() << "\n"
                   << "Use --help for usage.\n";

@@ -657,6 +657,7 @@ struct CompareCountStrategiesApp {
         player->setCountResolution(count.resolution);
         auto [strategyMinCount, strategyMaxCount] = strategy.getCountRange();
         player->setCountRange(strategyMinCount, strategyMaxCount);
+        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
         double graphResolution = (count.resolution > 0.0) ? (count.resolution / 4.0) : 0.25;
         player->enableCountGraph(graphResolution);
         player->enableRoundStats();
@@ -721,6 +722,7 @@ struct CompareCountStrategiesApp {
         player->setCountResolution(count.resolution);
         auto [strategyMinCount, strategyMaxCount] = strategy.getCountRange();
         player->setCountRange(strategyMinCount, strategyMaxCount);
+        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
         player->setBettingStrategy(
             std::make_unique<SpreadBetting>(std::vector<std::pair<double, double>>{{threshold, 10.0}}));
         player->enableRoundStats();
@@ -752,6 +754,7 @@ struct CompareCountStrategiesApp {
             player->setCountResolution(count.resolution);
             auto [strategyMinCount, strategyMaxCount] = strategy.getCountRange();
             player->setCountRange(strategyMinCount, strategyMaxCount);
+            if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
             player->setBettingStrategy(std::make_unique<KellyBetting>(kellyFraction));
             player->setEnforceBankrollActionLimits(true);
 
@@ -911,6 +914,7 @@ struct CompareCountStrategiesApp {
         player->setCountSystem(count.system);
         player->setCountResolution(count.resolution);
         player->setCountRange(count.minCount, count.maxCount);
+        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
 
         Rules rules = buildRules(c, 1.0, 1.0);
         std::vector<QLearningStrategy::QTableSnapshot> previousTables(1);
@@ -1601,9 +1605,14 @@ int runDoubleDownMadnessCompareCountStrategies(int argc, char** argv) {
     return CompareCountStrategiesApp<DoubleDownMadnessGame>::run(argc, argv);
 }
 
+int runSpanish21CompareCountStrategies(int argc, char** argv) {
+    return CompareCountStrategiesApp<Spanish21Game>::run(argc, argv);
+}
+
 int main(int argc, char** argv) {
     return dispatchGameApp(
         argc, argv, "CompareCountStrategies",
         runBlackjackCompareCountStrategies,
-        runDoubleDownMadnessCompareCountStrategies);
+        runDoubleDownMadnessCompareCountStrategies,
+        runSpanish21CompareCountStrategies);
 }

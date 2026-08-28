@@ -11,28 +11,32 @@ BlackjaclCpp/
 │   ├── Game/          # Game mechanics, table flow, betting, player state
 │   ├── RL/            # Strategies and reinforcement learning
 │   └── Utils/         # Parallel simulation + run logging
-├── apps/              # AlternatingOptimization + CompareCountStrategies (both games)
+├── apps/              # AlternatingOptimization + CompareCountStrategies (all games)
 ├── regression/        # Regression tests: sim output vs. reference JSON tables
 ├── basic_strategy_tables/
 │   ├── blackjack/
-│   └── double_down_madness/
+│   ├── double_down_madness/
+│   └── spanish21/
 ├── checkpoints/
 │   ├── alternating-checkpoints/
 │   ├── double-down-madness-alternating-checkpoints/
+│   ├── spanish21-alternating-checkpoints/
 │   ├── CompareCountStrategies/
-│   └── DoubleDownMadnessCompareCountStrategies/
+│   ├── DoubleDownMadnessCompareCountStrategies/
+│   └── Spanish21CompareCountStrategies/
 └── CMakeLists.txt
 ```
 
 ## Main App Targets
 
 There are exactly two app binaries, each a `template <typename Game>` engine
-instantiated over `BlackjackGame`/`DoubleDownMadnessGame` (`apps/GameTraits.h`):
+instantiated over `BlackjackGame`/`DoubleDownMadnessGame`/`Spanish21Game`
+(`apps/GameTraits.h`):
 
 | App | Purpose | Output Root |
 |---|---|---|
-| `AlternatingOptimization` | Blackjack/DDM RL and count-regression pipeline selected by `--game` | Game-specific alternating checkpoint root |
-| `CompareCountStrategies` | Blackjack/DDM strategy comparison selected by `--game` | Game-specific comparison checkpoint root |
+| `AlternatingOptimization` | RL and count-regression pipeline selected by `--game` | Game-specific alternating checkpoint root |
+| `CompareCountStrategies` | Strategy comparison selected by `--game` | Game-specific comparison checkpoint root |
 
 The older standalone `FindDeviations`, `FindOptimalCount`, and `MeasureEdge`
 apps have been removed; `AlternatingOptimization` covers their training
@@ -49,6 +53,7 @@ workflows and `CompareCountStrategies` reads its checkpoints directly via
 | `Deck` | `class` | — |
 | `Shoe` | `class` | — |
 | `DebugShoe` | `class` | `Shoe` |
+| `SpanishShoe` | `class` | `Shoe` |
 
 ### `src/Game`
 
@@ -57,12 +62,14 @@ workflows and `CompareCountStrategies` reads its checkpoints directly via
 | `Rules` | `struct` | — |
 | `BlackjackRules` | `struct` | `Rules` |
 | `DoubleDownMadnessRules` | `struct` | `Rules` |
+| `SpanishRules` | `struct` | `Rules` |
 | `Hand` | `class` | — |
 | `Slot` | `class` | — |
 | `Player` | `class` | — |
 | `Table` | `abstract class` | — |
 | `BlackjackTable` | `class` | `Table` |
 | `DoubleDownMadnessTable` | `class` | `Table` |
+| `SpanishTable` | `class` | `Table` |
 
 ### `src/RL`
 
@@ -87,9 +94,16 @@ workflows and `CompareCountStrategies` reads its checkpoints directly via
 ## Key State Shapes
 
 ```text
-StateKey = (count, handType, playerSum, dealerCard)
+StateKey = (count, handType, playerSum, dealerCard, cardCount)
 QTableKey = (StateKey, action)
 ```
+
+`cardCount` (the hand's card count, capped at 6) is a Spanish-21-only
+dimension: Blackjack and DDM players never set `Player::trackHandCardCount`,
+so it's always the constant `2` for them — their tables and behavior are
+unaffected. `HandType` includes `AFTER_DOUBLE`/`AFTER_DOUBLE_SOFT` (Spanish
+21's redouble/rescue decision node, split by hard vs. soft since WoO's chart
+treats them differently for the same numeric total).
 
 `Player::stateToKey()` is the central place where:
 
@@ -118,10 +132,22 @@ continued decisions after hitting an initial Ace, a one-card limit after
 doubling that Ace, immediate two-card blackjack settlement, and a push when the
 dealer busts with exactly 22.
 
+`SpanishTable::round()` follows the same skeleton, structurally closest to
+`BlackjackTable` (uses `Slot` for splits, unlike DDM), built on a 48-card
+no-tens `SpanishShoe`. Its `evaluate()` differs from Blackjack's: player
+blackjack always beats a dealer blackjack (pays 3:2, not a push), player 21 of
+any card count always wins (no push, even vs. a dealer 21), and card-count/
+suited-composition bonus tiers (5/6/7+-card 21, 6-7-8/7-7-7) replace the plain
+1:1 payout when they apply. Doubling is legal on any card count (not just the
+first two) as long as the hand hasn't already doubled; once doubled, the hand
+enters the `AFTER_DOUBLE[_SOFT]` decision node (stand, redouble up to
+`maxRedoubles`, or rescue/surrender).
+
 DDM Q-values are normalized to the wager entering each state. A hit carries
 `V(next)` forward, while a double that continues carries `2 * V(next)`. This is
 required because the strategy state intentionally excludes bankroll and wager
-size, while DDM permits repeated doubling.
+size, while DDM permits repeated doubling. `SpanishTable` reuses the same
+`nextValueMultiplier` mechanism for redoubling.
 
 ## Learning / Analysis Data
 
@@ -143,7 +169,9 @@ size, while DDM permits repeated doubling.
 
 The Double Down Madness optimizer writes the same artifact set beneath
 `checkpoints/double-down-madness-alternating-checkpoints/`; its metadata records
-the paytable version in addition to decks, H17/S17, and penetration.
+the paytable version in addition to decks, H17/S17, and penetration. Spanish 21
+writes the same set beneath `checkpoints/spanish21-alternating-checkpoints/`,
+recording `redouble`/`ddr` in addition to decks and H17/S17.
 
 ### Compare artifacts
 
@@ -156,10 +184,12 @@ the paytable version in addition to decks, H17/S17, and penetration.
   whenever full deviations were trained fresh this run (skipped when loaded
   from either `--deviations-checkpoint` or `--strategy-checkpoint`)
 
-The DDM comparison app writes the same artifact families for known basic
-strategy and full deviations. A loaded alternating policy `Pk` is paired with
-`Wk` by default so both policies use the same count and betting model; a
-loaded `--strategy-checkpoint` is paired with its own saved count the same way.
+The DDM and Spanish 21 comparison apps write the same artifact families for
+known basic strategy and full deviations, beneath
+`DoubleDownMadnessCompareCountStrategies/` and `Spanish21CompareCountStrategies/`
+respectively. A loaded alternating policy `Pk` is paired with `Wk` by default
+so both policies use the same count and betting model; a loaded
+`--strategy-checkpoint` is paired with its own saved count the same way.
 
 ### Return moments and Kelly sweeps
 
@@ -229,10 +259,11 @@ near-Bernoulli standard deviation. This remains an open research issue.
 
 - [src/Game/BlackjackTable.cpp](src/Game/BlackjackTable.cpp)
 - [src/Game/DoubleDownMadnessTable.cpp](src/Game/DoubleDownMadnessTable.cpp)
+- [src/Game/SpanishTable.cpp](src/Game/SpanishTable.cpp)
 - [src/Game/Player.cpp](src/Game/Player.cpp)
 - [src/Game/BettingStrategy.h](src/Game/BettingStrategy.h)
 - [src/RL/BasicStrategy.h](src/RL/BasicStrategy.h)
 - [src/RL/QLearningStrategy.h](src/RL/QLearningStrategy.h)
-- [apps/GameTraits.h](apps/GameTraits.h) — everything that differs between blackjack and DDM
-- [apps/AlternatingOptimization.cpp](apps/AlternatingOptimization.cpp) — engine + both instantiations + main()
-- [apps/CompareCountStrategies.cpp](apps/CompareCountStrategies.cpp) — engine + both instantiations + main()
+- [apps/GameTraits.h](apps/GameTraits.h) — everything that differs between blackjack, DDM, and Spanish 21
+- [apps/AlternatingOptimization.cpp](apps/AlternatingOptimization.cpp) — engine + all three instantiations + main()
+- [apps/CompareCountStrategies.cpp](apps/CompareCountStrategies.cpp) — engine + all three instantiations + main()

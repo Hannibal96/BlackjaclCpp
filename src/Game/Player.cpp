@@ -10,14 +10,14 @@ Player::Player(double initialMoney, std::unique_ptr<Strategy> strat, std::string
     }
 }
 
-// Convert a raw State to a StateKey
-StateKey Player::stateToKey(const State& state) const {
+// Compute the discretized true count for a removed-cards snapshot
+int Player::computeTrueCount(const std::array<int, 13>& removedCards) const {
     // Compute raw count as dot product of weights and removed cards
     double rawCount = 0.0;
     int totalRemoved = 0;
     for (int i = 0; i < 13; ++i) {
-        rawCount += countWeights[i] * static_cast<double>(state.removedCards[i]);
-        totalRemoved += state.removedCards[i];
+        rawCount += countWeights[i] * static_cast<double>(removedCards[i]);
+        totalRemoved += removedCards[i];
     }
 
     // Normalize by remaining decks to get the true count
@@ -25,9 +25,14 @@ StateKey Player::stateToKey(const State& state) const {
     double trueCount = (remainingDecks > 0.0) ? (rawCount / remainingDecks) : 0.0;
 
     // Discretize: round to nearest multiple of countResolution, clamp to [minCount, maxCount]
-    int discretizedCount = std::clamp(
+    return std::clamp(
         static_cast<int>(std::round(trueCount / countResolution) * countResolution),
         minCount, maxCount);
+}
+
+// Convert a raw State to a StateKey
+StateKey Player::stateToKey(const State& state) const {
+    int discretizedCount = computeTrueCount(state.removedCards);
 
     // Determine hand type — treat as PAIR only if split is actually allowed
     bool splitAllowed = std::find(state.allowedActions.begin(), state.allowedActions.end(),
@@ -42,7 +47,11 @@ StateKey Player::stateToKey(const State& state) const {
         playerSum = static_cast<unsigned int>(state.playerHand.getValue());
     }
 
-    return std::make_tuple(discretizedCount, handType, playerSum, dealerCard);
+    unsigned int cardCount = trackHandCardCount
+        ? static_cast<unsigned int>(std::min<size_t>(state.playerHand.cardCount(), 6))
+        : 2u;
+
+    return std::make_tuple(discretizedCount, handType, playerSum, dealerCard, cardCount);
 }
 
 // Get action based on game state (delegates to strategy via StateKey)
@@ -256,6 +265,7 @@ Player* Player::clone() const {
     p->minCount = minCount;
     p->maxCount = maxCount;
     p->numDecks = numDecks;
+    p->trackHandCardCount = trackHandCardCount;
     p->regressionEnabled = regressionEnabled;
     p->regressionObjective = regressionObjective;
     p->XtX = XtX;

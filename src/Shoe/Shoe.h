@@ -15,8 +15,9 @@ protected:
     bool endShoe;
     std::array<int, 13> removedCards{};  // Count of dealt cards per rank (index 0=TWO ... 12=ACE)
     std::mt19937 rng;  // Persistent RNG for shuffling (seeded once)
-    
-    void initializeFromDecks();
+
+    // Virtual so SpanishShoe can build 48-card (no-TEN) decks instead.
+    virtual void initializeFromDecks();
     void calculatePenetrationThreshold();
     
 public:
@@ -59,9 +60,18 @@ protected:
 
 public:
     DebugShoe(int numDecks, double penetration, int seed = 42);
-    
+
     void shuffle() override;
     Card dealCard(bool covered = false) override;
     void reset() override;
+};
+
+// Shoe built from 48-card "Spanish" decks (no rank-TEN cards) for Spanish 21.
+class SpanishShoe : public Shoe {
+protected:
+    void initializeFromDecks() override;
+
+public:
+    SpanishShoe(int numDecks, double penetration);
 };
 

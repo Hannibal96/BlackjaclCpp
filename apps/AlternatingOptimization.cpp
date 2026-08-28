@@ -427,6 +427,7 @@ struct AlternatingOptimizationApp {
         player->setCountResolution(count.resolution);
         auto [strategyMinCount, strategyMaxCount] = strategy.getCountRange();
         player->setCountRange(strategyMinCount, strategyMaxCount);
+        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
         if (betting) player->setBettingStrategy(std::move(betting));
         player->enableRoundStats();
 
@@ -462,6 +463,7 @@ struct AlternatingOptimizationApp {
             player->setCountResolution(count.resolution);
             auto [strategyMinCount, strategyMaxCount] = strategy.getCountRange();
             player->setCountRange(strategyMinCount, strategyMaxCount);
+            if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
             player->setBettingStrategy(std::make_unique<KellyBetting>(kellyFraction));
             player->setEnforceBankrollActionLimits(true);
 
@@ -1785,6 +1787,7 @@ struct AlternatingOptimizationApp {
         player->setCountSystem(count.system);
         player->setCountResolution(count.resolution);
         player->setCountRange(count.minCount, count.maxCount);
+        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
 
         Rules rules = buildRules(c, 1.0, 1.0);
         Player* result = nullptr;
@@ -1902,6 +1905,7 @@ struct AlternatingOptimizationApp {
         player->setCountSystem(strategyCount.system);
         player->setCountResolution(strategyCount.resolution);
         player->setCountRange(strategyCount.minCount, strategyCount.maxCount);
+        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
         player->enableRegression(
             g_count_regression_objective == CountRegressionObjective::QUADRATIC_KELLY
                 ? RegressionObjective::QUADRATIC_KELLY
@@ -1989,6 +1993,7 @@ struct AlternatingOptimizationApp {
         player->setCountResolution(count.resolution);
         auto [strategyMinCount, strategyMaxCount] = fixedPolicy.getCountRange();
         player->setCountRange(strategyMinCount, strategyMaxCount);
+        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
         double graphResolution = (count.resolution > 0.0) ? (count.resolution / 4.0) : 0.25;
         player->enableCountGraph(graphResolution);
 
@@ -2555,9 +2560,14 @@ int runDoubleDownMadnessAlternatingOptimization(int argc, char** argv) {
     return AlternatingOptimizationApp<DoubleDownMadnessGame>::run(argc, argv);
 }
 
+int runSpanish21AlternatingOptimization(int argc, char** argv) {
+    return AlternatingOptimizationApp<Spanish21Game>::run(argc, argv);
+}
+
 int main(int argc, char** argv) {
     return dispatchGameApp(
         argc, argv, "AlternatingOptimization",
         runBlackjackAlternatingOptimization,
-        runDoubleDownMadnessAlternatingOptimization);
+        runDoubleDownMadnessAlternatingOptimization,
+        runSpanish21AlternatingOptimization);
 }

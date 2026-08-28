@@ -1,6 +1,7 @@
 #include "BlackjackTable.h"
 #include "BlackjackRules.h"
 #include "RL/State.h"
+#include "VerboseTrace.h"
 #include <algorithm>
 #include <stdexcept>
 #include <iostream>
@@ -77,6 +78,10 @@ void BlackjackTable::round() {
                 for (auto& hand : slot.getHands()) {
                     double reward = hand.isBlackjack() ? 0.0 : -hand.getBet();
                     player->addReward(reward);
+                    if (verbose) {
+                        VerboseTrace::printOutcome(*verboseOut, round_number, *player, hand,
+                                                    dealerHand, reward);
+                    }
                 }
             }
         }
@@ -208,6 +213,12 @@ std::vector<std::tuple<Player*, Hand*, State, Action>> BlackjackTable::playersPl
                     State state(hand, dealerUpCard, allowedActions, shoe->getRemovedCards());
                     Action action = player->getAction(state, affordableActions);
 
+                    if (verbose) {
+                        int trueCount = player->computeTrueCount(state.removedCards);
+                        VerboseTrace::printDecision(*verboseOut, round_number, *player, hand,
+                                                     dealerUpCard, trueCount, action);
+                    }
+
                     if (action == Action::HIT) {
                         hand.addCard(shoe->dealCard());
                         if (hand.isBust()) {
@@ -216,6 +227,10 @@ std::vector<std::tuple<Player*, Hand*, State, Action>> BlackjackTable::playersPl
                             double reward = -hand.getBet();
                             player->updateMoney(reward, state, action, nextState);
                             releaseCommittedWager(player, hand.getBet());
+                            if (verbose) {
+                                VerboseTrace::printOutcome(*verboseOut, round_number, *player,
+                                                            hand, dealerHand, reward);
+                            }
                             break;
                         } else {
                             // Non-terminal state - player continues with updated hand
@@ -241,6 +256,10 @@ std::vector<std::tuple<Player*, Hand*, State, Action>> BlackjackTable::playersPl
                             double reward = -hand.getBet();
                             player->updateMoney(reward, state, action, nextState);
                             releaseCommittedWager(player, hand.getBet());
+                            if (verbose) {
+                                VerboseTrace::printOutcome(*verboseOut, round_number, *player,
+                                                            hand, dealerHand, reward);
+                            }
                         } else {
                             // Non-bust double down - still alive
                             aliveHandIndices.push_back({player, {slotIdx, handIdx}, state, action});
@@ -270,7 +289,11 @@ std::vector<std::tuple<Player*, Hand*, State, Action>> BlackjackTable::playersPl
                         double reward = -lossAmount;
                         player->updateMoney(reward, state, action, nextState);
                         releaseCommittedWager(player, originalBet);
-                        break;  
+                        if (verbose) {
+                            VerboseTrace::printOutcome(*verboseOut, round_number, *player,
+                                                        hand, dealerHand, reward);
+                        }
+                        break;
                     }
                     else {
                         throw std::invalid_argument("Invalid action");
@@ -402,51 +425,32 @@ void BlackjackTable::evaluate(const std::vector<std::tuple<Player*, Hand*, State
         int playerValue = hand->getValue();
         bool playerBlackjack = hand->isBlackjack();
         double bet = hand->getBet();
-        
+
         // Create terminal next state after dealer plays
         State nextState(*hand, dealerUpCard, {}, shoe->getRemovedCards());
-        
+
+        double reward;
         if (playerBlackjack && dealerBlackjack) {
-            // Push - no reward
-            player->updateMoney(0.0, state, action, nextState);
-            releaseCommittedWager(player, bet);
-            continue;
+            reward = 0.0;  // Push
+        } else if (playerBlackjack) {
+            reward = bet * blackjackPayout;
+        } else if (dealerBlackjack) {
+            reward = -bet;
+        } else if (dealerBusted) {
+            reward = bet;
+        } else if (playerValue > dealerValue) {
+            reward = bet;
+        } else if (playerValue < dealerValue) {
+            reward = -bet;
+        } else {
+            reward = 0.0;  // Push
         }
-        
-        if (playerBlackjack) {
-            double reward = bet * blackjackPayout;
-            player->updateMoney(reward, state, action, nextState);
-            releaseCommittedWager(player, bet);
-            continue;
-        }
-        
-        if (dealerBlackjack) {
-            double reward = -bet;
-            player->updateMoney(reward, state, action, nextState);
-            releaseCommittedWager(player, bet);
-            continue;
-        }
-        
-        if (dealerBusted) {
-            double reward = bet;
-            player->updateMoney(reward, state, action, nextState);
-            releaseCommittedWager(player, bet);
-            continue;
-        }
-        
-        if (playerValue > dealerValue) {
-            double reward = bet;
-            player->updateMoney(reward, state, action, nextState);
-        }
-        else if (playerValue < dealerValue) {
-            double reward = -bet;
-            player->updateMoney(reward, state, action, nextState);
-        }
-        else {
-            // Push - no reward
-            player->updateMoney(0.0, state, action, nextState);
-        }
+
+        player->updateMoney(reward, state, action, nextState);
         releaseCommittedWager(player, bet);
+        if (verbose) {
+            VerboseTrace::printOutcome(*verboseOut, round_number, *player, *hand, dealerHand, reward);
+        }
     }
 }
 
