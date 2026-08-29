@@ -12,6 +12,7 @@
 #include "Game/Player.h"
 #include "Game/CountingMethods.h"
 #include "RL/BasicStrategy.h"
+#include "RL/WalkerStrategy.h"
 #include "Utils/Utils.h"
 #include <iostream>
 #include <limits>
@@ -50,6 +51,11 @@ struct DebugPlayerBehaviorApp {
     static inline std::optional<int> g_max_count;
 
     static inline std::string g_strategy_file;
+    // Spanish21-only: play Katarina Walker's published index deviations
+    // (WalkerStrategy.h) instead of the plain reference table. Mutually
+    // exclusive with --strategy-file. Pair with --count walker to match
+    // CompareCountStrategies' "Walker + deviations" row exactly.
+    static inline bool g_walker_deviations = false;
 
     static inline std::vector<int>  g_deck_sizes   = {6};
     static inline std::vector<bool> g_stand_soft17 = {Game::kDefaultStandSoft17};
@@ -105,7 +111,13 @@ struct DebugPlayerBehaviorApp {
         std::cout << "  --strategy-file <path>  Load a BasicStrategy JSON file directly, e.g. a\n";
         std::cout << "                          full_deviations_strategy.json from CompareCountStrategies\n";
         std::cout << "                          or a Pk_agent.json from AlternatingOptimization.\n";
-        std::cout << "                          Default: the game's own WoO/reference basic strategy.\n\n";
+        std::cout << "                          Default: the game's own WoO/reference basic strategy.\n";
+        if constexpr (Game::kSupportsWalker) {
+            std::cout << "  --walker-deviations     Play Katarina Walker's published Spanish 21 index\n";
+            std::cout << "                          deviations instead (mutually exclusive with\n";
+            std::cout << "                          --strategy-file). Pair with --count walker.\n";
+        }
+        std::cout << "\n";
         std::cout << "GAME CONFIG:\n";
         std::cout << "  --decks <N>             Deck count (default: 6)\n";
         std::cout << "  --ss17 <bool>           Dealer stands on soft 17 (default: "
@@ -130,6 +142,7 @@ struct DebugPlayerBehaviorApp {
             else if (arg == "--max-count"        && i + 1 < argc) g_max_count = std::stoi(argv[++i]);
 
             else if (arg == "--strategy-file"    && i + 1 < argc) g_strategy_file = argv[++i];
+            else if (arg == "--walker-deviations") g_walker_deviations = true;
 
             else if (arg == "--decks" && i + 1 < argc) g_deck_sizes   = parseList<int>(argv[++i]);
             else if (arg == "--ss17"  && i + 1 < argc) g_stand_soft17 = parseList<bool>(argv[++i]);
@@ -150,6 +163,14 @@ struct DebugPlayerBehaviorApp {
             }
             const Case& c = cases.front();
 
+            if (g_walker_deviations && !g_strategy_file.empty())
+                throw std::invalid_argument("Specify only one of --strategy-file or --walker-deviations");
+            if (g_walker_deviations && !Game::kSupportsWalker)
+                throw std::invalid_argument("--walker-deviations is only supported for --game spanish21");
+
+            Rules rules = Game::buildRules(c, g_penetration, /*minBet=*/0.0,
+                                           /*maxBet=*/std::numeric_limits<double>::max());
+
             std::unique_ptr<BasicStrategy> strategy;
             std::string strategySource;
             if (!g_strategy_file.empty()) {
@@ -157,14 +178,20 @@ struct DebugPlayerBehaviorApp {
                 if (!strategy->loadFromFile(g_strategy_file))
                     throw std::runtime_error("Failed to load strategy file: " + g_strategy_file);
                 strategySource = g_strategy_file;
+            } else if constexpr (Game::kSupportsWalker) {
+                if (g_walker_deviations) {
+                    strategy = loadWalkerBasicStrategy(rules, kWalkerMinCount, kWalkerMaxCount);
+                    strategySource = "Katarina Walker's published index deviations";
+                } else {
+                    strategy = Game::loadBasicStrategy(c);
+                    strategySource = "game reference basic strategy";
+                }
             } else {
                 strategy = Game::loadBasicStrategy(c);
                 strategySource = "game reference basic strategy";
             }
 
             CountConfig count = resolveCountConfig(*strategy);
-            Rules rules = Game::buildRules(c, g_penetration, /*minBet=*/0.0,
-                                           /*maxBet=*/std::numeric_limits<double>::max());
 
             auto player = std::make_unique<Player>(g_starting_money, strategy->clone(), "Debug");
             player->setNumDecks(c.deckSize);
@@ -172,7 +199,7 @@ struct DebugPlayerBehaviorApp {
             player->setCountResolution(count.resolution);
             player->setCountRange(count.minCount, count.maxCount);
             if constexpr (Game::kTracksHandCardCount) {
-                player->setTrackHandCardCount(true);
+                player->setTrackHandCardCount(Game::tracksHandCardCount(c));
             }
 
             std::cout << "=== DebugPlayerBehavior ===\n";

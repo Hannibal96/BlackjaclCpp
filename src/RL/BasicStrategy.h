@@ -66,6 +66,13 @@ public:
     ActionWithFallback getActionFromTable(int count, HandType handType, int playerSum, int dealerCard,
                                           int cardCount = 2) const;
 
+    // True if this exact (count, handType, playerSum, dealerCard, cardCount) key has
+    // an entry -- unlike getActionFromTable(), doesn't mask "missing" behind a safe
+    // default. Used to detect genuinely unvisited states (e.g. backfilling a sparse
+    // Q-learning-derived table's gaps from a fully-populated reference strategy).
+    bool hasEntry(int count, HandType handType, int playerSum, int dealerCard,
+                 int cardCount = 2) const;
+
     // Return the minimum and maximum count keys currently present in the table.
     std::pair<int, int> getCountRange() const;
 

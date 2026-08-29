@@ -55,6 +55,17 @@ KellyFractionRange resolveKellyFractionRange(
     std::optional<double> maximumOverride = std::nullopt,
     double step = 0.05,
     double radius = 0.25);
+// Indices (0-12) among the 13 rank-weight regression variables whose column is
+// identically zero in `A` -- that rank never appears with a nonzero removed
+// count in any accumulated sample. This is a real, structural fact for some
+// games (Spanish 21's 48-card shoe has no rank-TEN cards at all -- J/Q/K
+// remain, but plain 10s are structurally absent, not just rarely dealt), not
+// sampling noise. Such a dimension can't be fit: treating it as an ordinary
+// free variable lets its arbitrary/underdetermined value corrupt every other
+// weight once a sum-zero (or similar coupling) constraint ties them together.
+// Every regression solver below excludes these dimensions instead.
+std::vector<int> degenerateRegressionDimensions(const RegressionMatrix14& A);
+
 RegressionVector14 solveQuadraticKellyRegression(
     const RegressionMatrix14& weightedSecondMoment,
     const RegressionVector14& outcomeFeatureMoment);
@@ -64,7 +75,8 @@ RegressionVector14 solveQuadraticKellyRegressionWithFixedBias(
     double fixedBias);
 double learnedCountNormalizationScale(
     const RegressionVector14& rawWeights,
-    double targetTenValueTag = -1.0);
+    double targetTenValueTag = -1.0,
+    const std::vector<int>& degenerateDimensions = {});
 nlohmann::json kellyGrowthCurvesToJson(const std::vector<KellyGrowthCurve>& curves);
 KellyGrowthCurve kellyGrowthCurveFromJson(const nlohmann::json& value);
 std::string kellyGrowthCurvesToSvg(const std::string& title,

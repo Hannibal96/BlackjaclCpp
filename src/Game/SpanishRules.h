@@ -33,6 +33,16 @@ struct SpanishRules : public Rules {
 
     bool paySuitedBonus;        // Pay the 6-7-8 / 7-7-7 suited bonus (mixed 3:2, suited 2:1, spades 3:1)
 
+    // Pay the 5/6/7+-card 21 charlie bonus (1.5x/2x/3x instead of 1x). This is
+    // the one bonus that actually widens the Q-learning state space (it's why
+    // StateKey/BasicStrategy carry a cardCount dimension at all -- see
+    // Player::trackHandCardCount) -- unlike paySuitedBonus, which the reward
+    // computes straight from the real Hand and never touches StateKey. The app
+    // layer (Spanish21Game::Case::cardCountBonuses) turns both bonuses off
+    // together and forces trackHandCardCount off, since collapsing the state
+    // is only valid once the reward no longer actually depends on card count.
+    bool payCardCountBonuses;
+
     double minBet = 0.0;
     double maxBet = std::numeric_limits<double>::max();
 
@@ -56,13 +66,14 @@ struct SpanishRules : public Rules {
           peekBlackjack(true),
           maxRedoubles(0),
           allowDoubleDownRescue(true),
-          paySuitedBonus(true)
+          paySuitedBonus(true),
+          payCardCountBonuses(true)
     {}
 
     SpanishRules(bool standS17, int decks, double pen, unsigned int maxSplit,
                 bool doubleAfterSpl, bool resplitAce, bool hitSplitAce,
                 bool surrender, bool peek, int maxRedouble,
-                bool ddr, bool suitedBonus)
+                bool ddr, bool suitedBonus, bool cardCountBonuses = true)
         : Rules(1.5, standS17, decks, pen),
           maxSplits(maxSplit),
           doubleAfterSplit(doubleAfterSpl),
@@ -72,6 +83,7 @@ struct SpanishRules : public Rules {
           peekBlackjack(peek),
           maxRedoubles(maxRedouble),
           allowDoubleDownRescue(ddr),
-          paySuitedBonus(suitedBonus)
+          paySuitedBonus(suitedBonus),
+          payCardCountBonuses(cardCountBonuses)
     {}
 };

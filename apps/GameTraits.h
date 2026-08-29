@@ -29,6 +29,10 @@ struct BlackjackGame {
     using Case  = ::Case;  // regression/RegressionTestUtils.h
 
     static constexpr bool kSupportsIllustrious18 = true;
+    // Walker's method (CompareCountStrategies' 5-row HiLo/Walker comparison,
+    // see WalkerStrategy.h) is Spanish-21-specific -- it corrects for that
+    // game's structurally short (48-card, no TEN rank) shoe.
+    static constexpr bool kSupportsWalker = false;
     static constexpr bool kDefaultStandSoft17 = true;
     // StateKey's cardCount field: only Spanish 21 needs it to carry the real
     // (capped-at-6) hand size (see Player::trackHandCardCount).
@@ -159,6 +163,7 @@ struct DoubleDownMadnessGame {
     };
 
     static constexpr bool kSupportsIllustrious18 = false;
+    static constexpr bool kSupportsWalker = false;
     static constexpr bool kDefaultStandSoft17 = false;
     static constexpr bool kTracksHandCardCount = false;
     static constexpr const char* kBannerLabel        = "DoubleDownMadness";
@@ -250,13 +255,27 @@ struct Spanish21Game {
         bool standSoft17 = true;
         int maxRedoubles = 0;  // 0 = redoubling off; see SpanishRules::maxRedoubles
         bool allowDoubleDownRescue = true;
+        // Drives both SpanishRules::payCardCountBonuses and paySuitedBonus together,
+        // and (via Spanish21Game::tracksHandCardCount()) whether Players carry the
+        // real per-hand card count in StateKey at all. Off collapses Spanish 21 back
+        // to Blackjack-sized state (StateKey's cardCount field pinned to the constant
+        // 2) for Q-learning convergence -- see SpanishRules::payCardCountBonuses.
+        bool cardCountBonuses = true;
     };
 
     static constexpr bool kSupportsIllustrious18 = false;
+    // Katarina Walker's published Spanish 21 counting method -- CompareCountStrategies
+    // shows a dedicated 5-row HiLo/Walker comparison for this game instead of the
+    // Illustrious-18-style single-count flow (see WalkerStrategy.h).
+    static constexpr bool kSupportsWalker = true;
     static constexpr bool kDefaultStandSoft17 = true;
     // Spanish 21's 5/6/7+-card 21 bonus makes card count strategically relevant,
-    // so its Players must carry the real hand size in StateKey's cardCount field.
+    // so its Players must carry the real hand size in StateKey's cardCount field --
+    // unless Case::cardCountBonuses turns that bonus (and the state cost that comes
+    // with it) off; see tracksHandCardCount() below, which every call site should
+    // use instead of this constant now that the decision is runtime, not per-game.
     static constexpr bool kTracksHandCardCount = true;
+    static bool tracksHandCardCount(const Case& c) { return c.cardCountBonuses; }
     static constexpr const char* kBannerLabel        = "Spanish21";
     static constexpr const char* kAlgorithmPrefix     = "spanish21_";
     static constexpr const char* kCheckpointDirPrefix  = "spanish21-";
@@ -271,12 +290,14 @@ struct Spanish21Game {
     // their flags.
     static inline std::vector<int> g_redouble = {0};
     static inline std::vector<bool> g_ddr = {true};
+    static inline std::vector<bool> g_card_count_bonuses = {true};
 
     static Rules buildRules(const Case& c, double penetration, double minBet, double maxBet) {
         Rules rules(c.standSoft17, c.deckSize, penetration, /*maxSplit=*/4,
                     /*doubleAfterSplit=*/true, /*resplitAces=*/true, /*hitSplitAces=*/true,
                     /*surrender=*/true, /*peek=*/true, c.maxRedoubles,
-                    c.allowDoubleDownRescue, /*suitedBonus=*/true);
+                    c.allowDoubleDownRescue, /*suitedBonus=*/c.cardCountBonuses,
+                    /*cardCountBonuses=*/c.cardCountBonuses);
         rules.minBet = minBet;
         rules.maxBet = maxBet;
         return rules;
@@ -287,7 +308,8 @@ struct Spanish21Game {
         os << "decks=" << c.deckSize
            << "_ss17=" << std::boolalpha << c.standSoft17
            << "_redouble=" << c.maxRedoubles
-           << "_ddr=" << c.allowDoubleDownRescue;
+           << "_ddr=" << c.allowDoubleDownRescue
+           << "_cardCountBonuses=" << c.cardCountBonuses;
         return os.str();
     }
 
@@ -296,7 +318,8 @@ struct Spanish21Game {
 
     static std::unique_ptr<BasicStrategy> loadBasicStrategy(const Case& c) {
         Rules rules(c.standSoft17, c.deckSize, 75.0, 4, true, true, true, true, true,
-                    c.maxRedoubles, c.allowDoubleDownRescue, true);
+                    c.maxRedoubles, c.allowDoubleDownRescue, c.cardCountBonuses,
+                    c.cardCountBonuses);
         return loadSpanishBasicStrategy(rules);
     }
 
@@ -309,7 +332,8 @@ struct Spanish21Game {
             for (bool s : ss17)
                 for (int r : g_redouble)
                     for (bool ddr : g_ddr)
-                        cases.push_back({d, s, r, ddr});
+                        for (bool bonuses : g_card_count_bonuses)
+                            cases.push_back({d, s, r, ddr, bonuses});
         }
         return cases;
     }
@@ -317,6 +341,10 @@ struct Spanish21Game {
     static bool parseArg(const std::string& arg, int& i, int argc, char** argv) {
         if (arg == "--redouble" && i + 1 < argc) { g_redouble = parseList<int>(argv[++i]); return true; }
         if (arg == "--ddr" && i + 1 < argc)      { g_ddr       = parseList<bool>(argv[++i]); return true; }
+        if (arg == "--card-count-bonuses" && i + 1 < argc) {
+            g_card_count_bonuses = parseList<bool>(argv[++i]);
+            return true;
+        }
         return false;
     }
 
@@ -324,11 +352,20 @@ struct Spanish21Game {
         std::cout << "  --redouble <list>         Number of allowed redoubles beyond the first\n";
         std::cout << "                             double, e.g. [0,2] (default: [0] -- off)\n";
         std::cout << "  --ddr <list>              Allow double-down rescue (default: true)\n";
+        std::cout << "  --card-count-bonuses <list>  Pay the 5/6/7+-card 21 and 6-7-8/7-7-7\n";
+        std::cout << "                             suited bonuses (default: true). false also\n";
+        std::cout << "                             collapses StateKey's cardCount dimension back\n";
+        std::cout << "                             to the constant 2 (Player::trackHandCardCount\n";
+        std::cout << "                             off) -- the reward no longer depends on card\n";
+        std::cout << "                             count once the bonuses are off, so this is a\n";
+        std::cout << "                             much smaller, Blackjack-sized state space for\n";
+        std::cout << "                             Q-learning to converge over.\n";
     }
 
     static void writeMetaGameSection(json& meta, const Case& c) {
         meta["game"]["redouble"] = c.maxRedoubles;
         meta["game"]["ddr"]      = c.allowDoubleDownRescue;
+        meta["game"]["card_count_bonuses"] = c.cardCountBonuses;
     }
 
     static Case readMetaGameSection(const json& g) {
@@ -337,6 +374,9 @@ struct Spanish21Game {
         c.standSoft17          = g.at("ss17").get<bool>();
         c.maxRedoubles          = g.at("redouble").get<int>();
         c.allowDoubleDownRescue = g.at("ddr").get<bool>();
+        // .value(): older checkpoints predate this field -- default true (bonuses
+        // on, matching the pre-existing behavior they were actually trained with).
+        c.cardCountBonuses      = g.value("card_count_bonuses", true);
         return c;
     }
 
@@ -345,6 +385,12 @@ struct Spanish21Game {
         if (redouble != c.maxRedoubles) {
             mismatches.push_back("redouble: simulation=" + std::to_string(c.maxRedoubles) +
                                  ", checkpoint=" + std::to_string(redouble));
+        }
+        const bool cardCountBonuses = g.value("card_count_bonuses", true);
+        if (cardCountBonuses != c.cardCountBonuses) {
+            mismatches.push_back("card_count_bonuses: simulation=" +
+                                 std::string(c.cardCountBonuses ? "true" : "false") +
+                                 ", checkpoint=" + std::string(cardCountBonuses ? "true" : "false"));
         }
         const bool ddr = g.at("ddr").get<bool>();
         if (ddr != c.allowDoubleDownRescue) {

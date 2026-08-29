@@ -106,7 +106,7 @@ inline std::vector<std::string> filterArguments(int argc,
         "--version"
     };
     static const std::unordered_set<std::string> spanishOnly = {
-        "--redouble", "--ddr"
+        "--redouble", "--ddr", "--card-count-bonuses"
     };
 
     std::vector<std::string> filtered;

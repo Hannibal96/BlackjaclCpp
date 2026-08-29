@@ -23,6 +23,7 @@ private:
     int maxRedoubles;  // 0 = redoubling off; see SpanishRules::maxRedoubles
     bool allowDoubleDownRescue;
     bool paySuitedBonus;
+    bool payCardCountBonuses;
     double minBet;
     double maxBet;
     uint64_t round_number;

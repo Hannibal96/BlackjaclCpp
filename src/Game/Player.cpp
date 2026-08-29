@@ -12,8 +12,10 @@ Player::Player(double initialMoney, std::unique_ptr<Strategy> strat, std::string
 
 // Compute the discretized true count for a removed-cards snapshot
 int Player::computeTrueCount(const std::array<int, 13>& removedCards) const {
-    // Compute raw count as dot product of weights and removed cards
-    double rawCount = 0.0;
+    // Compute raw count as dot product of weights and removed cards, starting
+    // from the count system's running-count offset (0 for ordinary systems;
+    // see Player::countOffsetPerDeck / CountingSystem::rawCountOffsetPerDeck).
+    double rawCount = countOffsetPerDeck * static_cast<double>(numDecks);
     int totalRemoved = 0;
     for (int i = 0; i < 13; ++i) {
         rawCount += countWeights[i] * static_cast<double>(removedCards[i]);
@@ -76,7 +78,7 @@ double Player::getBet(const std::array<int, 13>& removedCards) {
     ctx.bankroll = money;
 
     if (remainingDecks > 0.0) {
-        double rawCount = 0.0;
+        double rawCount = countOffsetPerDeck * static_cast<double>(numDecks);
         for (int i = 0; i < 13; ++i)
             rawCount += countWeights[i] * static_cast<double>(removedCards[i]);
         double tc = rawCount / remainingDecks;
@@ -265,6 +267,7 @@ Player* Player::clone() const {
     p->minCount = minCount;
     p->maxCount = maxCount;
     p->numDecks = numDecks;
+    p->countOffsetPerDeck = countOffsetPerDeck;
     p->trackHandCardCount = trackHandCardCount;
     p->regressionEnabled = regressionEnabled;
     p->regressionObjective = regressionObjective;

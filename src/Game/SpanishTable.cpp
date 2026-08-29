@@ -32,6 +32,7 @@ SpanishTable::SpanishTable(const SpanishRules& gameRules, std::vector<Player*> g
       maxRedoubles(gameRules.maxRedoubles),
       allowDoubleDownRescue(gameRules.allowDoubleDownRescue),
       paySuitedBonus(gameRules.paySuitedBonus),
+      payCardCountBonuses(gameRules.payCardCountBonuses),
       minBet(gameRules.minBet),
       maxBet(gameRules.maxBet),
       round_number(0ULL)
@@ -407,6 +408,8 @@ double SpanishTable::winMultiplier(const Hand& hand) const {
         const double suitedTier = suitedSequenceMultiplier(hand);
         if (suitedTier > 0.0) return suitedTier;
     }
+
+    if (!payCardCountBonuses) return 1.0;
 
     const size_t n = hand.cardCount();
     if (n >= 7) return 3.0;

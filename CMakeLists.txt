@@ -27,6 +27,7 @@ add_library(blackjack_objs OBJECT
     src/RL/BasicStrategy.cpp
     src/RL/DoubleDownMadnessStrategy.cpp
     src/RL/SpanishStrategy.cpp
+    src/RL/WalkerStrategy.cpp
     src/RL/QLearningStrategy.cpp
     src/Utils/RunLogger.cpp
     src/Utils/SimulationAnalysis.cpp

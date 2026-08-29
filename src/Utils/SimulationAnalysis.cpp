@@ -75,6 +75,14 @@ KellyFractionRange resolveKellyFractionRange(
     return range;
 }
 
+std::vector<int> degenerateRegressionDimensions(const RegressionMatrix14& A) {
+    std::vector<int> degenerate;
+    for (int i = 0; i < 13; ++i) {
+        if (std::abs(A[i][i]) < 1e-15) degenerate.push_back(i);
+    }
+    return degenerate;
+}
+
 RegressionVector14 solveQuadraticKellyRegression(
         const RegressionMatrix14& weightedSecondMoment,
         const RegressionVector14& outcomeFeatureMoment) {
@@ -86,6 +94,16 @@ RegressionVector14 solveQuadraticKellyRegression(
         for (int j = 0; j < 14; ++j)
             augmented[i][j] = weightedSecondMoment[i][j];
         augmented[i][14] = outcomeFeatureMoment[i];
+    }
+
+    // Force degenerate ranks (see degenerateRegressionDimensions()) to exactly
+    // 0 instead of leaving them as an unsolvable free variable. Their column is
+    // already all zero elsewhere (that rank never varies), so this only
+    // removes a dimension with no information -- it doesn't affect any other
+    // weight, unlike a naive singular-pivot failure or an unconstrained fit.
+    for (int idx : degenerateRegressionDimensions(weightedSecondMoment)) {
+        for (int j = 0; j < 15; ++j) augmented[idx][j] = 0.0;
+        augmented[idx][idx] = 1.0;
     }
 
     for (int col = 0; col < 14; ++col) {
@@ -138,9 +156,27 @@ RegressionVector14 solveQuadraticKellyRegressionWithFixedBias(
 
 double learnedCountNormalizationScale(
         const RegressionVector14& rawWeights,
-        double targetTenValueTag) {
-    const double tenValueAverage =
-        (rawWeights[8] + rawWeights[9] + rawWeights[10] + rawWeights[11]) / 4.0;
+        double targetTenValueTag,
+        const std::vector<int>& degenerateDimensions) {
+    // Average only the ten-value ranks that actually exist in the shoe. A
+    // degenerate one (e.g. Spanish 21's rank-TEN) was forced to exactly 0 by
+    // the solver, not fitted -- including it here would drag the average (and
+    // so the scale applied to every other weight) toward a meaningless value.
+    double tenValueSum = 0.0;
+    int tenValueCount = 0;
+    for (int i = 8; i <= 11; ++i) {
+        if (std::find(degenerateDimensions.begin(), degenerateDimensions.end(), i) !=
+            degenerateDimensions.end()) {
+            continue;
+        }
+        tenValueSum += rawWeights[i];
+        ++tenValueCount;
+    }
+    if (tenValueCount == 0) {
+        throw std::invalid_argument(
+            "Cannot normalize learned count: no non-degenerate 10/J/Q/K rank to average");
+    }
+    const double tenValueAverage = tenValueSum / tenValueCount;
     if (!std::isfinite(targetTenValueTag) ||
         !std::isfinite(tenValueAverage) ||
         std::abs(tenValueAverage) < 1e-15) {

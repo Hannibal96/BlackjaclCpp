@@ -22,6 +22,14 @@ struct CountingSystem {
     double factor = 1.0;               // signal change per unit of true count
     double bias   = 0.0;               // signal at neutral count
     bool continuousBettingCount = false; // true when w'c is a directly fitted wager fraction
+
+    // Running count starting offset, per deck in the shoe (added as
+    // rawCountOffsetPerDeck * numDecks before dividing by remaining decks —
+    // see Player::computeTrueCount). Zero for every ordinary system; nonzero
+    // only for counts designed for a structurally short shoe (e.g. Katarina
+    // Walker's Spanish 21 adaptation of Hi-Lo, which starts at -4/deck to
+    // correct for the 48-card shoe's missing TEN rank).
+    double rawCountOffsetPerDeck = 0.0;
 };
 
 namespace CountingMethods {
@@ -69,6 +77,17 @@ inline CountingSystem make(const std::array<double, 13>& w,
     return {w, factor, bias};
 }
 
+// Katarina Walker's Spanish 21 adaptation of Hi-Lo (see "The Pro's Guide to
+// Spanish 21 and Australian Pontoon"): identical per-rank tags to Hi-Lo, but
+// the running count starts at -4 per deck rather than 0, correcting for the
+// 48-card shoe's structurally missing TEN rank (J/Q/K remain, but plain-10
+// cards are absent entirely, not just removed by play).
+inline CountingSystem walker() {
+    CountingSystem cs{HiLo, kDefaultFactor, kDefaultBias};
+    cs.rawCountOffsetPerDeck = -4.0;
+    return cs;
+}
+
 // Look up a named system (factor=kDefaultFactor, bias=kDefaultBias for traditional systems).
 // Returns std::nullopt if the name is unrecognised.
 inline std::optional<CountingSystem> fromName(std::string name) {
@@ -81,11 +100,12 @@ inline std::optional<CountingSystem> fromName(std::string name) {
     if (name == "omega2" || name == "omegaii")      return CountingSystem{OmegaII, kDefaultFactor, kDefaultBias};
     if (name == "zen")                              return CountingSystem{Zen,     kDefaultFactor, kDefaultBias};
     if (name == "halves")                           return CountingSystem{Halves,  kDefaultFactor, kDefaultBias};
+    if (name == "walker")                           return walker();
     return std::nullopt;
 }
 
 inline std::vector<std::string> allNames() {
-    return {"none", "hilo", "ko", "hiopt1", "hiopt2", "omega2", "zen", "halves"};
+    return {"none", "hilo", "ko", "hiopt1", "hiopt2", "omega2", "zen", "halves", "walker"};
 }
 
 } // namespace CountingMethods

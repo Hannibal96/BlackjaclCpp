@@ -32,6 +32,7 @@ protected:
     int minCount = 0;                       // Lower clamp bound for the discretized count
     int maxCount = 0;                       // Upper clamp bound for the discretized count
     int numDecks = 1;                       // Total decks in the shoe (needed to compute remaining decks)
+    double countOffsetPerDeck = 0.0;        // Running count starting offset per deck (see CountingSystem)
 
     // When true, StateKey's cardCount field carries the real (capped at 6) number
     // of cards in the player's hand. Games that don't need this distinction (all
@@ -151,6 +152,7 @@ public:
         setCountFactor(cs.factor);
         setCountBias(cs.bias);
         continuousBettingCount = cs.continuousBettingCount;
+        countOffsetPerDeck = cs.rawCountOffsetPerDeck;
     }
 
     // Set card counting weights (rank tags only; resolution is separate)

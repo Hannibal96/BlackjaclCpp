@@ -191,6 +191,18 @@ Action BasicStrategy::getAction(const StateKey& key, const std::vector<Action>& 
             return Action::HIT;
         }
 
+        // Same edge case, the soft twin: repeated splitting can also leave a
+        // hand like A,A no longer allowed to split, encoded as SOFT 12 instead
+        // of PAIR 11 -- reached by the identical rare mechanism as HARD 4
+        // above, so it gets the same treatment. A soft 12 can never bust on a
+        // hit, and there's no meaningful upside to doubling such a low total,
+        // so HIT is the safe, always-correct default here regardless of dealer
+        // card -- not a guess, this is standard basic strategy for a hand this
+        // weak.
+        if (handType == HandType::SOFT && playerSum == 12) {
+            return Action::HIT;
+        }
+
         // Spanish 21 rescue/redouble decisions (AFTER_DOUBLE[_SOFT]) may not appear
         // in a hand-transcribed table sourced from a ruleset without that option (no
         // WoO chart exists for every redouble/rescue combination). Standing is
@@ -272,6 +284,17 @@ ActionWithFallback BasicStrategy::getActionFromTable(int count, HandType handTyp
         return lookupTable->at(count).at(handType).at(playerSum).at(dealerCard).at(cardCount);
     } catch (const std::out_of_range&) {
         return missingDefault;
+    }
+}
+
+bool BasicStrategy::hasEntry(int count, HandType handType, int playerSum, int dealerCard,
+                             int cardCount) const {
+    if (!lookupTable) return false;
+    try {
+        lookupTable->at(count).at(handType).at(playerSum).at(dealerCard).at(cardCount);
+        return true;
+    } catch (const std::out_of_range&) {
+        return false;
     }
 }
 

@@ -6,6 +6,7 @@
 #include "RL/BasicStrategy.h"
 #include "RL/QLearningStrategy.h"
 #include "RL/DecayingParameter.h"
+#include "RL/WalkerStrategy.h"
 #include "Utils/RunLogger.h"
 #include "Utils/SimulationAnalysis.h"
 #include "Utils/Utils.h"
@@ -657,7 +658,7 @@ struct CompareCountStrategiesApp {
         player->setCountResolution(count.resolution);
         auto [strategyMinCount, strategyMaxCount] = strategy.getCountRange();
         player->setCountRange(strategyMinCount, strategyMaxCount);
-        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
+        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(Game::tracksHandCardCount(c));
         double graphResolution = (count.resolution > 0.0) ? (count.resolution / 4.0) : 0.25;
         player->enableCountGraph(graphResolution);
         player->enableRoundStats();
@@ -722,7 +723,7 @@ struct CompareCountStrategiesApp {
         player->setCountResolution(count.resolution);
         auto [strategyMinCount, strategyMaxCount] = strategy.getCountRange();
         player->setCountRange(strategyMinCount, strategyMaxCount);
-        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
+        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(Game::tracksHandCardCount(c));
         player->setBettingStrategy(
             std::make_unique<SpreadBetting>(std::vector<std::pair<double, double>>{{threshold, 10.0}}));
         player->enableRoundStats();
@@ -754,7 +755,7 @@ struct CompareCountStrategiesApp {
             player->setCountResolution(count.resolution);
             auto [strategyMinCount, strategyMaxCount] = strategy.getCountRange();
             player->setCountRange(strategyMinCount, strategyMaxCount);
-            if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
+            if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(Game::tracksHandCardCount(c));
             player->setBettingStrategy(std::make_unique<KellyBetting>(kellyFraction));
             player->setEnforceBankrollActionLimits(true);
 
@@ -914,7 +915,7 @@ struct CompareCountStrategiesApp {
         player->setCountSystem(count.system);
         player->setCountResolution(count.resolution);
         player->setCountRange(count.minCount, count.maxCount);
-        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
+        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(Game::tracksHandCardCount(c));
 
         Rules rules = buildRules(c, 1.0, 1.0);
         std::vector<QLearningStrategy::QTableSnapshot> previousTables(1);
@@ -1176,7 +1177,159 @@ struct CompareCountStrategiesApp {
         }
     }
 
+    // Spanish21-specific 5-row HiLo/Walker comparison (see WalkerStrategy.h and
+    // Game::kSupportsWalker). Bypasses the ordinary --count/--deviations-checkpoint/
+    // --strategy-checkpoint flow entirely: Walker mode's whole point is a fixed,
+    // reproducible comparison across two specific counting systems (Hi-Lo and
+    // Walker's own -4/deck-offset adaptation), not a user-selectable single count.
+    static void runWalkerCase(const Case& c) {
+        const std::string runName = currentTimestamp() + "_walker_" + ToStringTableName(c);
+        std::filesystem::path outputPath = g_output_dir.empty()
+            ? std::filesystem::path(PROJECT_ROOT) / kCompareCheckpointRoot / runName
+            : std::filesystem::path(g_output_dir);
+        if (outputPath.is_relative()) outputPath = std::filesystem::path(PROJECT_ROOT) / outputPath;
+        RunLogger logger(outputPath.parent_path(), outputPath.filename().string());
+        const uint64_t evalRounds = resolvedEvalRounds();
+        const uint64_t graphRounds = resolvedGraphRounds();
+
+        std::cout << "\n=== " << Game::kBannerLabel << "CompareCountStrategies (Walker) ===\n";
+        std::cout << "Command:       " << g_command_line << "\n";
+        std::cout << "Scenario:      " << ToString(c) << "_penetration=" << g_penetration << "%\n";
+        std::cout << "Eval rounds:   " << evalRounds << "  Threads: " << g_num_threads << "\n";
+        std::cout << "Graph rounds:  " << graphRounds << "\n";
+        std::cout << "Train rounds:  " << g_num_rounds << "\n";
+        std::cout << "Count grid:    range=[" << kWalkerMinCount << "," << kWalkerMaxCount << "]\n";
+        std::cout << "===============================\n";
+        printWalkerDeviationsList(std::cout);
+        std::cout << "\n";
+
+        StrategyCountConfig hiLoCount;
+        hiLoCount.system = *CountingMethods::fromName("hilo");
+        hiLoCount.minCount = kWalkerMinCount;
+        hiLoCount.maxCount = kWalkerMaxCount;
+
+        StrategyCountConfig walkerCount;
+        walkerCount.system = CountingMethods::walker();
+        walkerCount.minCount = kWalkerMinCount;
+        walkerCount.maxCount = kWalkerMaxCount;
+
+        auto baseStrategy = loadBasicStrategyForCase(c);
+        Rules rules = buildRules(c, 1.0, 1.0);
+
+        std::vector<EvalResult> results;
+        std::vector<StrategyGraphArtifact> graphs;
+
+        auto addRow = [&](const std::string& label, const std::string& note,
+                          const BasicStrategy& strategy, const StrategyCountConfig& count) {
+            graphs.push_back(measureEvCountGraph(c, label, strategy, count, graphRounds));
+            results.push_back(evaluateCase(
+                label, note, c, strategy, count,
+                graphs.back().flatStatistics.secondMoment > 0.0
+                    ? 1.0 / graphs.back().flatStatistics.secondMoment : 0.0));
+        };
+
+        auto noDevStrategy = expandSpanishBasicStrategyAcrossCounts(
+            *baseStrategy, kWalkerMinCount, kWalkerMaxCount);
+        addRow("HiLo (no deviations)", "", *noDevStrategy, hiLoCount);
+        addRow("Walker (no deviations)", "", *noDevStrategy, walkerCount);
+
+        auto walkerDevStrategy = loadWalkerBasicStrategy(rules, kWalkerMinCount, kWalkerMaxCount);
+        addRow("Walker + deviations", "", *walkerDevStrategy, walkerCount);
+
+        // Q-learning only writes states it actually visited during training; Walker's
+        // wide count range x 5 card-counts is sparse enough that rare cells can go
+        // unvisited even at large round counts, and unlike getActionFromTable(),
+        // real gameplay (BasicStrategy::getAction()) throws on a genuinely missing
+        // HARD/SOFT entry. Backfill any gaps from the fully-populated base strategy
+        // before using either trained table for evaluation or saving it as a checkpoint.
+        auto walkerFullDeviationsRaw = trainFullDeviations(c, walkerCount);
+        auto walkerFullDeviations = backfillMissingEntries(
+            *walkerFullDeviationsRaw, *noDevStrategy, kWalkerMinCount, kWalkerMaxCount);
+        saveStrategyCheckpoint(outputPath / "walker_full", *walkerFullDeviations, walkerCount, c);
+        addRow("Walker + full deviations", "Trained fresh against Walker count",
+               *walkerFullDeviations, walkerCount);
+
+        auto hiLoFullDeviationsRaw = trainFullDeviations(c, hiLoCount);
+        auto hiLoFullDeviations = backfillMissingEntries(
+            *hiLoFullDeviationsRaw, *noDevStrategy, kWalkerMinCount, kWalkerMaxCount);
+        saveStrategyCheckpoint(outputPath / "hilo_full", *hiLoFullDeviations, hiLoCount, c);
+        addRow("HiLo + full deviations", "Trained fresh against Hi-Lo count",
+               *hiLoFullDeviations, hiLoCount);
+
+        printResultsTable(results);
+
+        json graphsJson = graphsToJson(graphs);
+        const StrategyGraphArtifact& histogramGraph = graphs.front();
+        json histJson = histogramToJson(histogramGraph);
+        std::ofstream(logger.pathFor("ev_count_graph.json")) << std::setw(2) << graphsJson << "\n";
+        std::ofstream(logger.pathFor("ev_count_graph.svg")) << graphsToSvg(graphs);
+        std::ofstream(logger.pathFor("count_histograms.json")) << std::setw(2) << histJson << "\n";
+        std::ofstream(logger.pathFor("count_histograms.svg")) << histogramToSvg(histogramGraph);
+        std::vector<ConditionalSecondMomentCurve> secondMomentCurves;
+        secondMomentCurves.reserve(graphs.size());
+        for (const auto& graph : graphs)
+            secondMomentCurves.push_back(conditionalSecondMomentCurve(graph));
+        std::ofstream(logger.pathFor("second_moment_count_graph.json"))
+            << std::setw(2) << conditionalSecondMomentCurvesToJson(secondMomentCurves) << "\n";
+        std::ofstream(logger.pathFor("second_moment_count_graph.svg"))
+            << conditionalSecondMomentCurvesToSvg(
+                   "Conditional second moment by strategy", secondMomentCurves);
+        std::vector<KellyGrowthCurve> kellyCurves;
+        for (const auto& result : results) {
+            if (!result.kellyCurve.points.empty()) kellyCurves.push_back(result.kellyCurve);
+        }
+        std::ofstream(logger.pathFor("kelly_fraction_graph.json"))
+            << std::setw(2) << kellyGrowthCurvesToJson(kellyCurves) << "\n";
+        std::ofstream(logger.pathFor("kelly_fraction_graph.svg"))
+            << kellyGrowthCurvesToSvg("Kelly growth by strategy", kellyCurves);
+
+        std::cout << "\nSaved artifacts:\n";
+        std::cout << "  " << logger.pathFor("run.log").string() << "\n";
+        std::cout << "  " << logger.pathFor("ev_count_graph.json").string() << "\n";
+        std::cout << "  " << logger.pathFor("ev_count_graph.svg").string() << "\n";
+        std::cout << "  " << logger.pathFor("count_histograms.json").string() << "\n";
+        std::cout << "  " << logger.pathFor("count_histograms.svg").string() << "\n";
+        std::cout << "  " << logger.pathFor("second_moment_count_graph.json").string() << "\n";
+        std::cout << "  " << logger.pathFor("second_moment_count_graph.svg").string() << "\n";
+        std::cout << "  " << logger.pathFor("kelly_fraction_graph.json").string() << "\n";
+        std::cout << "  " << logger.pathFor("kelly_fraction_graph.svg").string() << "\n";
+        std::cout << "  " << (outputPath / "walker_full" / "full_deviations_strategy.json").string() << "\n";
+        std::cout << "  " << (outputPath / "hilo_full" / "full_deviations_strategy.json").string() << "\n";
+
+        printWalkerReproductionCommands(c, outputPath);
+    }
+
+    static void printWalkerReproductionCommands(const Case& c, const std::filesystem::path& outputPath) {
+        const std::string gameFlags = "--game spanish21 --decks " + std::to_string(c.deckSize) +
+            " --ss17 " + (c.standSoft17 ? "true" : "false") +
+            " --redouble " + std::to_string(c.maxRedoubles) +
+            " --ddr " + (c.allowDoubleDownRescue ? "true" : "false");
+        const std::string walkerFull =
+            (outputPath / "walker_full" / "full_deviations_strategy.json").string();
+        const std::string hiloFull =
+            (outputPath / "hilo_full" / "full_deviations_strategy.json").string();
+
+        std::cout << "\nDebugPlayerBehavior commands to watch each policy play:\n";
+        std::cout << "  HiLo (no deviations):\n"
+                  << "    ./build/bin/DebugPlayerBehavior " << gameFlags << " --count hilo\n";
+        std::cout << "  Walker (no deviations):\n"
+                  << "    ./build/bin/DebugPlayerBehavior " << gameFlags << " --count walker\n";
+        std::cout << "  Walker + deviations:\n"
+                  << "    ./build/bin/DebugPlayerBehavior " << gameFlags
+                  << " --count walker --walker-deviations\n";
+        std::cout << "  Walker + full deviations:\n"
+                  << "    ./build/bin/DebugPlayerBehavior " << gameFlags
+                  << " --count walker --strategy-file " << walkerFull << "\n";
+        std::cout << "  HiLo + full deviations:\n"
+                  << "    ./build/bin/DebugPlayerBehavior " << gameFlags
+                  << " --count hilo --strategy-file " << hiloFull << "\n";
+    }
+
     static void runCase(const Case& c) {
+        if constexpr (Game::kSupportsWalker) {
+            runWalkerCase(c);
+            return;
+        }
         const std::string runName = currentTimestamp() + "_" + ToStringTableName(c);
         std::filesystem::path outputPath = g_output_dir.empty()
             ? std::filesystem::path(PROJECT_ROOT) / kCompareCheckpointRoot / runName
@@ -1418,6 +1571,18 @@ struct CompareCountStrategiesApp {
             std::cout << "  This app uses the standard Hi-Lo, multi-deck S17 reference indices.\n";
             std::cout << "  Insurance is omitted because the engine does not model insurance yet.\n";
             std::cout << "  If the selected count is not Hi-Lo, the Illustrious 18 row is skipped.\n\n";
+        } else if constexpr (Game::kSupportsWalker) {
+            std::cout << "Runs a fixed, dedicated 5-row comparison (--count/--count-weights/checkpoint\n";
+            std::cout << "flags are ignored for this game -- see WalkerStrategy.h):\n";
+            std::cout << "  1. HiLo (no deviations)         -- known basic strategy, Hi-Lo count context.\n";
+            std::cout << "  2. Walker (no deviations)       -- known basic strategy, Walker count context.\n";
+            std::cout << "  3. Walker + deviations          -- Katarina Walker's published index table.\n";
+            std::cout << "  4. Walker + full deviations     -- Q-learning trained fresh against Walker's count.\n";
+            std::cout << "  5. HiLo + full deviations       -- Q-learning trained fresh against Hi-Lo.\n\n";
+            std::cout << "WALKER NOTE:\n";
+            std::cout << "  Walker's count is Hi-Lo tags with the running count starting at -4/deck,\n";
+            std::cout << "  correcting for the 48-card shoe's missing TEN rank (see CountingMethods::walker()).\n";
+            std::cout << "  Prints a DebugPlayerBehavior command per row at the end, to watch each play.\n\n";
         } else {
             std::cout << "Compare a count system under two play policies:\n";
             std::cout << "  1. Known basic strategy for the chosen game.\n";

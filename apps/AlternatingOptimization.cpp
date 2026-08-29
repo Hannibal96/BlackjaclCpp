@@ -427,7 +427,7 @@ struct AlternatingOptimizationApp {
         player->setCountResolution(count.resolution);
         auto [strategyMinCount, strategyMaxCount] = strategy.getCountRange();
         player->setCountRange(strategyMinCount, strategyMaxCount);
-        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
+        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(Game::tracksHandCardCount(c));
         if (betting) player->setBettingStrategy(std::move(betting));
         player->enableRoundStats();
 
@@ -463,7 +463,7 @@ struct AlternatingOptimizationApp {
             player->setCountResolution(count.resolution);
             auto [strategyMinCount, strategyMaxCount] = strategy.getCountRange();
             player->setCountRange(strategyMinCount, strategyMaxCount);
-            if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
+            if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(Game::tracksHandCardCount(c));
             player->setBettingStrategy(std::make_unique<KellyBetting>(kellyFraction));
             player->setEnforceBankrollActionLimits(true);
 
@@ -531,6 +531,14 @@ struct AlternatingOptimizationApp {
             M[i][14] = d[i];
         }
 
+        // Force degenerate ranks (see degenerateRegressionDimensions()) to
+        // exactly 0 -- their column is already all zero elsewhere (that rank
+        // never varies), so this only removes an unsolvable free variable.
+        for (int idx : degenerateRegressionDimensions(A)) {
+            for (int j = 0; j < 15; ++j) M[idx][j] = 0.0;
+            M[idx][idx] = 1.0;
+        }
+
         for (int col = 0; col < 14; ++col) {
             int pivot = col;
             for (int row = col + 1; row < 14; ++row)
@@ -570,6 +578,17 @@ struct AlternatingOptimizationApp {
             M[i][15] = b[i];
         }
         for (int j = 0; j < 13; ++j) M[14][j] = 1.0;
+
+        // Degenerate ranks (see degenerateRegressionDimensions()) can't be fit
+        // and must not participate in the sum-zero constraint -- otherwise
+        // their arbitrary/underdetermined value corrupts every other weight
+        // through it. Force them to exactly 0 and drop them from the
+        // constraint row/column too.
+        for (int idx : degenerateRegressionDimensions(A)) {
+            for (int j = 0; j < 16; ++j) M[idx][j] = 0.0;
+            M[idx][idx] = 1.0;
+            M[14][idx] = 0.0;
+        }
 
         for (int col = 0; col < 15; ++col) {
             int pivot = col;
@@ -614,6 +633,17 @@ struct AlternatingOptimizationApp {
         }
         for (int j = 0; j < 13; ++j) M[13][j] = 1.0;
 
+        // Degenerate ranks (see degenerateRegressionDimensions()) can't be fit
+        // and must not participate in the sum-zero constraint -- otherwise
+        // their arbitrary/underdetermined value corrupts every other weight
+        // through it. Force them to exactly 0 and drop them from the
+        // constraint row/column too.
+        for (int idx : degenerateRegressionDimensions(XtX)) {
+            for (int j = 0; j < 15; ++j) M[idx][j] = 0.0;
+            M[idx][idx] = 1.0;
+            M[13][idx] = 0.0;
+        }
+
         for (int col = 0; col < 14; ++col) {
             int pivot = col;
             for (int row = col + 1; row < 14; ++row)
@@ -640,12 +670,14 @@ struct AlternatingOptimizationApp {
         return result;
     }
 
-    static CountArtifact normalizeCount(const std::array<double, 14>& raw) {
+    static CountArtifact normalizeCount(const std::array<double, 14>& raw,
+                                        const std::array<std::array<double, 14>, 14>& XtX) {
         CountArtifact artifact;
         artifact.rawSolution = raw;
 
+        const std::vector<int> degenerate = degenerateRegressionDimensions(XtX);
         const double normalizationScale =
-            learnedCountNormalizationScale(raw, kTargetTenValueTag);
+            learnedCountNormalizationScale(raw, kTargetTenValueTag, degenerate);
 
         for (int i = 0; i < 13; ++i) {
             artifact.rawNormalizedWeights[i] = raw[i] * normalizationScale;
@@ -653,14 +685,34 @@ struct AlternatingOptimizationApp {
         }
 
         // By symmetry, 10/J/Q/K should share the same tag. Keep the original fitted
-        // values for reporting, but use their average in the learned count.
-        double tenValueAverage =
-            (artifact.rawNormalizedWeights[8] + artifact.rawNormalizedWeights[9] +
-             artifact.rawNormalizedWeights[10] + artifact.rawNormalizedWeights[11]) / 4.0;
-        artifact.count.system.weights[8] = tenValueAverage;
-        artifact.count.system.weights[9] = tenValueAverage;
-        artifact.count.system.weights[10] = tenValueAverage;
-        artifact.count.system.weights[11] = tenValueAverage;
+        // values for reporting, but use their average in the learned count --
+        // excluding any degenerate rank (e.g. Spanish 21's structurally absent
+        // rank-TEN, forced to exactly 0 above) from that average, since it was
+        // never fitted and would otherwise drag the real ranks' shared tag
+        // toward a meaningless value. It's still assigned the resulting
+        // average below for a uniform, honest-looking weights array -- it's
+        // never actually exercised (that rank never appears in the shoe), so
+        // this is display consistency only, not a functional change.
+        double tenValueSum = 0.0;
+        int tenValueCount = 0;
+        for (int i = 8; i <= 11; ++i) {
+            if (std::find(degenerate.begin(), degenerate.end(), i) != degenerate.end()) continue;
+            tenValueSum += artifact.rawNormalizedWeights[i];
+            ++tenValueCount;
+        }
+        if (tenValueCount > 0) {
+            const double tenValueAverage = tenValueSum / tenValueCount;
+            for (int i = 8; i <= 11; ++i) {
+                // A degenerate rank (e.g. Spanish 21's structurally absent
+                // rank-TEN) never appears in this game's shoe at all -- leave
+                // its weight at the raw forced-0 value from the loop above
+                // instead of broadcasting the real ranks' shared tag onto it.
+                // It genuinely isn't part of the learned count, and shouldn't
+                // look like it shares J/Q/K's tag.
+                if (std::find(degenerate.begin(), degenerate.end(), i) != degenerate.end()) continue;
+                artifact.count.system.weights[i] = tenValueAverage;
+            }
+        }
 
         artifact.count.system.factor = 1.0 / normalizationScale;
         artifact.count.system.bias   = raw[13];
@@ -1787,7 +1839,7 @@ struct AlternatingOptimizationApp {
         player->setCountSystem(count.system);
         player->setCountResolution(count.resolution);
         player->setCountRange(count.minCount, count.maxCount);
-        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
+        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(Game::tracksHandCardCount(c));
 
         Rules rules = buildRules(c, 1.0, 1.0);
         Player* result = nullptr;
@@ -1905,7 +1957,7 @@ struct AlternatingOptimizationApp {
         player->setCountSystem(strategyCount.system);
         player->setCountResolution(strategyCount.resolution);
         player->setCountRange(strategyCount.minCount, strategyCount.maxCount);
-        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
+        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(Game::tracksHandCardCount(c));
         player->enableRegression(
             g_count_regression_objective == CountRegressionObjective::QUADRATIC_KELLY
                 ? RegressionObjective::QUADRATIC_KELLY
@@ -1948,7 +2000,7 @@ struct AlternatingOptimizationApp {
                     result->getXtX(), result->getXty(), 0.0);
                 break;
         }
-        CountArtifact artifact = normalizeCount(rawSolution);
+        CountArtifact artifact = normalizeCount(rawSolution, result->getXtX());
         artifact.regressionObjective = g_count_regression_objective;
         artifact.regressionConstraint = g_count_regression_constraint;
         artifact.forcedBias = forcedBias;
@@ -1993,7 +2045,7 @@ struct AlternatingOptimizationApp {
         player->setCountResolution(count.resolution);
         auto [strategyMinCount, strategyMaxCount] = fixedPolicy.getCountRange();
         player->setCountRange(strategyMinCount, strategyMaxCount);
-        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(true);
+        if constexpr (Game::kTracksHandCardCount) player->setTrackHandCardCount(Game::tracksHandCardCount(c));
         double graphResolution = (count.resolution > 0.0) ? (count.resolution / 4.0) : 0.25;
         player->enableCountGraph(graphResolution);
 
@@ -2048,14 +2100,24 @@ struct AlternatingOptimizationApp {
             "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"
         };
 
-        double tenMean = (artifact.rawNormalizedWeights[8] + artifact.rawNormalizedWeights[9]
-                        + artifact.rawNormalizedWeights[10] + artifact.rawNormalizedWeights[11]) / 4.0;
-        double tenMaxDev = std::max({
-            std::abs(artifact.rawNormalizedWeights[8]  - tenMean),
-            std::abs(artifact.rawNormalizedWeights[9]  - tenMean),
-            std::abs(artifact.rawNormalizedWeights[10] - tenMean),
-            std::abs(artifact.rawNormalizedWeights[11] - tenMean)
-        });
+        const std::vector<int> degenerate = degenerateRegressionDimensions(artifact.XtX);
+        const auto isDegenerate = [&](int i) {
+            return std::find(degenerate.begin(), degenerate.end(), i) != degenerate.end();
+        };
+
+        // 10-value consistency only makes sense across ten-value ranks that
+        // actually exist in this game's shoe -- a degenerate one (e.g.
+        // Spanish 21's structurally absent rank-TEN) was never fit at all, so
+        // including it would report a fake deviation instead of a real one.
+        std::vector<double> tenValues;
+        for (int i = 8; i <= 11; ++i) {
+            if (!isDegenerate(i)) tenValues.push_back(artifact.rawNormalizedWeights[i]);
+        }
+        double tenMean = 0.0;
+        for (double v : tenValues) tenMean += v;
+        tenMean = tenValues.empty() ? 0.0 : tenMean / tenValues.size();
+        double tenMaxDev = 0.0;
+        for (double v : tenValues) tenMaxDev = std::max(tenMaxDev, std::abs(v - tenMean));
         double tenRelDev = (std::abs(tenMean) > kEps) ? tenMaxDev / std::abs(tenMean) : tenMaxDev;
 
         double sumWeights = 0.0;
@@ -2073,10 +2135,19 @@ struct AlternatingOptimizationApp {
                   << std::setw(14) << "Used" << "\n";
         std::cout << "  " << std::string(38, '-') << "\n";
         for (size_t i = 0; i < artifact.count.system.weights.size(); ++i) {
-            std::cout << "  " << std::left << std::setw(10) << kRankNames[i]
-                      << std::setw(14) << std::fixed << std::setprecision(4)
-                      << artifact.rawNormalizedWeights[i]
-                      << std::setw(14) << artifact.count.system.weights[i] << "\n";
+            std::cout << "  " << std::left << std::setw(10) << kRankNames[i];
+            if (isDegenerate(static_cast<int>(i))) {
+                // Not part of the learned count at all (that rank never
+                // appears in this game's shoe -- see
+                // degenerateRegressionDimensions()) -- show it as excluded
+                // rather than a number, so it can't be misread as a real,
+                // fitted (or shared-tag) value.
+                std::cout << std::setw(14) << "---" << std::setw(14) << "---" << "\n";
+            } else {
+                std::cout << std::setw(14) << std::fixed << std::setprecision(4)
+                          << artifact.rawNormalizedWeights[i]
+                          << std::setw(14) << artifact.count.system.weights[i] << "\n";
+            }
         }
         std::cout << "  " << std::left << std::setw(10) << "Bias"
                   << std::setw(12) << std::fixed << std::setprecision(6)
