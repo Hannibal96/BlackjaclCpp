@@ -1,0 +1,260 @@
+{
+  "curves": [
+    {
+      "empirical_optimal_fraction": 0.8,
+      "empirical_optimal_growth": 1.0000064802326676,
+      "label": "W1",
+      "points": [
+        {
+          "error_lower": 1.000002430968409,
+          "error_upper": 1.000009897958429,
+          "growth_mean": 1.000006164463419,
+          "growth_stddev": 3.73349501006229e-06,
+          "kelly_fraction": 0.75
+        },
+        {
+          "error_lower": 1.000002411612698,
+          "error_upper": 1.0000105488526372,
+          "growth_mean": 1.0000064802326676,
+          "growth_stddev": 4.0686199696111735e-06,
+          "kelly_fraction": 0.8
+        },
+        {
+          "error_lower": 1.00000181698967,
+          "error_upper": 1.0000104222514665,
+          "growth_mean": 1.0000061196205683,
+          "growth_stddev": 4.302630898165383e-06,
+          "kelly_fraction": 0.85
+        },
+        {
+          "error_lower": 1.000000917803312,
+          "error_upper": 1.000010072438319,
+          "growth_mean": 1.0000054951208155,
+          "growth_stddev": 4.577317503566383e-06,
+          "kelly_fraction": 0.9
+        },
+        {
+          "error_lower": 1.0000005751631282,
+          "error_upper": 1.0000105239257455,
+          "growth_mean": 1.0000055495444369,
+          "growth_stddev": 4.974381308572766e-06,
+          "kelly_fraction": 0.95
+        },
+        {
+          "error_lower": 1.0000000485340161,
+          "error_upper": 1.0000099788632937,
+          "growth_mean": 1.000005013698655,
+          "growth_stddev": 4.9651646386800025e-06,
+          "kelly_fraction": 1.0
+        },
+        {
+          "error_lower": 0.9999995431689487,
+          "error_upper": 1.0000103927988924,
+          "growth_mean": 1.0000049679839205,
+          "growth_stddev": 5.424814971832042e-06,
+          "kelly_fraction": 1.05
+        },
+        {
+          "error_lower": 0.9999986732268928,
+          "error_upper": 1.0000094762700316,
+          "growth_mean": 1.0000040747484622,
+          "growth_stddev": 5.401521569336493e-06,
+          "kelly_fraction": 1.1
+        },
+        {
+          "error_lower": 0.9999980287427935,
+          "error_upper": 1.0000096863697874,
+          "growth_mean": 1.0000038575562904,
+          "growth_stddev": 5.828813496907624e-06,
+          "kelly_fraction": 1.15
+        },
+        {
+          "error_lower": 0.9999974884924778,
+          "error_upper": 1.0000093613544216,
+          "growth_mean": 1.0000034249234497,
+          "growth_stddev": 5.936430971899326e-06,
+          "kelly_fraction": 1.2
+        },
+        {
+          "error_lower": 0.9999959815630578,
+          "error_upper": 1.0000086224322187,
+          "growth_mean": 1.0000023019976383,
+          "growth_stddev": 6.320434580474338e-06,
+          "kelly_fraction": 1.25
+        }
+      ],
+      "predicted_optimal_fraction_1_over_ex2": 1.0
+    },
+    {
+      "empirical_optimal_fraction": 1.0,
+      "empirical_optimal_growth": 1.000028145203737,
+      "label": "W2",
+      "points": [
+        {
+          "error_lower": 1.00001985077149,
+          "error_upper": 1.0000299061659017,
+          "growth_mean": 1.0000248784686958,
+          "growth_stddev": 5.027697205921708e-06,
+          "kelly_fraction": 0.75
+        },
+        {
+          "error_lower": 1.000020257601785,
+          "error_upper": 1.0000308681140972,
+          "growth_mean": 1.000025562857941,
+          "growth_stddev": 5.305256156151281e-06,
+          "kelly_fraction": 0.8
+        },
+        {
+          "error_lower": 1.0000205012759822,
+          "error_upper": 1.0000319218757054,
+          "growth_mean": 1.0000262115758438,
+          "growth_stddev": 5.710299861702592e-06,
+          "kelly_fraction": 0.85
+        },
+        {
+          "error_lower": 1.0000208404137894,
+          "error_upper": 1.0000329112223674,
+          "growth_mean": 1.0000268758180784,
+          "growth_stddev": 6.035404288921301e-06,
+          "kelly_fraction": 0.9
+        },
+        {
+          "error_lower": 1.0000208472687366,
+          "error_upper": 1.0000334827351853,
+          "growth_mean": 1.000027165001961,
+          "growth_stddev": 6.317733224388936e-06,
+          "kelly_fraction": 0.95
+        },
+        {
+          "error_lower": 1.0000216246060263,
+          "error_upper": 1.0000346658014476,
+          "growth_mean": 1.000028145203737,
+          "growth_stddev": 6.520597710643882e-06,
+          "kelly_fraction": 1.0
+        },
+        {
+          "error_lower": 1.0000209212346851,
+          "error_upper": 1.0000346305359318,
+          "growth_mean": 1.0000277758853084,
+          "growth_stddev": 6.854650623288077e-06,
+          "kelly_fraction": 1.05
+        },
+        {
+          "error_lower": 1.0000202997390932,
+          "error_upper": 1.000035076539723,
+          "growth_mean": 1.0000276881394081,
+          "growth_stddev": 7.388400314797858e-06,
+          "kelly_fraction": 1.1
+        },
+        {
+          "error_lower": 1.0000204803372759,
+          "error_upper": 1.0000357770257722,
+          "growth_mean": 1.000028128681524,
+          "growth_stddev": 7.648344248100709e-06,
+          "kelly_fraction": 1.15
+        },
+        {
+          "error_lower": 1.0000192959721468,
+          "error_upper": 1.000035199519838,
+          "growth_mean": 1.0000272477459924,
+          "growth_stddev": 7.951773845503806e-06,
+          "kelly_fraction": 1.2
+        },
+        {
+          "error_lower": 1.0000194398327313,
+          "error_upper": 1.0000360022787451,
+          "growth_mean": 1.0000277210557382,
+          "growth_stddev": 8.2812230068467e-06,
+          "kelly_fraction": 1.25
+        }
+      ],
+      "predicted_optimal_fraction_1_over_ex2": 1.0
+    },
+    {
+      "empirical_optimal_fraction": 1.2,
+      "empirical_optimal_growth": 1.0000280133946946,
+      "label": "W3",
+      "points": [
+        {
+          "error_lower": 1.0000194864908525,
+          "error_upper": 1.0000297425100624,
+          "growth_mean": 1.0000246145004574,
+          "growth_stddev": 5.128009605005772e-06,
+          "kelly_fraction": 0.75
+        },
+        {
+          "error_lower": 1.0000200748013943,
+          "error_upper": 1.000030853609924,
+          "growth_mean": 1.0000254642056592,
+          "growth_stddev": 5.389404264900876e-06,
+          "kelly_fraction": 0.8
+        },
+        {
+          "error_lower": 1.000020677476913,
+          "error_upper": 1.0000322390217669,
+          "growth_mean": 1.0000264582493399,
+          "growth_stddev": 5.780772427031723e-06,
+          "kelly_fraction": 0.85
+        },
+        {
+          "error_lower": 1.000021166758895,
+          "error_upper": 1.0000329291291359,
+          "growth_mean": 1.0000270479440154,
+          "growth_stddev": 5.881185120522426e-06,
+          "kelly_fraction": 0.9
+        },
+        {
+          "error_lower": 1.0000206641084302,
+          "error_upper": 1.000033367266132,
+          "growth_mean": 1.000027015687281,
+          "growth_stddev": 6.351578850954164e-06,
+          "kelly_fraction": 0.95
+        },
+        {
+          "error_lower": 1.0000214664216793,
+          "error_upper": 1.0000344046071086,
+          "growth_mean": 1.000027935514394,
+          "growth_stddev": 6.469092714680779e-06,
+          "kelly_fraction": 1.0
+        },
+        {
+          "error_lower": 1.0000209393828086,
+          "error_upper": 1.0000345365942396,
+          "growth_mean": 1.000027737988524,
+          "growth_stddev": 6.798605715513376e-06,
+          "kelly_fraction": 1.05
+        },
+        {
+          "error_lower": 1.0000199794725957,
+          "error_upper": 1.000035343104564,
+          "growth_mean": 1.00002766128858,
+          "growth_stddev": 7.681815984246194e-06,
+          "kelly_fraction": 1.1
+        },
+        {
+          "error_lower": 1.0000202495516513,
+          "error_upper": 1.000034946659927,
+          "growth_mean": 1.0000275981057891,
+          "growth_stddev": 7.348554137908192e-06,
+          "kelly_fraction": 1.15
+        },
+        {
+          "error_lower": 1.000019775904298,
+          "error_upper": 1.0000362508850913,
+          "growth_mean": 1.0000280133946946,
+          "growth_stddev": 8.237490396766358e-06,
+          "kelly_fraction": 1.2
+        },
+        {
+          "error_lower": 1.0000192918105013,
+          "error_upper": 1.0000357912808406,
+          "growth_mean": 1.000027541545671,
+          "growth_stddev": 8.249735169644452e-06,
+          "kelly_fraction": 1.25
+        }
+      ],
+      "predicted_optimal_fraction_1_over_ex2": 1.0
+    }
+  ],
+  "error_bar": "mean_plus_minus_sample_stddev"
+}

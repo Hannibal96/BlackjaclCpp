@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="680" viewBox="0 0 1100 680">
+<rect width="100%" height="100%" fill="white"/>
+<defs>
+  <pattern id="minorGridOverlay" width="38.5" height="28.5" patternUnits="userSpaceOnUse">
+    <path d="M 38.5 0 L 0 0 0 28.5" fill="none" stroke="#dddddd" stroke-width="1.1"/>
+  </pattern>
+  <pattern id="majorGridOverlay" width="77" height="57" patternUnits="userSpaceOnUse">
+    <rect width="77" height="57" fill="url(#minorGridOverlay)"/>
+    <path d="M 77 0 L 0 0 0 57" fill="none" stroke="#b8b8b8" stroke-width="1.5"/>
+  </pattern>
+</defs>
+<text x="90" y="24" font-family="sans-serif" font-size="20">W1..W3 cumulative EV vs Count</text>
+<rect x="90" y="40" width="770" height="570" fill="url(#majorGridOverlay)"/>
+<line x1="90" y1="610" x2="860" y2="610" stroke="black" stroke-width="1.2"/>
+<line x1="90" y1="40" x2="90" y2="610" stroke="black" stroke-width="1.2"/>
+<line x1="90" y1="610" x2="90" y2="616" stroke="black"/>
+<text x="90" y="634" text-anchor="middle" font-family="sans-serif" font-size="12">-5.00</text>
+<line x1="138.12" y1="610.00" x2="138.12" y2="616.00" stroke="black"/>
+<line x1="186.25" y1="610.00" x2="186.25" y2="616.00" stroke="black"/>
+<text x="186.25" y="634.00" text-anchor="middle" font-family="sans-serif" font-size="12">-3.75</text>
+<line x1="234.38" y1="610.00" x2="234.38" y2="616.00" stroke="black"/>
+<line x1="282.50" y1="610.00" x2="282.50" y2="616.00" stroke="black"/>
+<text x="282.50" y="634.00" text-anchor="middle" font-family="sans-serif" font-size="12">-2.50</text>
+<line x1="330.62" y1="610.00" x2="330.62" y2="616.00" stroke="black"/>
+<line x1="378.75" y1="610.00" x2="378.75" y2="616.00" stroke="black"/>
+<text x="378.75" y="634.00" text-anchor="middle" font-family="sans-serif" font-size="12">-1.25</text>
+<line x1="426.88" y1="610.00" x2="426.88" y2="616.00" stroke="black"/>
+<line x1="475.00" y1="610.00" x2="475.00" y2="616.00" stroke="black"/>
+<text x="475.00" y="634.00" text-anchor="middle" font-family="sans-serif" font-size="12">0.00</text>
+<line x1="523.12" y1="610.00" x2="523.12" y2="616.00" stroke="black"/>
+<line x1="571.25" y1="610.00" x2="571.25" y2="616.00" stroke="black"/>
+<text x="571.25" y="634.00" text-anchor="middle" font-family="sans-serif" font-size="12">1.25</text>
+<line x1="619.38" y1="610.00" x2="619.38" y2="616.00" stroke="black"/>
+<line x1="667.50" y1="610.00" x2="667.50" y2="616.00" stroke="black"/>
+<text x="667.50" y="634.00" text-anchor="middle" font-family="sans-serif" font-size="12">2.50</text>
+<line x1="715.62" y1="610.00" x2="715.62" y2="616.00" stroke="black"/>
+<line x1="763.75" y1="610.00" x2="763.75" y2="616.00" stroke="black"/>
+<text x="763.75" y="634.00" text-anchor="middle" font-family="sans-serif" font-size="12">3.75</text>
+<line x1="811.88" y1="610.00" x2="811.88" y2="616.00" stroke="black"/>
+<line x1="860.00" y1="610.00" x2="860.00" y2="616.00" stroke="black"/>
+<text x="860.00" y="634.00" text-anchor="middle" font-family="sans-serif" font-size="12">5.00</text>
+<line x1="84.00" y1="610.00" x2="90.00" y2="610.00" stroke="black"/>
+<text x="80.00" y="614.00" text-anchor="end" font-family="sans-serif" font-size="12">-0.0342</text>
+<line x1="84.0000" y1="562.5000" x2="90.0000" y2="562.5000" stroke="black"/>
+<line x1="84.0000" y1="515.0000" x2="90.0000" y2="515.0000" stroke="black"/>
+<text x="80.0000" y="519.0000" text-anchor="end" font-family="sans-serif" font-size="12">-0.0236</text>
+<line x1="84.0000" y1="467.5000" x2="90.0000" y2="467.5000" stroke="black"/>
+<line x1="84.0000" y1="420.0000" x2="90.0000" y2="420.0000" stroke="black"/>
+<text x="80.0000" y="424.0000" text-anchor="end" font-family="sans-serif" font-size="12">-0.0129</text>
+<line x1="84.0000" y1="372.5000" x2="90.0000" y2="372.5000" stroke="black"/>
+<line x1="84.0000" y1="325.0000" x2="90.0000" y2="325.0000" stroke="black"/>
+<text x="80.0000" y="329.0000" text-anchor="end" font-family="sans-serif" font-size="12">-0.0022</text>
+<line x1="84.0000" y1="277.5000" x2="90.0000" y2="277.5000" stroke="black"/>
+<line x1="84.0000" y1="230.0000" x2="90.0000" y2="230.0000" stroke="black"/>
+<text x="80.0000" y="234.0000" text-anchor="end" font-family="sans-serif" font-size="12">0.0084</text>
+<line x1="84.0000" y1="182.5000" x2="90.0000" y2="182.5000" stroke="black"/>
+<line x1="84.0000" y1="135.0000" x2="90.0000" y2="135.0000" stroke="black"/>
+<text x="80.0000" y="139.0000" text-anchor="end" font-family="sans-serif" font-size="12">0.0191</text>
+<line x1="84.0000" y1="87.5000" x2="90.0000" y2="87.5000" stroke="black"/>
+<line x1="84.0000" y1="40.0000" x2="90.0000" y2="40.0000" stroke="black"/>
+<text x="80.0000" y="44.0000" text-anchor="end" font-family="sans-serif" font-size="12">0.0298</text>
+<line x1="475.0000" y1="40.0000" x2="475.0000" y2="610.0000" stroke="#666666" stroke-width="1.8"/>
+<line x1="90.0000" y1="305.1923" x2="860.0000" y2="305.1923" stroke="#666666" stroke-width="1.8"/>
+<path d="M 90 562.5 L 109.25 546.929 L 128.5 540.209 L 147.75 525.725 L 167 517.697 L 186.25 501.447 L 205.5 488.498 L 224.75 475.389 L 244 465.156 L 263.25 454.4 L 282.5 441.028 L 301.75 434.094 L 321 422.283 L 340.25 407.931 L 359.5 397.765 L 378.75 380.915 L 398 374.621 L 417.25 365.286 L 436.5 348.588 L 455.75 342.383 L 475 337.523 L 494.25 317.208 L 513.5 297.576 L 532.75 287.95 L 552 278.377 L 571.25 268.451 L 590.5 261.509 L 609.75 247.361 L 629 239.013 L 648.25 230.895 L 667.5 214.401 L 686.75 206.029 L 706 191.485 L 725.25 183.406 L 744.5 168.65 L 763.75 159.068 L 783 153.125 L 802.25 143.876 L 821.5 131.938 L 840.75 131.951 L 860 117.839" fill="none" stroke="#1f77b4" stroke-width="2.4"/>
+<path d="M 90 542.286 L 109.25 528.105 L 128.5 523.927 L 147.75 512.285 L 167 501.401 L 186.25 487.646 L 205.5 475.088 L 224.75 468.212 L 244 451.66 L 263.25 449.514 L 282.5 435.041 L 301.75 428.314 L 321 415.754 L 340.25 403.353 L 359.5 392.162 L 378.75 385.924 L 398 373.696 L 417.25 359.486 L 436.5 346.299 L 455.75 344.165 L 475 334.749 L 494.25 307.896 L 513.5 304.059 L 532.75 289.357 L 552 277.133 L 571.25 272.725 L 590.5 254.77 L 609.75 241.27 L 629 229.224 L 648.25 222.217 L 667.5 204.194 L 686.75 196.367 L 706 184.688 L 725.25 168.64 L 744.5 147.032 L 763.75 136.956 L 783 134.417 L 802.25 119.602 L 821.5 110.042 L 840.75 98.6511 L 860 89.8963" fill="none" stroke="#d62728" stroke-width="2.4"/>
+<path d="M 90 553.829 L 109.25 532.33 L 128.5 515.926 L 147.75 518.157 L 167 509.507 L 186.25 488.714 L 205.5 485.524 L 224.75 465.145 L 244 452.956 L 263.25 452.241 L 282.5 439.064 L 301.75 426.653 L 321 413.973 L 340.25 406.274 L 359.5 395.033 L 378.75 382.233 L 398 371.694 L 417.25 361.591 L 436.5 350.388 L 455.75 331.76 L 475 334.835 L 494.25 316.601 L 513.5 301.077 L 532.75 291.568 L 552 280.907 L 571.25 271.08 L 590.5 257.907 L 609.75 243.794 L 629 228.405 L 648.25 218.578 L 667.5 204.077 L 686.75 195.354 L 706 180.198 L 725.25 168.22 L 744.5 157.702 L 763.75 143.374 L 783 123.939 L 802.25 126.545 L 821.5 115.398 L 840.75 102.224 L 860 87.5" fill="none" stroke="#2ca02c" stroke-width="2.4"/>
+<text x="475.0000" y="662.0000" text-anchor="middle" font-family="sans-serif" font-size="14">Count</text>
+<text x="20" y="325.0000" transform="rotate(-90 20 325.0000)" text-anchor="middle" font-family="sans-serif" font-size="14">EV per round</text>
+<line x1="890.0000" y1="24.0000" x2="930.0000" y2="24.0000" stroke="#1f77b4" stroke-width="2.4"/>
+<line x1="890.0000" y1="34.0000" x2="930.0000" y2="34.0000" stroke="#1f77b4" stroke-width="1.5" stroke-dasharray="6,4" stroke-opacity="0.85"/>
+<text x="940.0000" y="28.0000" font-family="sans-serif" font-size="12">W1 empirical</text>
+<text x="940.0000" y="38.0000" font-family="sans-serif" font-size="12">W1 regression</text>
+<line x1="890.0000" y1="54.0000" x2="930.0000" y2="54.0000" stroke="#d62728" stroke-width="2.4"/>
+<line x1="890.0000" y1="64.0000" x2="930.0000" y2="64.0000" stroke="#d62728" stroke-width="1.5" stroke-dasharray="6,4" stroke-opacity="0.85"/>
+<text x="940.0000" y="58.0000" font-family="sans-serif" font-size="12">W2 empirical</text>
+<text x="940.0000" y="68.0000" font-family="sans-serif" font-size="12">W2 regression</text>
+<line x1="890.0000" y1="84.0000" x2="930.0000" y2="84.0000" stroke="#2ca02c" stroke-width="2.4"/>
+<line x1="890.0000" y1="94.0000" x2="930.0000" y2="94.0000" stroke="#2ca02c" stroke-width="1.5" stroke-dasharray="6,4" stroke-opacity="0.85"/>
+<text x="940.0000" y="88.0000" font-family="sans-serif" font-size="12">W3 empirical</text>
+<text x="940.0000" y="98.0000" font-family="sans-serif" font-size="12">W3 regression</text>
+</svg>

@@ -1,0 +1,636 @@
+{
+  "curves": [
+    {
+      "label": "Known basic strategy",
+      "points": [
+        {
+          "conditional_second_moment": 1.3922714328684231,
+          "count": -5.0,
+          "n": 5409155
+        },
+        {
+          "conditional_second_moment": 1.3874342500249819,
+          "count": -4.75,
+          "n": 4002106
+        },
+        {
+          "conditional_second_moment": 1.3734153275183616,
+          "count": -4.5,
+          "n": 2579000
+        },
+        {
+          "conditional_second_moment": 1.3808234860064732,
+          "count": -4.25,
+          "n": 6629339
+        },
+        {
+          "conditional_second_moment": 1.3730069864176004,
+          "count": -4.0,
+          "n": 3784226
+        },
+        {
+          "conditional_second_moment": 1.3675653451697385,
+          "count": -3.75,
+          "n": 8850594
+        },
+        {
+          "conditional_second_moment": 1.3555594347528233,
+          "count": -3.5,
+          "n": 5019005
+        },
+        {
+          "conditional_second_moment": 1.363179566974828,
+          "count": -3.25,
+          "n": 10113203
+        },
+        {
+          "conditional_second_moment": 1.3480685296903834,
+          "count": -3.0,
+          "n": 6452966
+        },
+        {
+          "conditional_second_moment": 1.3519983201831238,
+          "count": -2.75,
+          "n": 5509320
+        },
+        {
+          "conditional_second_moment": 1.3494828334097906,
+          "count": -2.5,
+          "n": 10870885
+        },
+        {
+          "conditional_second_moment": 1.3432787504753558,
+          "count": -2.25,
+          "n": 13738680
+        },
+        {
+          "conditional_second_moment": 1.3404549388920302,
+          "count": -2.0,
+          "n": 4838592
+        },
+        {
+          "conditional_second_moment": 1.334945329495267,
+          "count": -1.75,
+          "n": 7643573
+        },
+        {
+          "conditional_second_moment": 1.33353657846494,
+          "count": -1.5,
+          "n": 8157048
+        },
+        {
+          "conditional_second_moment": 1.3295429413901239,
+          "count": -1.25,
+          "n": 13657817
+        },
+        {
+          "conditional_second_moment": 1.3340616308318252,
+          "count": -1.0,
+          "n": 8647902
+        },
+        {
+          "conditional_second_moment": null,
+          "count": -0.75,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": null,
+          "count": -0.5,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": null,
+          "count": -0.25,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": 1.3106556803964882,
+          "count": 0.0,
+          "n": 128904850
+        },
+        {
+          "conditional_second_moment": null,
+          "count": 0.25,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": null,
+          "count": 0.5,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": null,
+          "count": 0.75,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": 1.2986032790847435,
+          "count": 1.0,
+          "n": 4397682
+        },
+        {
+          "conditional_second_moment": 1.2938939738408093,
+          "count": 1.25,
+          "n": 15350644
+        },
+        {
+          "conditional_second_moment": 1.288025219451849,
+          "count": 1.5,
+          "n": 7901093
+        },
+        {
+          "conditional_second_moment": 1.283803554956503,
+          "count": 1.75,
+          "n": 7385523
+        },
+        {
+          "conditional_second_moment": 1.277813044087326,
+          "count": 2.0,
+          "n": 4256773
+        },
+        {
+          "conditional_second_moment": 1.2752572387303276,
+          "count": 2.25,
+          "n": 11276084
+        },
+        {
+          "conditional_second_moment": 1.2730705596274896,
+          "count": 2.5,
+          "n": 8810799
+        },
+        {
+          "conditional_second_moment": 1.2650703378614678,
+          "count": 2.75,
+          "n": 3759880
+        },
+        {
+          "conditional_second_moment": 1.2622510429139888,
+          "count": 3.0,
+          "n": 7838752
+        },
+        {
+          "conditional_second_moment": 1.2542957593199804,
+          "count": 3.25,
+          "n": 4334809
+        },
+        {
+          "conditional_second_moment": 1.2592110565187007,
+          "count": 3.5,
+          "n": 8395085
+        },
+        {
+          "conditional_second_moment": 1.2489218410980731,
+          "count": 3.75,
+          "n": 5560883
+        },
+        {
+          "conditional_second_moment": 1.252886017706341,
+          "count": 4.0,
+          "n": 3969520
+        },
+        {
+          "conditional_second_moment": 1.2487021677337649,
+          "count": 4.25,
+          "n": 4447925
+        },
+        {
+          "conditional_second_moment": 1.2453679901741497,
+          "count": 4.5,
+          "n": 5423556
+        },
+        {
+          "conditional_second_moment": 1.232417328707126,
+          "count": 4.75,
+          "n": 1891237
+        },
+        {
+          "conditional_second_moment": 1.2352521107764862,
+          "count": 5.0,
+          "n": 3150583
+        }
+      ]
+    },
+    {
+      "label": "Illustrious 18",
+      "points": [
+        {
+          "conditional_second_moment": 1.3928643810792927,
+          "count": -5.0,
+          "n": 5388390
+        },
+        {
+          "conditional_second_moment": 1.3866887613217547,
+          "count": -4.75,
+          "n": 4031296
+        },
+        {
+          "conditional_second_moment": 1.3726459819717292,
+          "count": -4.5,
+          "n": 2562848
+        },
+        {
+          "conditional_second_moment": 1.3807279575336495,
+          "count": -4.25,
+          "n": 6558882
+        },
+        {
+          "conditional_second_moment": 1.373981644711444,
+          "count": -4.0,
+          "n": 3787999
+        },
+        {
+          "conditional_second_moment": 1.3698862574152675,
+          "count": -3.75,
+          "n": 8845600
+        },
+        {
+          "conditional_second_moment": 1.3588670508394438,
+          "count": -3.5,
+          "n": 4975492
+        },
+        {
+          "conditional_second_moment": 1.3654590709476144,
+          "count": -3.25,
+          "n": 10132304
+        },
+        {
+          "conditional_second_moment": 1.3520905145594626,
+          "count": -3.0,
+          "n": 6376027
+        },
+        {
+          "conditional_second_moment": 1.3544003504396847,
+          "count": -2.75,
+          "n": 5507733
+        },
+        {
+          "conditional_second_moment": 1.352361370199637,
+          "count": -2.5,
+          "n": 10840571
+        },
+        {
+          "conditional_second_moment": 1.3450512856916774,
+          "count": -2.25,
+          "n": 13646459
+        },
+        {
+          "conditional_second_moment": 1.3413751880177816,
+          "count": -2.0,
+          "n": 4876485
+        },
+        {
+          "conditional_second_moment": 1.3366163240786322,
+          "count": -1.75,
+          "n": 7640443
+        },
+        {
+          "conditional_second_moment": 1.3350326461557427,
+          "count": -1.5,
+          "n": 8151656
+        },
+        {
+          "conditional_second_moment": 1.330850404229522,
+          "count": -1.25,
+          "n": 13603680
+        },
+        {
+          "conditional_second_moment": 1.3348806114417349,
+          "count": -1.0,
+          "n": 8721056
+        },
+        {
+          "conditional_second_moment": null,
+          "count": -0.75,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": null,
+          "count": -0.5,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": null,
+          "count": -0.25,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": 1.3158024008718323,
+          "count": 0.0,
+          "n": 128881825
+        },
+        {
+          "conditional_second_moment": null,
+          "count": 0.25,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": null,
+          "count": 0.5,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": null,
+          "count": 0.75,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": 1.3073395153275673,
+          "count": 1.0,
+          "n": 4485545
+        },
+        {
+          "conditional_second_moment": 1.3033362669584267,
+          "count": 1.25,
+          "n": 15172948
+        },
+        {
+          "conditional_second_moment": 1.2997018438084194,
+          "count": 1.5,
+          "n": 7866330
+        },
+        {
+          "conditional_second_moment": 1.3047129191583302,
+          "count": 1.75,
+          "n": 7368996
+        },
+        {
+          "conditional_second_moment": 1.2986596231482475,
+          "count": 2.0,
+          "n": 4356651
+        },
+        {
+          "conditional_second_moment": 1.2961286752684331,
+          "count": 2.25,
+          "n": 11178410
+        },
+        {
+          "conditional_second_moment": 1.294063605999747,
+          "count": 2.5,
+          "n": 8944825
+        },
+        {
+          "conditional_second_moment": 1.2845302940943515,
+          "count": 2.75,
+          "n": 3748150
+        },
+        {
+          "conditional_second_moment": 1.2870347209169795,
+          "count": 3.0,
+          "n": 7774416
+        },
+        {
+          "conditional_second_moment": 1.2958895710300418,
+          "count": 3.25,
+          "n": 4471045
+        },
+        {
+          "conditional_second_moment": 1.301400902871441,
+          "count": 3.5,
+          "n": 8390512
+        },
+        {
+          "conditional_second_moment": 1.2924277968854851,
+          "count": 3.75,
+          "n": 5655261
+        },
+        {
+          "conditional_second_moment": 1.2951138696467506,
+          "count": 4.0,
+          "n": 3951842
+        },
+        {
+          "conditional_second_moment": 1.2916595840290832,
+          "count": 4.25,
+          "n": 4578286
+        },
+        {
+          "conditional_second_moment": 1.2918486961935998,
+          "count": 4.5,
+          "n": 5332063
+        },
+        {
+          "conditional_second_moment": 1.275433783308075,
+          "count": 4.75,
+          "n": 1845832
+        },
+        {
+          "conditional_second_moment": 1.2926282638455213,
+          "count": 5.0,
+          "n": 3346967
+        }
+      ]
+    },
+    {
+      "label": "Full deviations",
+      "points": [
+        {
+          "conditional_second_moment": 1.2822173947690811,
+          "count": -5.0,
+          "n": 5366073
+        },
+        {
+          "conditional_second_moment": 1.2760916126168935,
+          "count": -4.75,
+          "n": 3978496
+        },
+        {
+          "conditional_second_moment": 1.2690076500515142,
+          "count": -4.5,
+          "n": 2563582
+        },
+        {
+          "conditional_second_moment": 1.275576332856307,
+          "count": -4.25,
+          "n": 6630800
+        },
+        {
+          "conditional_second_moment": 1.2901494892024268,
+          "count": -4.0,
+          "n": 3756967
+        },
+        {
+          "conditional_second_moment": 1.3037748248504086,
+          "count": -3.75,
+          "n": 8835191
+        },
+        {
+          "conditional_second_moment": 1.317874021293543,
+          "count": -3.5,
+          "n": 4998347
+        },
+        {
+          "conditional_second_moment": 1.3137935362762865,
+          "count": -3.25,
+          "n": 10093966
+        },
+        {
+          "conditional_second_moment": 1.3211646962454549,
+          "count": -3.0,
+          "n": 6406810
+        },
+        {
+          "conditional_second_moment": 1.318107226347625,
+          "count": -2.75,
+          "n": 5486686
+        },
+        {
+          "conditional_second_moment": 1.3164340182411567,
+          "count": -2.5,
+          "n": 10826861
+        },
+        {
+          "conditional_second_moment": 1.3096577326401175,
+          "count": -2.25,
+          "n": 13666003
+        },
+        {
+          "conditional_second_moment": 1.3313057330445481,
+          "count": -2.0,
+          "n": 4834965
+        },
+        {
+          "conditional_second_moment": 1.3003675072171261,
+          "count": -1.75,
+          "n": 7635434
+        },
+        {
+          "conditional_second_moment": 1.303527760264082,
+          "count": -1.5,
+          "n": 8167766
+        },
+        {
+          "conditional_second_moment": 1.299066524827757,
+          "count": -1.25,
+          "n": 13614388
+        },
+        {
+          "conditional_second_moment": 1.297977493260108,
+          "count": -1.0,
+          "n": 8747251
+        },
+        {
+          "conditional_second_moment": null,
+          "count": -0.75,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": null,
+          "count": -0.5,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": null,
+          "count": -0.25,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": 1.3170404691898994,
+          "count": 0.0,
+          "n": 129028451
+        },
+        {
+          "conditional_second_moment": null,
+          "count": 0.25,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": null,
+          "count": 0.5,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": null,
+          "count": 0.75,
+          "n": 0
+        },
+        {
+          "conditional_second_moment": 1.3300477586825807,
+          "count": 1.0,
+          "n": 4445599
+        },
+        {
+          "conditional_second_moment": 1.3306895498498994,
+          "count": 1.25,
+          "n": 15236818
+        },
+        {
+          "conditional_second_moment": 1.3433694146982171,
+          "count": 1.5,
+          "n": 7894245
+        },
+        {
+          "conditional_second_moment": 1.3440475930948834,
+          "count": 1.75,
+          "n": 7372046
+        },
+        {
+          "conditional_second_moment": 1.3438689025897776,
+          "count": 2.0,
+          "n": 4332827
+        },
+        {
+          "conditional_second_moment": 1.3424497460935918,
+          "count": 2.25,
+          "n": 11241657
+        },
+        {
+          "conditional_second_moment": 1.3573289775250603,
+          "count": 2.5,
+          "n": 8924532
+        },
+        {
+          "conditional_second_moment": 1.3477783873949973,
+          "count": 2.75,
+          "n": 3772502
+        },
+        {
+          "conditional_second_moment": 1.3480860454865125,
+          "count": 3.0,
+          "n": 7782846
+        },
+        {
+          "conditional_second_moment": 1.339998689252005,
+          "count": 3.25,
+          "n": 4495750
+        },
+        {
+          "conditional_second_moment": 1.345059097243405,
+          "count": 3.5,
+          "n": 8386558
+        },
+        {
+          "conditional_second_moment": 1.3548199926672202,
+          "count": 3.75,
+          "n": 5673823
+        },
+        {
+          "conditional_second_moment": 1.3732151132853798,
+          "count": 4.0,
+          "n": 3968207
+        },
+        {
+          "conditional_second_moment": 1.3690893857486808,
+          "count": 4.25,
+          "n": 4556320
+        },
+        {
+          "conditional_second_moment": 1.3973731381763257,
+          "count": 4.5,
+          "n": 5307689
+        },
+        {
+          "conditional_second_moment": 1.3834475295427333,
+          "count": 4.75,
+          "n": 1875497
+        },
+        {
+          "conditional_second_moment": 1.3900935984120335,
+          "count": 5.0,
+          "n": 3348907
+        }
+      ]
+    }
+  ],
+  "statistic": "E[X^2 | count]",
+  "x_definition": "net profit from one complete round at unit initial wager"
+}
