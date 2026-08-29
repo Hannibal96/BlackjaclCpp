@@ -8,7 +8,7 @@ add_executable(BasicStrategyRegressionTest
 )
 target_link_libraries(BasicStrategyRegressionTest
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(BasicStrategyRegressionTest
     PRIVATE
@@ -24,7 +24,7 @@ add_executable(QLearningRegressionTest
 )
 target_link_libraries(QLearningRegressionTest
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(QLearningRegressionTest
     PRIVATE
@@ -39,7 +39,7 @@ add_executable(DoubleDownMadnessEdgeRegressionTest
 )
 target_link_libraries(DoubleDownMadnessEdgeRegressionTest
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(DoubleDownMadnessEdgeRegressionTest
     PRIVATE
@@ -53,7 +53,7 @@ add_executable(DoubleDownMadnessQLearningRegressionTest
 )
 target_link_libraries(DoubleDownMadnessQLearningRegressionTest
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(DoubleDownMadnessQLearningRegressionTest
     PRIVATE
@@ -67,7 +67,7 @@ add_executable(Spanish21EdgeRegressionTest
 )
 target_link_libraries(Spanish21EdgeRegressionTest
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(Spanish21EdgeRegressionTest
     PRIVATE
@@ -81,7 +81,7 @@ add_executable(Spanish21QLearningRegressionTest
 )
 target_link_libraries(Spanish21QLearningRegressionTest
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(Spanish21QLearningRegressionTest
     PRIVATE

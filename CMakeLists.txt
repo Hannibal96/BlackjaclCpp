@@ -1,6 +1,9 @@
 ﻿cmake_minimum_required(VERSION 3.20)
 
 project(BlackjaclCpp LANGUAGES CXX)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -37,6 +40,10 @@ target_include_directories(blackjack_objs
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(blackjack_objs
+    PUBLIC
+        Threads::Threads
 )
 
 # Regression tests: compare simulation output against reference JSON tables.

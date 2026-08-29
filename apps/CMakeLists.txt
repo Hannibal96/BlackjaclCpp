@@ -10,7 +10,7 @@ add_executable(AlternatingOptimization
 )
 target_link_libraries(AlternatingOptimization
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(AlternatingOptimization
     PRIVATE
@@ -29,7 +29,7 @@ add_executable(CompareCountStrategies
 )
 target_link_libraries(CompareCountStrategies
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(CompareCountStrategies
     PRIVATE
@@ -49,7 +49,7 @@ add_executable(DebugPlayerBehavior
 )
 target_link_libraries(DebugPlayerBehavior
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(DebugPlayerBehavior
     PRIVATE
