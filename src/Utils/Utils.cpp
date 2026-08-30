@@ -11,9 +11,26 @@
 #include <mutex>
 #include <sstream>
 #include <cctype>
+#include <optional>
 
 // Global mutex for thread-safe console output
 static std::mutex g_consoleMutex;
+
+namespace {
+
+uint64_t mixSeed(uint64_t value) {
+    value += 0x9e3779b97f4a7c15ULL;
+    value = (value ^ (value >> 30U)) * 0xbf58476d1ce4e5b9ULL;
+    value = (value ^ (value >> 27U)) * 0x94d049bb133111ebULL;
+    return value ^ (value >> 31U);
+}
+
+std::optional<uint64_t> threadSeed(std::optional<uint64_t> baseSeed, int threadIndex) {
+    if (!baseSeed) return std::nullopt;
+    return mixSeed(*baseSeed + static_cast<uint64_t>(threadIndex));
+}
+
+} // namespace
 
 static std::string shellQuote(const std::string& arg) {
     if (arg.empty()) return "''";
@@ -46,7 +63,10 @@ std::string commandLineFromArgs(int argc, char** argv) {
     return os.str();
 }
 
-bool runSimulation(const BlackjackRules& rules, std::vector<Player*>& players, uint64_t numRounds) {
+bool runSimulation(const BlackjackRules& rules,
+                   std::vector<Player*>& players,
+                   uint64_t numRounds,
+                   std::optional<uint64_t> seed) {
     if (players.empty()) {
         std::lock_guard<std::mutex> lock(g_consoleMutex);
         std::cerr << "Error: No players provided" << std::endl;
@@ -62,6 +82,7 @@ bool runSimulation(const BlackjackRules& rules, std::vector<Player*>& players, u
     try {
         // Create the table with the provided rules and players
         BlackjackTable table(rules, players);
+        if (seed) table.getShoe()->setSeed(*seed);
         
         // Time tracking for progress bar
         auto startTime = std::chrono::high_resolution_clock::now();
@@ -87,7 +108,8 @@ bool runSimulation(const BlackjackRules& rules, std::vector<Player*>& players, u
 std::vector<Player*> runParallelSimulation(const BlackjackRules& rules, 
                                                         const std::vector<Player*>& players, 
                                                         uint64_t numRounds, 
-                                                        int numThreads) {
+                                                        int numThreads,
+                                                        std::optional<uint64_t> seed) {
                                                             
     std::vector<Player*> resultPlayers;
     
@@ -114,6 +136,7 @@ std::vector<Player*> runParallelSimulation(const BlackjackRules& rules,
     struct ThreadData {
         std::vector<Player*> players;
         uint64_t rounds;
+        std::optional<uint64_t> seed;
     };
     
     std::vector<ThreadData> threadData(numThreads);
@@ -124,20 +147,16 @@ std::vector<Player*> runParallelSimulation(const BlackjackRules& rules,
             threadData[t].players.push_back(player->clone());
         }
         threadData[t].rounds = roundsPerThread + (t < remainingRounds ? 1 : 0);
+        threadData[t].seed = threadSeed(seed, t);
     }
     
     // Launch threads
     std::vector<std::future<bool>> futures;
     for (int t = 0; t < numThreads; ++t) {
-        futures.push_back(std::async(
-            std::launch::async,
-            static_cast<bool (*)(const BlackjackRules&,
-                                 std::vector<Player*>&,
-                                 uint64_t)>(runSimulation),
-            std::cref(rules),
-            std::ref(threadData[t].players),
-            threadData[t].rounds
-        ));
+        ThreadData* data = &threadData[t];
+        futures.push_back(std::async(std::launch::async, [&rules, data]() {
+            return runSimulation(rules, data->players, data->rounds, data->seed);
+        }));
     }
     
     // Track start time
@@ -183,10 +202,12 @@ std::vector<Player*> runParallelSimulation(const BlackjackRules& rules,
 
 bool runSimulation(const DoubleDownMadnessRules& rules,
                    std::vector<Player*>& players,
-                   uint64_t numRounds) {
+                   uint64_t numRounds,
+                   std::optional<uint64_t> seed) {
     if (players.empty() || numRounds == 0) return false;
     try {
         DoubleDownMadnessTable table(rules, players);
+        if (seed) table.getShoe()->setSeed(*seed);
         for (uint64_t i = 0; i < numRounds; ++i)
             table.round();
         return true;
@@ -202,7 +223,8 @@ std::vector<Player*> runParallelSimulation(
         const DoubleDownMadnessRules& rules,
         const std::vector<Player*>& players,
         uint64_t numRounds,
-        int numThreads) {
+        int numThreads,
+        std::optional<uint64_t> seed) {
     std::vector<Player*> resultPlayers;
     if (players.empty() || numRounds == 0 || numThreads <= 0)
         return resultPlayers;
@@ -210,6 +232,7 @@ std::vector<Player*> runParallelSimulation(
     struct ThreadData {
         std::vector<Player*> players;
         uint64_t rounds = 0;
+        std::optional<uint64_t> seed;
     };
     std::vector<ThreadData> threadData(numThreads);
     const uint64_t roundsPerThread = numRounds / static_cast<uint64_t>(numThreads);
@@ -219,19 +242,16 @@ std::vector<Player*> runParallelSimulation(
             threadData[t].players.push_back(player->clone());
         threadData[t].rounds =
             roundsPerThread + (static_cast<uint64_t>(t) < remainingRounds ? 1 : 0);
+        threadData[t].seed = threadSeed(seed, t);
     }
 
     std::vector<std::future<bool>> futures;
     futures.reserve(numThreads);
     for (int t = 0; t < numThreads; ++t) {
-        futures.push_back(std::async(
-            std::launch::async,
-            static_cast<bool (*)(const DoubleDownMadnessRules&,
-                                 std::vector<Player*>&,
-                                 uint64_t)>(runSimulation),
-            std::cref(rules),
-            std::ref(threadData[t].players),
-            threadData[t].rounds));
+        ThreadData* data = &threadData[t];
+        futures.push_back(std::async(std::launch::async, [&rules, data]() {
+            return runSimulation(rules, data->players, data->rounds, data->seed);
+        }));
     }
     for (auto& future : futures)
         future.get();

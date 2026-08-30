@@ -1,9 +1,8 @@
 #pragma once
 
-// Game-specific glue shared by AlternatingOptimizationApp<Game> and
-// CompareCountStrategiesApp<Game>. Everything that differs between classic
+// Game-specific glue shared by the templated research apps. Everything that differs between classic
 // blackjack and Double Down Madness lives here as a small "traits" struct;
-// the two app engines are otherwise game-agnostic templates over `Game`.
+// their engines are otherwise game-agnostic templates over `Game`.
 
 #include "RegressionTestUtils.h"
 #include "Game/BlackjackRules.h"

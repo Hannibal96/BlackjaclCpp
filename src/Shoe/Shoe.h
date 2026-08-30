@@ -2,6 +2,7 @@
 #include "Deck.h"
 #include <vector>
 #include <array>
+#include <cstdint>
 #include <random>
 
 // Shoe class for managing multiple decks of cards
@@ -25,6 +26,10 @@ public:
     
     // Shuffle the shoe
     virtual void shuffle();
+
+    // Re-seed the regular shuffled shoe and immediately start a fresh shoe.
+    // Simulations remain time-seeded unless this is called explicitly.
+    void setSeed(uint64_t seed);
     
     // Deal a card from the shoe.
     // Pass covered=true for a face-down card (e.g. dealer hole card in peek games):
@@ -64,4 +69,3 @@ public:
     Card dealCard(bool covered = false) override;
     void reset() override;
 };
-

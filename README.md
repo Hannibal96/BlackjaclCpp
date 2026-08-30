@@ -6,15 +6,16 @@ A C++20 blackjack simulation and research project with:
 - Classic blackjack and Double Down Madness table variants
 - Table-driven and learned playing strategies
 - Card-count-aware betting and regression tooling
-- Two research apps — `AlternatingOptimization` and `CompareCountStrategies` —
-  each shared between both games via a `Game` traits template (see `apps/GameTraits.h`)
+- Three research apps — `AlternatingOptimization`, `CompareCountStrategies`,
+  and the blackjack-first `QuantizationEffect` evaluator — using the shared
+  `Game` traits/app-dispatch shape (see `apps/GameTraits.h`)
 - Standalone simulation regression targets
 
 ## Repository Layout
 
 ```text
 .
-├── apps/                         # AlternatingOptimization + CompareCountStrategies (both games)
+├── apps/                         # Training, strategy comparison, and count-quantization apps
 ├── basic_strategy_tables/
 │   ├── blackjack/                # One JSON table per classic-blackjack rule combo
 │   └── double_down_madness/      # Base table + per-version overrides
@@ -22,7 +23,8 @@ A C++20 blackjack simulation and research project with:
 │   ├── alternating-checkpoints/  # AlternatingOptimization runs and resumable state (blackjack)
 │   ├── double-down-madness-alternating-checkpoints/  # same, for DDM
 │   ├── CompareCountStrategies/   # Compare app logs + graph artifacts (blackjack)
-│   └── DoubleDownMadnessCompareCountStrategies/       # same, for DDM
+│   ├── DoubleDownMadnessCompareCountStrategies/       # same, for DDM
+│   └── QuantizationEffect/       # quantized-count tables, metrics, and plots
 ├── hpo/                          # Python hyperparameter tuning helpers
 ├── include/                      # Third-party headers
 ├── regression/                   # Regression tests: sim output vs. reference JSON tables
@@ -52,7 +54,8 @@ cmake --build build --target tests
 Regression targets include:
 
 - `BasicStrategyRegressionTest`, `QLearningRegressionTest`,
-  `DoubleDownMadnessEdgeRegressionTest`, `DoubleDownMadnessQLearningRegressionTest`
+  `DoubleDownMadnessEdgeRegressionTest`, `DoubleDownMadnessQLearningRegressionTest`,
+  `CountQuantizationTest`
   — standalone regression executables (no GoogleTest) that compare simulated
   output against reference JSON tables, in `regression/`
 
@@ -78,9 +81,15 @@ Regression targets include:
 ./build/bin/CompareCountStrategies --game blackjack \
     --deviations-checkpoint <folder-name> --deviations-agent P1
 
-# Full flag reference for either app, either game:
+# Measure W3 with the policy from which it was learned (P2) across the default
+# quantization grid. Rules and performance defaults come from meta.json:
+./build/bin/QuantizationEffect --game blackjack \
+    --checkpoint <folder-or-path> --count W3 --policy P2 --seed 12345
+
+# Full flag reference:
 ./build/bin/AlternatingOptimization --game <blackjack|ddm> --help
 ./build/bin/CompareCountStrategies --game <blackjack|ddm> --help
+./build/bin/QuantizationEffect --game blackjack --help
 ```
 
 `<folder-name>` is whatever `AlternatingOptimization` printed after `Folder:`
@@ -90,13 +99,12 @@ it under `checkpoints/alternating-checkpoints/` for blackjack and
 
 ## Apps
 
-The app surface is deliberately just two executables, and just two files:
-`apps/AlternatingOptimization.cpp` and `apps/CompareCountStrategies.cpp`.
-Both used to be built twice — once per game — as near-duplicate `.cpp`
-files; each is now a `template <typename Game>` engine instantiated over a
-`Game` traits type (`BlackjackGame` / `DoubleDownMadnessGame` in the shared
-`apps/GameTraits.h`), with the two instantiations and `main()` in the same
-file (nothing else needs the engine, so there's no separate header for it).
+The app surface has three executables, each implemented in one `.cpp` file.
+`AlternatingOptimization` and `CompareCountStrategies` are instantiated for
+both games. `QuantizationEffect` follows the same `template <typename Game>`
+and `--game` dispatch shape, but currently enables only its blackjack
+instantiation so Double Down Madness support can be added without redesigning
+the app.
 Earlier, standalone precursors — `FindDeviations` (Q-learning checkpoints),
 `FindOptimalCount` (OLS count checkpoints), and `MeasureEdge` (fixed-strategy
 evaluation) — have been removed; their functionality is fully covered by
@@ -163,6 +171,19 @@ evaluation) — have been removed; their functionality is fully covered by
   conditional `E[X^2 | count]` curves, and an overlaid Kelly-multiplier sweep for
   all policies. Irrelevant game-specific CLI flags are ignored with warnings.
 
+- `QuantizationEffect`
+  Loads a learned alternating pair `Wk + P(k-1)` (latest complete pair by
+  default), reconstructs the learned tags from `raw_solution` at full
+  precision, and evaluates the exact count plus user-selected quantization
+  steps. Balanced counts use minimum-squared-error constrained rounding, keep
+  `sum(weights)=0`, and retain one shared 10/J/Q/K tag. The default grid is
+  `0,0.01,0.05,0.1,0.5,1.0`; zero is simulated once as the exact reference.
+  Rules, spread rounds, threads, and Kelly measurement count default from the
+  source `meta.json`. Kelly multipliers default to `0.75..1.25` in `0.05`
+  steps, and `--seed` provides repeatable common random seeds across quantum
+  levels. Results are written as a run log, JSON, CSV, and SVG under
+  `checkpoints/QuantizationEffect/` unless `--output-dir` is supplied.
+
 Conditional second-moment curves use only flat simulations with an initial wager
 of exactly 1, so `X` is the normalized net profit from one complete round. The
 statistics are accumulated in the same count bins as the EV graph and are not
@@ -209,7 +230,10 @@ large standard deviations as ruin mixtures, not ordinary Monte Carlo noise.
   `run.log`, `ev_count_graph.json/svg`, `count_histograms.json/svg`,
   `kelly_fraction_graph.json/svg`
 
-Both apps log terminal output into their checkpoint/run folder through `RunLogger`.
+- `checkpoints/QuantizationEffect/<run-name>/`
+  `run.log`, `results.json`, `results.csv`, and `quantization_effect.svg`
+
+All apps log terminal output into their checkpoint/run folder through `RunLogger`.
 
 ## Current Research Direction
 

@@ -177,13 +177,14 @@ This is used heavily by:
 
 ## Apps Layer
 
-The app surface is exactly two binaries, each exactly one file:
-`apps/AlternatingOptimization.cpp` and `apps/CompareCountStrategies.cpp`.
-Each file is a `template <typename Game>` engine, its two instantiations
-(`Game = BlackjackGame` / `DoubleDownMadnessGame`), and `main()` — nothing
-else needs the engine, so there's no separate header for it. Game selection
+The app surface is three binaries, each implemented in one file:
+`apps/AlternatingOptimization.cpp`, `apps/CompareCountStrategies.cpp`, and
+`apps/QuantizationEffect.cpp`. Each follows the `template <typename Game>`
+engine and shared-dispatch shape. The first two instantiate both games;
+`QuantizationEffect` currently enables blackjack and retains a clear DDM
+dispatch boundary for later support. Game selection
 is dispatched by `--game` through the header-only `apps/GameAppDispatcher.h`
-(shared by both apps, since the routing logic is identical). Everything that
+(shared by all three apps, since the routing logic is identical). Everything that
 differs between the two games — `Rules` construction, the `Case` parameter
 struct, CLI rule flags, meta.json fields, checkpoint-root naming, basic-strategy
 loading, and whether Illustrious 18 applies — lives in the shared
@@ -249,6 +250,20 @@ ground.
 - writes aggregate Kelly growth curves and error bars; individual Kelly trial
   debug printing is disabled
 
+### `QuantizationEffect`
+
+- loads a learned count `Wk` and its generating policy `P(k-1)` from an
+  alternating checkpoint, defaulting to the latest complete pair
+- reconstructs full-precision learned tags from `raw_solution` and
+  `normalization_scale`
+- rounds to a user-supplied quantum grid while preserving a source zero-sum
+  constraint and shared 10/J/Q/K tags
+- reruns quantum zero once as an exact reference
+- evaluates 1:10 spread edge and a configurable Kelly multiplier sweep
+- can use deterministic common seeds across quantum levels
+- writes `run.log`, `results.json`, `results.csv`, and
+  `quantization_effect.svg` under `checkpoints/QuantizationEffect/`
+
 ## Checkpoint And Logging Convention
 
 The project now keeps run output beside the relevant checkpoint family instead of in a separate log tree.
@@ -259,6 +274,7 @@ Examples:
 - `checkpoints/double-down-madness-alternating-checkpoints/<folder>/` (DDM)
 - `checkpoints/CompareCountStrategies/<run-name>/` (blackjack)
 - `checkpoints/DoubleDownMadnessCompareCountStrategies/<run-name>/` (DDM)
+- `checkpoints/QuantizationEffect/<run-name>/` (blackjack-first)
 
 `RunLogger` mirrors `stdout` and `stderr` into `run.log` inside those folders.
 
