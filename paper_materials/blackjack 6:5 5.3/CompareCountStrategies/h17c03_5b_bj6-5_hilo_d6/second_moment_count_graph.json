@@ -1,0 +1,636 @@
+{
+  "curves": [
+    {
+      "label": "Known basic strategy",
+      "points": [
+        {
+          "conditional_second_moment": 1.3850509496334895,
+          "count": -5.0,
+          "n": 2037761
+        },
+        {
+          "conditional_second_moment": 1.3817973519825526,
+          "count": -4.75,
+          "n": 2188914
+        },
+        {
+          "conditional_second_moment": 1.3786912061005334,
+          "count": -4.5,
+          "n": 2825096
+        },
+        {
+          "conditional_second_moment": 1.3732775264761348,
+          "count": -4.25,
+          "n": 3087323
+        },
+        {
+          "conditional_second_moment": 1.3691159236946044,
+          "count": -4.0,
+          "n": 3525810
+        },
+        {
+          "conditional_second_moment": 1.3660421830593537,
+          "count": -3.75,
+          "n": 4264230
+        },
+        {
+          "conditional_second_moment": 1.3603435602903102,
+          "count": -3.5,
+          "n": 4587899
+        },
+        {
+          "conditional_second_moment": 1.3573404927839134,
+          "count": -3.25,
+          "n": 5602743
+        },
+        {
+          "conditional_second_moment": 1.3541955104317893,
+          "count": -3.0,
+          "n": 6272023
+        },
+        {
+          "conditional_second_moment": 1.3493701560527493,
+          "count": -2.75,
+          "n": 7197668
+        },
+        {
+          "conditional_second_moment": 1.3450642114937161,
+          "count": -2.5,
+          "n": 8651949
+        },
+        {
+          "conditional_second_moment": 1.3419948204852052,
+          "count": -2.25,
+          "n": 9571881
+        },
+        {
+          "conditional_second_moment": 1.3386867106311071,
+          "count": -2.0,
+          "n": 11276926
+        },
+        {
+          "conditional_second_moment": 1.3343465774459773,
+          "count": -1.75,
+          "n": 13404651
+        },
+        {
+          "conditional_second_moment": 1.3314509021038743,
+          "count": -1.5,
+          "n": 14694045
+        },
+        {
+          "conditional_second_moment": 1.3264695392442147,
+          "count": -1.25,
+          "n": 17917172
+        },
+        {
+          "conditional_second_moment": 1.323841266141457,
+          "count": -1.0,
+          "n": 20954826
+        },
+        {
+          "conditional_second_moment": 1.3198479165472456,
+          "count": -0.75,
+          "n": 22736769
+        },
+        {
+          "conditional_second_moment": 1.3159201100225961,
+          "count": -0.5,
+          "n": 28976716
+        },
+        {
+          "conditional_second_moment": 1.3122242017618941,
+          "count": -0.25,
+          "n": 31929542
+        },
+        {
+          "conditional_second_moment": 1.3085572060325739,
+          "count": 0.0,
+          "n": 43777715
+        },
+        {
+          "conditional_second_moment": 1.305336324521308,
+          "count": 0.25,
+          "n": 30073448
+        },
+        {
+          "conditional_second_moment": 1.3011546974222916,
+          "count": 0.5,
+          "n": 27545057
+        },
+        {
+          "conditional_second_moment": 1.2973751345074793,
+          "count": 0.75,
+          "n": 21513546
+        },
+        {
+          "conditional_second_moment": 1.2943860735109127,
+          "count": 1.0,
+          "n": 19828534
+        },
+        {
+          "conditional_second_moment": 1.2898781155043086,
+          "count": 1.25,
+          "n": 17029784
+        },
+        {
+          "conditional_second_moment": 1.2859463993155102,
+          "count": 1.5,
+          "n": 13928341
+        },
+        {
+          "conditional_second_moment": 1.282673495742265,
+          "count": 1.75,
+          "n": 12737238
+        },
+        {
+          "conditional_second_moment": 1.2794834325030449,
+          "count": 2.0,
+          "n": 10719101
+        },
+        {
+          "conditional_second_moment": 1.2757874685507284,
+          "count": 2.25,
+          "n": 9082194
+        },
+        {
+          "conditional_second_moment": 1.2725060606961558,
+          "count": 2.5,
+          "n": 8238379
+        },
+        {
+          "conditional_second_moment": 1.269403332536931,
+          "count": 2.75,
+          "n": 6838214
+        },
+        {
+          "conditional_second_moment": 1.2649211171663879,
+          "count": 3.0,
+          "n": 5960227
+        },
+        {
+          "conditional_second_moment": 1.2622408118012638,
+          "count": 3.25,
+          "n": 5334938
+        },
+        {
+          "conditional_second_moment": 1.2586412602732686,
+          "count": 3.5,
+          "n": 4361537
+        },
+        {
+          "conditional_second_moment": 1.2548337521281983,
+          "count": 3.75,
+          "n": 4059301
+        },
+        {
+          "conditional_second_moment": 1.252320950706595,
+          "count": 4.0,
+          "n": 3348068
+        },
+        {
+          "conditional_second_moment": 1.2489391409424409,
+          "count": 4.25,
+          "n": 2929599
+        },
+        {
+          "conditional_second_moment": 1.2440217951367805,
+          "count": 4.5,
+          "n": 2690922
+        },
+        {
+          "conditional_second_moment": 1.2424535156394183,
+          "count": 4.75,
+          "n": 2075574
+        },
+        {
+          "conditional_second_moment": 1.239004017597528,
+          "count": 5.0,
+          "n": 1938857
+        }
+      ]
+    },
+    {
+      "label": "Illustrious 18",
+      "points": [
+        {
+          "conditional_second_moment": 1.3858026870511642,
+          "count": -5.0,
+          "n": 2032091
+        },
+        {
+          "conditional_second_moment": 1.382637932404593,
+          "count": -4.75,
+          "n": 2181060
+        },
+        {
+          "conditional_second_moment": 1.379879903401254,
+          "count": -4.5,
+          "n": 2820300
+        },
+        {
+          "conditional_second_moment": 1.3727805933821686,
+          "count": -4.25,
+          "n": 3075154
+        },
+        {
+          "conditional_second_moment": 1.3698843895166728,
+          "count": -4.0,
+          "n": 3510713
+        },
+        {
+          "conditional_second_moment": 1.3644898269935677,
+          "count": -3.75,
+          "n": 4248925
+        },
+        {
+          "conditional_second_moment": 1.3600584298141343,
+          "count": -3.5,
+          "n": 4571294
+        },
+        {
+          "conditional_second_moment": 1.3567885923515715,
+          "count": -3.25,
+          "n": 5580212
+        },
+        {
+          "conditional_second_moment": 1.3530689702697323,
+          "count": -3.0,
+          "n": 6248372
+        },
+        {
+          "conditional_second_moment": 1.349421843937143,
+          "count": -2.75,
+          "n": 7173111
+        },
+        {
+          "conditional_second_moment": 1.346066658899269,
+          "count": -2.5,
+          "n": 8620445
+        },
+        {
+          "conditional_second_moment": 1.3426122484958873,
+          "count": -2.25,
+          "n": 9537693
+        },
+        {
+          "conditional_second_moment": 1.3386941172420939,
+          "count": -2.0,
+          "n": 11236558
+        },
+        {
+          "conditional_second_moment": 1.335144357222673,
+          "count": -1.75,
+          "n": 13358379
+        },
+        {
+          "conditional_second_moment": 1.3305521516851713,
+          "count": -1.5,
+          "n": 14642988
+        },
+        {
+          "conditional_second_moment": 1.3278557741667611,
+          "count": -1.25,
+          "n": 17831598
+        },
+        {
+          "conditional_second_moment": 1.3241480517881627,
+          "count": -1.0,
+          "n": 20868096
+        },
+        {
+          "conditional_second_moment": 1.3201782183466546,
+          "count": -0.75,
+          "n": 22656440
+        },
+        {
+          "conditional_second_moment": 1.3185849222162391,
+          "count": -0.5,
+          "n": 29023912
+        },
+        {
+          "conditional_second_moment": 1.3161187243736694,
+          "count": -0.25,
+          "n": 32033560
+        },
+        {
+          "conditional_second_moment": 1.3176161627245837,
+          "count": 0.0,
+          "n": 43782843
+        },
+        {
+          "conditional_second_moment": 1.3157799235853618,
+          "count": 0.25,
+          "n": 30135540
+        },
+        {
+          "conditional_second_moment": 1.3119491113827249,
+          "count": 0.5,
+          "n": 27585687
+        },
+        {
+          "conditional_second_moment": 1.3081680420961699,
+          "count": 0.75,
+          "n": 21544313
+        },
+        {
+          "conditional_second_moment": 1.304980416204336,
+          "count": 1.0,
+          "n": 19863984
+        },
+        {
+          "conditional_second_moment": 1.3023637378890711,
+          "count": 1.25,
+          "n": 17052971
+        },
+        {
+          "conditional_second_moment": 1.2985255462161758,
+          "count": 1.5,
+          "n": 13957455
+        },
+        {
+          "conditional_second_moment": 1.2961543096754746,
+          "count": 1.75,
+          "n": 12762491
+        },
+        {
+          "conditional_second_moment": 1.295008962577718,
+          "count": 2.0,
+          "n": 10744784
+        },
+        {
+          "conditional_second_moment": 1.2942677554320268,
+          "count": 2.25,
+          "n": 9110942
+        },
+        {
+          "conditional_second_moment": 1.2909146714318567,
+          "count": 2.5,
+          "n": 8261325
+        },
+        {
+          "conditional_second_moment": 1.2891732618105882,
+          "count": 2.75,
+          "n": 6857116
+        },
+        {
+          "conditional_second_moment": 1.2863103686413397,
+          "count": 3.0,
+          "n": 5980100
+        },
+        {
+          "conditional_second_moment": 1.2882747390183416,
+          "count": 3.25,
+          "n": 5363083
+        },
+        {
+          "conditional_second_moment": 1.3029852018599624,
+          "count": 3.5,
+          "n": 4390104
+        },
+        {
+          "conditional_second_moment": 1.310707863561342,
+          "count": 3.75,
+          "n": 4084509
+        },
+        {
+          "conditional_second_moment": 1.3255383895789632,
+          "count": 4.0,
+          "n": 3361183
+        },
+        {
+          "conditional_second_moment": 1.329909607194247,
+          "count": 4.25,
+          "n": 2945495
+        },
+        {
+          "conditional_second_moment": 1.3331210496659172,
+          "count": 4.5,
+          "n": 2703974
+        },
+        {
+          "conditional_second_moment": 1.3414075100337175,
+          "count": 4.75,
+          "n": 2079611
+        },
+        {
+          "conditional_second_moment": 1.3525834342217176,
+          "count": 5.0,
+          "n": 1945276
+        }
+      ]
+    },
+    {
+      "label": "Full deviations",
+      "points": [
+        {
+          "conditional_second_moment": 1.2111556872108888,
+          "count": -5.0,
+          "n": 2023288
+        },
+        {
+          "conditional_second_moment": 1.2307798835128338,
+          "count": -4.75,
+          "n": 2170002
+        },
+        {
+          "conditional_second_moment": 1.2456842777733506,
+          "count": -4.5,
+          "n": 2817345
+        },
+        {
+          "conditional_second_moment": 1.2499225945394044,
+          "count": -4.25,
+          "n": 3079462
+        },
+        {
+          "conditional_second_moment": 1.2521387899420173,
+          "count": -4.0,
+          "n": 3510707
+        },
+        {
+          "conditional_second_moment": 1.2606407191405464,
+          "count": -3.75,
+          "n": 4246975
+        },
+        {
+          "conditional_second_moment": 1.2717462369191594,
+          "count": -3.5,
+          "n": 4577987
+        },
+        {
+          "conditional_second_moment": 1.2932509680160678,
+          "count": -3.25,
+          "n": 5583606
+        },
+        {
+          "conditional_second_moment": 1.2916649398538274,
+          "count": -3.0,
+          "n": 6252633
+        },
+        {
+          "conditional_second_moment": 1.2985196437415887,
+          "count": -2.75,
+          "n": 7170617
+        },
+        {
+          "conditional_second_moment": 1.3014932062537634,
+          "count": -2.5,
+          "n": 8628399
+        },
+        {
+          "conditional_second_moment": 1.300789753313566,
+          "count": -2.25,
+          "n": 9547265
+        },
+        {
+          "conditional_second_moment": 1.3025807128056126,
+          "count": -2.0,
+          "n": 11251470
+        },
+        {
+          "conditional_second_moment": 1.2993723755197593,
+          "count": -1.75,
+          "n": 13375604
+        },
+        {
+          "conditional_second_moment": 1.294586279094485,
+          "count": -1.5,
+          "n": 14672849
+        },
+        {
+          "conditional_second_moment": 1.2938313830337347,
+          "count": -1.25,
+          "n": 17875633
+        },
+        {
+          "conditional_second_moment": 1.2943764716324142,
+          "count": -1.0,
+          "n": 20913069
+        },
+        {
+          "conditional_second_moment": 1.2938508501060018,
+          "count": -0.75,
+          "n": 22678518
+        },
+        {
+          "conditional_second_moment": 1.2949942493365452,
+          "count": -0.5,
+          "n": 28918171
+        },
+        {
+          "conditional_second_moment": 1.2973882214907875,
+          "count": -0.25,
+          "n": 31887963
+        },
+        {
+          "conditional_second_moment": 1.2948561808987262,
+          "count": 0.0,
+          "n": 43707224
+        },
+        {
+          "conditional_second_moment": 1.295783486333667,
+          "count": 0.25,
+          "n": 30049622
+        },
+        {
+          "conditional_second_moment": 1.2989921513152802,
+          "count": 0.5,
+          "n": 27645175
+        },
+        {
+          "conditional_second_moment": 1.2990467528526477,
+          "count": 0.75,
+          "n": 21570360
+        },
+        {
+          "conditional_second_moment": 1.2969840526586465,
+          "count": 1.0,
+          "n": 19890444
+        },
+        {
+          "conditional_second_moment": 1.2993204782850254,
+          "count": 1.25,
+          "n": 17077609
+        },
+        {
+          "conditional_second_moment": 1.3015440059263124,
+          "count": 1.5,
+          "n": 13973494
+        },
+        {
+          "conditional_second_moment": 1.3020337843176206,
+          "count": 1.75,
+          "n": 12776808
+        },
+        {
+          "conditional_second_moment": 1.3013899038289636,
+          "count": 2.0,
+          "n": 10767307
+        },
+        {
+          "conditional_second_moment": 1.2976142281685228,
+          "count": 2.25,
+          "n": 9126316
+        },
+        {
+          "conditional_second_moment": 1.2977622167539444,
+          "count": 2.5,
+          "n": 8267446
+        },
+        {
+          "conditional_second_moment": 1.2960495443738909,
+          "count": 2.75,
+          "n": 6860120
+        },
+        {
+          "conditional_second_moment": 1.2949468237433672,
+          "count": 3.0,
+          "n": 5975308
+        },
+        {
+          "conditional_second_moment": 1.291304424366886,
+          "count": 3.25,
+          "n": 5362367
+        },
+        {
+          "conditional_second_moment": 1.290489435970073,
+          "count": 3.5,
+          "n": 4392151
+        },
+        {
+          "conditional_second_moment": 1.2990055056058991,
+          "count": 3.75,
+          "n": 4089852
+        },
+        {
+          "conditional_second_moment": 1.325341318147506,
+          "count": 4.0,
+          "n": 3361646
+        },
+        {
+          "conditional_second_moment": 1.34166375948906,
+          "count": 4.25,
+          "n": 2951291
+        },
+        {
+          "conditional_second_moment": 1.3683515054155528,
+          "count": 4.5,
+          "n": 2708855
+        },
+        {
+          "conditional_second_moment": 1.3779187999947493,
+          "count": 4.75,
+          "n": 2085377
+        },
+        {
+          "conditional_second_moment": 1.3879844131502355,
+          "count": 5.0,
+          "n": 1948781
+        }
+      ]
+    }
+  ],
+  "statistic": "E[X^2 | count]",
+  "x_definition": "net profit from one complete round at unit initial wager"
+}

@@ -11,7 +11,7 @@ BlackjaclCpp/
 │   ├── Game/          # Game mechanics, table flow, betting, player state
 │   ├── RL/            # Strategies and reinforcement learning
 │   └── Utils/         # Parallel simulation + run logging
-├── apps/              # AlternatingOptimization + CompareCountStrategies (both games)
+├── apps/              # Training, comparison, and quantization-effect executables
 ├── regression/        # Regression tests: sim output vs. reference JSON tables
 ├── basic_strategy_tables/
 │   ├── blackjack/
@@ -20,19 +20,21 @@ BlackjaclCpp/
 │   ├── alternating-checkpoints/
 │   ├── double-down-madness-alternating-checkpoints/
 │   ├── CompareCountStrategies/
-│   └── DoubleDownMadnessCompareCountStrategies/
+│   ├── DoubleDownMadnessCompareCountStrategies/
+│   └── QuantizationEffect/
 └── CMakeLists.txt
 ```
 
 ## Main App Targets
 
-There are exactly two app binaries, each a `template <typename Game>` engine
-instantiated over `BlackjackGame`/`DoubleDownMadnessGame` (`apps/GameTraits.h`):
+There are three app binaries using the shared `template <typename Game>` shape
+and game traits (`apps/GameTraits.h`):
 
 | App | Purpose | Output Root |
 |---|---|---|
 | `AlternatingOptimization` | Blackjack/DDM RL and count-regression pipeline selected by `--game` | Game-specific alternating checkpoint root |
 | `CompareCountStrategies` | Blackjack/DDM strategy comparison selected by `--game` | Game-specific comparison checkpoint root |
+| `QuantizationEffect` | Quantized `Wk + P(k-1)` spread/Kelly evaluation; blackjack enabled first | `checkpoints/QuantizationEffect/` |
 
 The older standalone `FindDeviations`, `FindOptimalCount`, and `MeasureEdge`
 apps have been removed; `AlternatingOptimization` covers their training
@@ -236,3 +238,4 @@ near-Bernoulli standard deviation. This remains an open research issue.
 - [apps/GameTraits.h](apps/GameTraits.h) — everything that differs between blackjack and DDM
 - [apps/AlternatingOptimization.cpp](apps/AlternatingOptimization.cpp) — engine + both instantiations + main()
 - [apps/CompareCountStrategies.cpp](apps/CompareCountStrategies.cpp) — engine + both instantiations + main()
+- [apps/QuantizationEffect.cpp](apps/QuantizationEffect.cpp) — checkpoint-driven quantization evaluator; blackjack instantiation + game dispatcher

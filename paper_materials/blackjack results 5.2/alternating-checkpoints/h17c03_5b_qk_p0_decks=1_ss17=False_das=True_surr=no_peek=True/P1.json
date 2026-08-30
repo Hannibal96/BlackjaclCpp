@@ -1,0 +1,38 @@
+{
+  "count_config": {
+    "bias": -0.0017205251,
+    "continuous_betting_count": true,
+    "factor": 0.0037862620318925436,
+    "max_count": 5,
+    "min_count": -5,
+    "resolution": 1.0,
+    "weights": [
+      0.7347,
+      0.8389,
+      1.0904,
+      1.2999,
+      0.8693,
+      0.4847,
+      0.0152,
+      -0.3419,
+      -1.0,
+      -1.0,
+      -1.0,
+      -1.0,
+      -0.9913
+    ]
+  },
+  "evaluation_edge_flat": 0.0039889126,
+  "evaluation_edge_flat_second_moment": 1.3536230639,
+  "evaluation_edge_flat_stddev": 1.163446239732198,
+  "evaluation_edge_spread_1_10": 0.1103830193,
+  "evaluation_edge_spread_1_10_second_moment": 54.43654735475,
+  "evaluation_edge_spread_1_10_stddev": 7.377286964371461,
+  "evaluation_kelly_growth": 1.0001987579078622,
+  "evaluation_kelly_growth_stddev": 1.720231911545034e-05,
+  "hands_per_sec": 4211640.5533253355,
+  "label": "P1",
+  "training_edge_flat": -0.1416469886666669,
+  "training_rounds": 6000000000,
+  "type": "policy"
+}

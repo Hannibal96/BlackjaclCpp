@@ -3,6 +3,7 @@
 #include <random>
 #include <stdexcept>
 #include <chrono>
+#include <iterator>
 #include <thread>
 
 // Shoe methods
@@ -46,6 +47,18 @@ void Shoe::shuffle() {
     currentIndex = 0;
     endShoe = false;
     removedCards.fill(0);
+}
+
+void Shoe::setSeed(uint64_t seed) {
+    const uint32_t seedParts[] = {
+        static_cast<uint32_t>(seed),
+        static_cast<uint32_t>(seed >> 32U),
+        0x9e3779b9U
+    };
+    std::seed_seq sequence(std::begin(seedParts), std::end(seedParts));
+    rng.seed(sequence);
+    initializeFromDecks();
+    shuffle();
 }
 
 Card Shoe::dealCard(bool covered) {

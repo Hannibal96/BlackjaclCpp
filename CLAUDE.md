@@ -193,15 +193,16 @@ See [DEBUG_MODE.md](DEBUG_MODE.md) for comprehensive guide on debug mode and Pyt
 
 ## Current Alternating-Optimization Research
 
-The app surface is exactly two executables, each exactly one file:
-`apps/AlternatingOptimization.cpp` and `apps/CompareCountStrategies.cpp`.
-Each holds a `template <typename Game>` engine, its two instantiations
-(`Game = BlackjackGame` / `DoubleDownMadnessGame`), and `main()`. Nothing
-else includes those engines, so there's no header/source split for them.
+The app surface has three executables, each implemented in one file:
+`apps/AlternatingOptimization.cpp`, `apps/CompareCountStrategies.cpp`, and
+`apps/QuantizationEffect.cpp`. All follow the `template <typename Game>` and
+shared-dispatch shape. The first two instantiate both games;
+`QuantizationEffect` currently enables blackjack only and keeps a DDM dispatch
+boundary for later support.
 Game-specific behavior (Rules construction, CLI rule flags, meta.json
 fields, checkpoint-root naming, basic-strategy loading, whether Illustrious
 18 applies) lives in the shared `apps/GameTraits.h`. `apps/GameAppDispatcher.h`
-is a header-only helper (also shared, since it's identical for both apps)
+is a header-only helper (shared by all three apps)
 that does the `--game`/`--table-type` argv routing and filters out
 irrelevant game-specific flags before calling into the right instantiation.
 The older standalone `FindDeviations`, `FindOptimalCount`, and `MeasureEdge`
@@ -241,6 +242,14 @@ folder. `--strategy-checkpoint <dir>` reloads one instead of retraining
 `checkpoints/DoubleDownMadnessCompareCountStrategies/`, or an absolute path
 to any prior run's output folder). Mutually exclusive with
 `--deviations-checkpoint`.
+
+`QuantizationEffect --checkpoint <folder-or-path>` loads a `Wk + P(k-1)` pair
+from an alternating checkpoint, reconstructs full-precision tags, and compares
+spread/Kelly performance over a constrained quantization grid. Quantum zero is
+rerun once as the exact reference. Balanced tags remain sum-zero with a shared
+10/J/Q/K value. Its outputs live under `checkpoints/QuantizationEffect/` and
+include JSON, CSV, SVG, and `run.log`; optional `--seed` makes the shuffled-shoe
+streams reproducible and common across quantum levels.
 
 Both objectives use streamed normal-equation statistics. OLS has
 `A=E[cc^T]`; quadratic Kelly has `A=E[X^2cc^T]`; both use `d=E[Xc]`. Sum-zero

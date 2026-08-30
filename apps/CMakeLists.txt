@@ -38,3 +38,22 @@ target_include_directories(CompareCountStrategies
         ${CMAKE_SOURCE_DIR}/regression
 )
 set_property(TARGET CompareCountStrategies PROPERTY CXX_STANDARD 20)
+
+# QuantizationEffect — evaluate a learned Wk + P(k-1) alternating pair after
+# constrained rank-tag quantization. It uses the shared game-app shape so DDM
+# can be added later, while the current executable intentionally enables only
+# the blackjack instantiation.
+add_executable(QuantizationEffect
+    ${CMAKE_CURRENT_SOURCE_DIR}/QuantizationEffect.cpp
+)
+target_link_libraries(QuantizationEffect
+    PRIVATE
+        $<TARGET_OBJECTS:blackjack_objs>
+)
+target_include_directories(QuantizationEffect
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/regression
+)
+set_property(TARGET QuantizationEffect PROPERTY CXX_STANDARD 20)

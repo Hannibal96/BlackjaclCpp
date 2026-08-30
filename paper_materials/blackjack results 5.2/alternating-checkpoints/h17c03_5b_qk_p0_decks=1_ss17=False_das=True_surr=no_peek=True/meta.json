@@ -1,0 +1,76 @@
+{
+  "algorithm": "alternating_optimization",
+  "algorithm_config": {
+    "count_regression_constraint": "sum_zero_fixed_p0_flat_edge",
+    "count_regression_objective": "quadratic_kelly",
+    "eval_rounds": 5000000000,
+    "graph_rounds": 500000000,
+    "initial_count": {
+      "bias": 0.0,
+      "factor": 1.0,
+      "max_count": 5,
+      "min_count": -5,
+      "resolution": 1.0,
+      "weights": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "iterations": 3,
+    "kelly_fraction_max": null,
+    "kelly_fraction_min": null,
+    "kelly_fraction_range_mode": "direct_fraction_multiplier_one_plus_minus_0.25",
+    "kelly_fraction_step": 0.05,
+    "kelly_measurements": 1000,
+    "learned_count_normalization": "ten_value_average",
+    "learned_count_target_ten_value_tag": -1.0,
+    "num_rounds_per_phase": 5000000000,
+    "num_threads": 5,
+    "policy_diff_threshold": 0.005,
+    "policy_sample_rounds": 100000000,
+    "policy_stop_mode": "diff",
+    "sample_every": 5
+  },
+  "artifacts": {
+    "naming": "W0 (implicit zeros), P0, W1, P1, W2, P2, ..."
+  },
+  "game": {
+    "bj_pay": 1.5,
+    "das": true,
+    "decks": 1,
+    "don": "ANY",
+    "hsa": false,
+    "peek": true,
+    "penetration": 75.0,
+    "rsa": false,
+    "sas": 4,
+    "ss17": false,
+    "surrender": "no"
+  },
+  "rl": {
+    "alpha_decay_steps": 100.0,
+    "alpha_min": 0.0001,
+    "alpha_start": 0.01,
+    "count_resolution": 1.0,
+    "epsilon_decay": 0.99999,
+    "epsilon_min": 0.1,
+    "epsilon_start": 1.0,
+    "exploration_mode": "epsilon",
+    "max_count": 5,
+    "min_count": -5,
+    "temp_decay": 0.99999,
+    "temp_min": 0.1,
+    "temp_start": 1.0
+  }
+}

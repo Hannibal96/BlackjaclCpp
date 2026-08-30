@@ -2,6 +2,8 @@
 #include "../Game/BlackjackRules.h"
 #include "../Game/DoubleDownMadnessRules.h"
 #include "../Game/Player.h"
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -13,7 +15,10 @@
 //   - showProgress: Whether to show progress bar (default true, set to false for multithreaded use)
 // Returns:
 //   - true if simulation completed successfully, false otherwise
-bool runSimulation(const BlackjackRules& rules, std::vector<Player*>& players, uint64_t numRounds);
+bool runSimulation(const BlackjackRules& rules,
+                   std::vector<Player*>& players,
+                   uint64_t numRounds,
+                   std::optional<uint64_t> seed = std::nullopt);
 
 // Parallel simulation function
 // Parameters:
@@ -27,16 +32,19 @@ bool runSimulation(const BlackjackRules& rules, std::vector<Player*>& players, u
 std::vector<Player*> runParallelSimulation(const BlackjackRules& rules, 
                                                const std::vector<Player*>& players, 
                                                uint64_t numRounds, 
-                                               int numThreads);
+                                               int numThreads,
+                                               std::optional<uint64_t> seed = std::nullopt);
 
 bool runSimulation(const DoubleDownMadnessRules& rules,
                    std::vector<Player*>& players,
-                   uint64_t numRounds);
+                   uint64_t numRounds,
+                   std::optional<uint64_t> seed = std::nullopt);
 
 std::vector<Player*> runParallelSimulation(
     const DoubleDownMadnessRules& rules,
     const std::vector<Player*>& players,
     uint64_t numRounds,
-    int numThreads);
+    int numThreads,
+    std::optional<uint64_t> seed = std::nullopt);
 
 std::string commandLineFromArgs(int argc, char** argv);

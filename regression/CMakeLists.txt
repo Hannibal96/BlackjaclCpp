@@ -61,3 +61,17 @@ target_include_directories(DoubleDownMadnessQLearningRegressionTest
         ${CMAKE_SOURCE_DIR}/include
 )
 set_property(TARGET DoubleDownMadnessQLearningRegressionTest PROPERTY CXX_STANDARD 20)
+
+add_executable(CountQuantizationTest
+    ${CMAKE_CURRENT_SOURCE_DIR}/CountQuantizationTest.cpp
+)
+target_link_libraries(CountQuantizationTest
+    PRIVATE
+        $<TARGET_OBJECTS:blackjack_objs>
+)
+target_include_directories(CountQuantizationTest
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+)
+set_property(TARGET CountQuantizationTest PROPERTY CXX_STANDARD 20)

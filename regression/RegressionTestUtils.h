@@ -110,6 +110,18 @@ inline Surrender stringToSurrender(const std::string& str) {
     throw std::invalid_argument("Invalid surrender value: " + str);
 }
 
+// Resolve the semantic "late" surrender option using the dealer's hole-card
+// rule. A peek game has already ruled out dealer blackjack before the player
+// acts, so surrender is available against every upcard. In a no-peek game,
+// surrender against an ace is unavailable.
+inline Surrender stringToSurrender(const std::string& str, bool peek) {
+    if (str == "late") {
+        return peek ? Surrender::SURRENDER_ANY
+                    : Surrender::SURRENDER_NO_ACE;
+    }
+    return stringToSurrender(str);
+}
+
 // Helper function to parse comma-separated list from string like "[1,2,3]" or "1,2,3"
 template<typename T>
 inline std::vector<T> parseList(const std::string& str) {
@@ -170,7 +182,7 @@ inline std::vector<Case> generateTestCases(
                                     for (const auto& surr_str : surrender)
                                         for (float bj : blackjackPay) {
                                             DoubleDownOn don = stringToDoubleOn(don_str);
-                                            Surrender surr = stringToSurrender(surr_str);
+                                            Surrender surr = stringToSurrender(surr_str, pk);
                                             Case new_case{d, ss17, das, sas, don, rsa, hsa, pk, surr, bj};
                                             v.push_back(new_case);
                                         }
