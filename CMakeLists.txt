@@ -28,6 +28,7 @@ add_library(blackjack_objs OBJECT
     src/RL/QLearningStrategy.cpp
     src/Utils/RunLogger.cpp
     src/Utils/CountQuantization.cpp
+    src/Utils/CountPolicyEvaluation.cpp
     src/Utils/SimulationAnalysis.cpp
     src/Utils/Utils.cpp
 )
@@ -48,6 +49,8 @@ add_custom_target(tests ALL
     DoubleDownMadnessEdgeRegressionTest
     DoubleDownMadnessQLearningRegressionTest
     CountQuantizationTest
+    KellyExposureTest
+    CountPolicyEvaluationTest
 )
 
 # Standalone training/analysis apps

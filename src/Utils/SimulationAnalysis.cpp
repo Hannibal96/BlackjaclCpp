@@ -167,13 +167,16 @@ nlohmann::json kellyGrowthCurvesToJson(const std::vector<KellyGrowthCurve>& curv
         }
         row["points"] = nlohmann::json::array();
         for (const auto& point : curve.points) {
-            row["points"].push_back({
+            nlohmann::json pointJson = {
                 {"kelly_fraction", point.fraction},
                 {"growth_mean", point.growthMean},
                 {"growth_stddev", point.growthStddev},
                 {"error_lower", point.growthMean - point.growthStddev},
                 {"error_upper", point.growthMean + point.growthStddev}
-            });
+            };
+            if (point.exposure.rounds > 0)
+                pointJson["exposure"] = kellyExposureStatisticsToJson(point.exposure);
+            row["points"].push_back(std::move(pointJson));
         }
         root["curves"].push_back(std::move(row));
     }
@@ -190,10 +193,325 @@ KellyGrowthCurve kellyGrowthCurveFromJson(const nlohmann::json& value) {
         curve.points.push_back({
             point.value("kelly_fraction", 1.0),
             point.value("growth_mean", 1.0),
-            point.value("growth_stddev", 0.0)
+            point.value("growth_stddev", 0.0),
+            {}
         });
     }
     return curve;
+}
+
+nlohmann::json kellyExposureStatisticsToJson(
+        const KellyExposureStatistics& statistics) {
+    using json = nlohmann::json;
+    json root;
+    root["definitions"] = {
+        {"bankroll", "bankroll immediately before the round's initial wager"},
+        {"gross_exposure", "total gross wagers placed during the round divided by bankroll"},
+        {"absolute_return", "absolute net round profit divided by bankroll; this is |fX|"},
+        {"wager_multiple", "total gross wagers divided by the initial wager"},
+        {"quadratic_log_increment", "r - 0.5*r^2, where r is net round profit divided by bankroll"},
+        {"exact_log_increment", "log(1+r)"}
+    };
+    root["rounds"] = statistics.rounds;
+    root["valid_bankroll_rounds"] = statistics.validBankrollRounds;
+    root["invalid_bankroll_rounds"] = statistics.invalidBankrollRounds;
+    root["zero_wager_rounds"] = statistics.zeroWagerRounds;
+    root["invalid_log_rounds"] = statistics.invalidLogRounds;
+
+    const double valid = static_cast<double>(statistics.validBankrollRounds);
+    const uint64_t validLogRounds =
+        statistics.validBankrollRounds >= statistics.invalidLogRounds
+            ? statistics.validBankrollRounds - statistics.invalidLogRounds
+            : 0;
+    const double validLog = static_cast<double>(validLogRounds);
+    root["gross_exposure_summary"] = {
+        {"mean", valid > 0.0 ? json(statistics.grossExposureSum / valid) : json(nullptr)},
+        {"maximum", statistics.grossExposureMaximum}
+    };
+    root["absolute_return_summary"] = {
+        {"mean", valid > 0.0 ? json(statistics.absoluteReturnSum / valid) : json(nullptr)},
+        {"maximum", statistics.absoluteReturnMaximum}
+    };
+    root["signed_return_summary"] = {
+        {"mean", valid > 0.0 ? json(statistics.signedReturnSum / valid) : json(nullptr)},
+        {"second_moment", valid > 0.0
+            ? json(statistics.signedReturnSquaredSum / valid) : json(nullptr)}
+    };
+    root["linearization"] = {
+        {"valid_log_rounds", validLogRounds},
+        {"exact_mean_log_increment", validLog > 0.0
+            ? json(statistics.exactLogIncrementSum / validLog) : json(nullptr)},
+        {"quadratic_mean_log_increment", validLog > 0.0
+            ? json(statistics.quadraticLogIncrementSum / validLog) : json(nullptr)},
+        {"mean_signed_error_exact_minus_quadratic", validLog > 0.0
+            ? json(statistics.taylorErrorSum / validLog) : json(nullptr)},
+        {"mean_absolute_error", validLog > 0.0
+            ? json(statistics.absoluteTaylorErrorSum / validLog) : json(nullptr)},
+        {"maximum_absolute_error", statistics.absoluteTaylorErrorMaximum}
+    };
+
+    auto histogramJson = [&](const auto& histogram) {
+        json bins = json::array();
+        for (size_t i = 0; i < KellyExposureStatistics::kRegularHistogramBins; ++i) {
+            if (histogram[i] == 0) continue;
+            bins.push_back({
+                {"lower_inclusive", i * KellyExposureStatistics::kHistogramBinWidth},
+                {"upper_exclusive", (i + 1) * KellyExposureStatistics::kHistogramBinWidth},
+                {"count", histogram[i]},
+                {"probability", valid > 0.0
+                    ? json(static_cast<double>(histogram[i]) / valid) : json(nullptr)}
+            });
+        }
+        const uint64_t overflow = histogram.back();
+        if (overflow > 0) {
+            bins.push_back({
+                {"lower_inclusive", KellyExposureStatistics::kHistogramMaximum},
+                {"upper_exclusive", nullptr},
+                {"count", overflow},
+                {"probability", valid > 0.0
+                    ? json(static_cast<double>(overflow) / valid) : json(nullptr)}
+            });
+        }
+        return bins;
+    };
+    root["histogram_bin_width"] = KellyExposureStatistics::kHistogramBinWidth;
+    root["gross_exposure_histogram"] =
+        histogramJson(statistics.grossExposureHistogram);
+    root["absolute_return_histogram"] =
+        histogramJson(statistics.absoluteReturnHistogram);
+
+    root["wager_multiple_histogram"] = json::array();
+    for (size_t i = 0; i < statistics.wagerMultipleHistogram.size(); ++i) {
+        const uint64_t count = statistics.wagerMultipleHistogram[i];
+        if (count == 0) continue;
+        root["wager_multiple_histogram"].push_back({
+            {"multiple", i + 1 == statistics.wagerMultipleHistogram.size()
+                ? json(nullptr) : json(i)},
+            {"lower_bound", i + 1 == statistics.wagerMultipleHistogram.size()
+                ? json(i) : json(nullptr)},
+            {"count", count},
+            {"probability", valid > 0.0
+                ? json(static_cast<double>(count) / valid) : json(nullptr)}
+        });
+    }
+
+    root["tail_probabilities"] = json::array();
+    for (size_t i = 0; i < KellyExposureStatistics::kTailThresholds.size(); ++i) {
+        root["tail_probabilities"].push_back({
+            {"threshold", KellyExposureStatistics::kTailThresholds[i]},
+            {"gross_exposure_count", statistics.grossExposureTailCounts[i]},
+            {"gross_exposure_probability", valid > 0.0
+                ? json(static_cast<double>(statistics.grossExposureTailCounts[i]) / valid)
+                : json(nullptr)},
+            {"absolute_return_count", statistics.absoluteReturnTailCounts[i]},
+            {"absolute_return_probability", valid > 0.0
+                ? json(static_cast<double>(statistics.absoluteReturnTailCounts[i]) / valid)
+                : json(nullptr)}
+        });
+    }
+    return root;
+}
+
+std::string kellyExposureStatisticsToCsv(
+        const KellyExposureStatistics& statistics) {
+    std::ostringstream output;
+    output << "metric,lower_inclusive,upper_exclusive,count,probability\n";
+    const double valid = static_cast<double>(statistics.validBankrollRounds);
+    auto append = [&](const char* metric, const auto& histogram) {
+        for (size_t i = 0; i < KellyExposureStatistics::kRegularHistogramBins; ++i) {
+            if (histogram[i] == 0) continue;
+            output << metric << ','
+                   << i * KellyExposureStatistics::kHistogramBinWidth << ','
+                   << (i + 1) * KellyExposureStatistics::kHistogramBinWidth << ','
+                   << histogram[i] << ','
+                   << (valid > 0.0 ? static_cast<double>(histogram[i]) / valid : 0.0)
+                   << '\n';
+        }
+        if (histogram.back() > 0) {
+            output << metric << ',' << KellyExposureStatistics::kHistogramMaximum
+                   << ",," << histogram.back() << ','
+                   << (valid > 0.0 ? static_cast<double>(histogram.back()) / valid : 0.0)
+                   << '\n';
+        }
+    };
+    output << std::setprecision(15);
+    append("gross_exposure", statistics.grossExposureHistogram);
+    append("absolute_return", statistics.absoluteReturnHistogram);
+    return output.str();
+}
+
+std::string kellyExposureStatisticsToSvg(
+        const std::string& title,
+        const KellyExposureStatistics& statistics) {
+    constexpr double width = 1200.0;
+    constexpr double height = 720.0;
+    constexpr double left = 125.0;
+    constexpr double right = 45.0;
+    constexpr double top = 92.0;
+    constexpr double bottom = 92.0;
+    const double plotWidth = width - left - right;
+    const double plotHeight = height - top - bottom;
+
+    const double observedMaximum = std::max(
+        statistics.grossExposureMaximum,
+        statistics.absoluteReturnMaximum);
+    const size_t displayedBins = std::max<size_t>(1, std::min<size_t>(
+        KellyExposureStatistics::kRegularHistogramBins,
+        static_cast<size_t>(std::ceil(
+            std::min(observedMaximum, KellyExposureStatistics::kHistogramMaximum) /
+            KellyExposureStatistics::kHistogramBinWidth))));
+    const double dataXMaximum = std::max(
+        KellyExposureStatistics::kHistogramBinWidth,
+        static_cast<double>(displayedBins) * KellyExposureStatistics::kHistogramBinWidth);
+    const double xStep = [&]() {
+        if (dataXMaximum <= 0.01) return 0.001;
+        if (dataXMaximum <= 0.05) return 0.005;
+        if (dataXMaximum <= 0.10) return 0.01;
+        if (dataXMaximum <= 0.25) return 0.025;
+        if (dataXMaximum <= 0.50) return 0.05;
+        return 0.10;
+    }();
+    const double xMaximum = std::max(
+        xStep, std::ceil(dataXMaximum / xStep - 1e-12) * xStep);
+    const double valid = static_cast<double>(statistics.validBankrollRounds);
+
+    uint64_t minimumPositiveCount = std::numeric_limits<uint64_t>::max();
+    for (size_t i = 0; i < displayedBins; ++i) {
+        const uint64_t gross = statistics.grossExposureHistogram[i];
+        const uint64_t absoluteReturn = statistics.absoluteReturnHistogram[i];
+        if (gross > 0) minimumPositiveCount = std::min(minimumPositiveCount, gross);
+        if (absoluteReturn > 0)
+            minimumPositiveCount = std::min(minimumPositiveCount, absoluteReturn);
+    }
+    const double minimumPositiveProbability =
+        valid > 0.0 && minimumPositiveCount != std::numeric_limits<uint64_t>::max()
+            ? static_cast<double>(minimumPositiveCount) / valid
+            : 0.1;
+    // Leave one full decade below the smallest observed nonzero bin so a
+    // singleton observation still has a visible bar above the baseline.
+    const int minimumExponent = std::min(
+        -1,
+        static_cast<int>(std::floor(std::log10(minimumPositiveProbability))) - 1);
+    auto yForProbability = [&](double probability) {
+        if (probability <= 0.0) return top + plotHeight;
+        const double logProbability = std::clamp(
+            std::log10(probability), static_cast<double>(minimumExponent), 0.0);
+        return top + (-logProbability / -static_cast<double>(minimumExponent)) * plotHeight;
+    };
+    auto probabilityForCount = [&](uint64_t count) {
+        return valid > 0.0 ? static_cast<double>(count) / valid : 0.0;
+    };
+    auto percentLabel = [](double fraction) {
+        std::ostringstream label;
+        const double percent = 100.0 * fraction;
+        if (std::abs(percent - std::round(percent)) < 1e-10)
+            label << std::fixed << std::setprecision(0) << percent;
+        else if (percent >= 1.0)
+            label << std::fixed << std::setprecision(1) << percent;
+        else if (percent >= 0.01)
+            label << std::fixed << std::setprecision(2) << percent;
+        else
+            label << std::scientific << std::setprecision(0) << percent;
+        return label.str() + "%";
+    };
+    std::ostringstream svg;
+    svg << "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"" << width
+        << "\" height=\"" << height << "\" viewBox=\"0 0 " << width << ' ' << height
+        << "\">\n<title>" << title << "</title>\n"
+        << "<rect width=\"100%\" height=\"100%\" fill=\"white\"/>\n"
+        << "<defs><clipPath id=\"exposure-plot\"><rect x=\"" << left
+        << "\" y=\"" << top << "\" width=\"" << plotWidth
+        << "\" height=\"" << plotHeight << "\"/></clipPath></defs>\n";
+    svg << "<text x=\"" << left << "\" y=\"30\" font-family=\"sans-serif\" "
+        << "font-size=\"21\" font-weight=\"600\">" << title << "</text>\n"
+        << "<text x=\"" << left << "\" y=\"54\" font-family=\"sans-serif\" "
+        << "font-size=\"13\" fill=\"#555\">Bin width: 0.1% of bankroll; "
+        << "the first bin includes zero exposure</text>\n";
+
+    // Horizontal logarithmic probability grid and labels.
+    for (int exponent = 0; exponent >= minimumExponent; --exponent) {
+        const double probability = std::pow(10.0, exponent);
+        const double y = yForProbability(probability);
+        svg << "<line x1=\"" << left << "\" y1=\"" << y << "\" x2=\""
+            << (left + plotWidth) << "\" y2=\"" << y
+            << "\" stroke=\"#d6dbe1\" stroke-width=\"1\"/>\n"
+            << "<line x1=\"" << (left - 6) << "\" y1=\"" << y << "\" x2=\""
+            << left << "\" y2=\"" << y << "\" stroke=\"#222\"/>\n"
+            << "<text x=\"" << (left - 11) << "\" y=\"" << (y + 4)
+            << "\" text-anchor=\"end\" font-family=\"sans-serif\" font-size=\"12\">"
+            << percentLabel(probability) << "</text>\n";
+    }
+
+    // Vertical bankroll-fraction grid and labels.
+    for (size_t tick = 0;; ++tick) {
+        const double value = static_cast<double>(tick) * xStep;
+        if (value > xMaximum + xStep * 1e-9) break;
+        const double x = left + value / xMaximum * plotWidth;
+        svg << "<line x1=\"" << x << "\" y1=\"" << top << "\" x2=\"" << x
+            << "\" y2=\"" << (top + plotHeight)
+            << "\" stroke=\"#e2e6ea\" stroke-width=\"1\"/>\n"
+            << "<line x1=\"" << x << "\" y1=\"" << (top + plotHeight)
+            << "\" x2=\"" << x << "\" y2=\"" << (top + plotHeight + 6)
+            << "\" stroke=\"#222\"/>\n"
+            << "<text x=\"" << x << "\" y=\"" << (top + plotHeight + 23)
+            << "\" text-anchor=\"middle\" font-family=\"sans-serif\" font-size=\"12\">"
+            << percentLabel(value) << "</text>\n";
+    }
+
+    const double groupWidth =
+        plotWidth * KellyExposureStatistics::kHistogramBinWidth / xMaximum;
+    const double innerWidth = std::max(0.35, groupWidth * 0.44);
+    const double baseline = top + plotHeight;
+    svg << "<g clip-path=\"url(#exposure-plot)\">\n";
+    for (size_t i = 0; i < displayedBins; ++i) {
+        const double groupX = left + static_cast<double>(i) * groupWidth;
+        const double grossProbability =
+            probabilityForCount(statistics.grossExposureHistogram[i]);
+        const double returnProbability =
+            probabilityForCount(statistics.absoluteReturnHistogram[i]);
+        if (grossProbability > 0.0) {
+            const double y = yForProbability(grossProbability);
+            svg << "<rect x=\"" << (groupX + groupWidth * 0.04) << "\" y=\"" << y
+                << "\" width=\"" << innerWidth << "\" height=\"" << (baseline - y)
+                << "\" fill=\"#2878b5\" opacity=\"0.82\"/>\n";
+        }
+        if (returnProbability > 0.0) {
+            const double y = yForProbability(returnProbability);
+            svg << "<rect x=\"" << (groupX + groupWidth * 0.52) << "\" y=\"" << y
+                << "\" width=\"" << innerWidth << "\" height=\"" << (baseline - y)
+                << "\" fill=\"#d1495b\" opacity=\"0.82\"/>\n";
+        }
+    }
+    svg << "</g>\n";
+    svg << "<rect x=\"" << left << "\" y=\"" << top << "\" width=\"" << plotWidth
+        << "\" height=\"" << plotHeight
+        << "\" fill=\"none\" stroke=\"#222\" stroke-width=\"1.3\"/>\n";
+    svg << "<text x=\"" << (left + plotWidth / 2.0) << "\" y=\"" << (height - 25)
+        << "\" text-anchor=\"middle\" font-family=\"sans-serif\" font-size=\"15\">"
+        << "Fraction of round-start bankroll</text>\n"
+        << "<text x=\"24\" y=\"" << (top + plotHeight / 2.0)
+        << "\" transform=\"rotate(-90 24 " << (top + plotHeight / 2.0)
+        << ")\" text-anchor=\"middle\" font-family=\"sans-serif\" font-size=\"15\">"
+        << "Probability per bin (log scale)</text>\n";
+    svg << "<rect x=\"" << (width - 355) << "\" y=\"22\" width=\"16\" height=\"12\" "
+        << "fill=\"#2878b5\" opacity=\"0.82\"/>"
+        << "<text x=\"" << (width - 332) << "\" y=\"33\" font-family=\"sans-serif\" "
+        << "font-size=\"12\">Gross exposure</text>\n";
+    svg << "<rect x=\"" << (width - 182) << "\" y=\"22\" width=\"16\" height=\"12\" "
+        << "fill=\"#d1495b\" opacity=\"0.82\"/>"
+        << "<text x=\"" << (width - 159) << "\" y=\"33\" font-family=\"sans-serif\" "
+        << "font-size=\"12\">|fX|</text>\n";
+
+    const uint64_t grossOverflow = statistics.grossExposureHistogram.back();
+    const uint64_t returnOverflow = statistics.absoluteReturnHistogram.back();
+    if (grossOverflow > 0 || returnOverflow > 0) {
+        svg << "<text x=\"" << (left + plotWidth) << "\" y=\"" << (top + 17)
+            << "\" text-anchor=\"end\" font-family=\"sans-serif\" font-size=\"12\" "
+            << "fill=\"#7a1f1f\">Overflow at ≥100%: gross=" << grossOverflow
+            << ", |fX|=" << returnOverflow << "</text>\n";
+    }
+    svg << "</svg>\n";
+    return svg.str();
 }
 
 namespace {

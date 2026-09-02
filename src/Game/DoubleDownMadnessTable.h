@@ -20,6 +20,8 @@ private:
     Hand dealerHand;
     std::map<Player*, Hand> playerHands;
     std::map<Player*, double> committedWagers;
+    std::map<Player*, double> totalWagers;
+    std::map<Player*, double> roundStartingBankrolls;
     std::vector<double> moneyBeforeScratch;
 
     void clearHands();

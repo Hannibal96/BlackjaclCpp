@@ -173,29 +173,27 @@ The flow is:
 This is used heavily by:
 
 - `AlternatingOptimization`
-- `CompareCountStrategies`
+- legacy EV/count diagnostics
 
 ## Apps Layer
 
-The app surface is three binaries, each implemented in one file:
-`apps/AlternatingOptimization.cpp`, `apps/CompareCountStrategies.cpp`, and
-`apps/QuantizationEffect.cpp`. Each follows the `template <typename Game>`
-engine and shared-dispatch shape. The first two instantiate both games;
-`QuantizationEffect` currently enables blackjack and retains a clear DDM
-dispatch boundary for later support. Game selection
-is dispatched by `--game` through the header-only `apps/GameAppDispatcher.h`
-(shared by all three apps, since the routing logic is identical). Everything that
+The primary app surface is `apps/AlternatingOptimization.cpp` and
+`apps/EvaluateCountPolicy.cpp`. Both retain the `template <typename Game>` and
+shared-dispatch shape; the fixed evaluator currently enables blackjack and
+keeps the `--game` boundary for Spanish 21 and other future implementations.
+Game selection is dispatched through `apps/GameAppDispatcher.h`. Everything that
 differs between the two games — `Rules` construction, the `Case` parameter
 struct, CLI rule flags, meta.json fields, checkpoint-root naming, basic-strategy
-loading, and whether Illustrious 18 applies — lives in the shared
-`apps/GameTraits.h`; the rest of the app logic is written once. Earlier
+loading, and whether Illustrious 18 applies — lives in `apps/GameTraits.h`.
+`scripts/compare_count_strategies.py` and `scripts/quantization_effect.py`
+perform multi-run orchestration through `EvaluateCountPolicy`, so there is one
+authoritative spread/Kelly simulator. Earlier
 standalone precursors —
 `FindDeviations` (Q-learning checkpoints under `checkpoints/checkpoints_QLearning/`),
 `FindOptimalCount` (OLS checkpoints under `checkpoints/checkpoints_ols/`), and
 `MeasureEdge` (fixed-strategy evaluation under `checkpoints/MeasureEdge/`) —
-have been removed; `AlternatingOptimization`'s loop and
-`CompareCountStrategies` reading its checkpoints directly now cover that
-ground.
+have been removed; `AlternatingOptimization` and `EvaluateCountPolicy` cover
+that ground.
 
 ### `AlternatingOptimization`
 
@@ -225,44 +223,38 @@ ground.
 - stores blackjack runs under `checkpoints/alternating-checkpoints/`
 - stores DDM runs under `checkpoints/double-down-madness-alternating-checkpoints/`
 
-### `CompareCountStrategies`
+### `EvaluateCountPolicy`
 
-- selects classic blackjack or Double Down Madness with `--game`
-- blackjack compares basic strategy, Illustrious 18, and full deviations
-- DDM compares its known version-specific strategy and full deviations
-  (Illustrious 18 is Hi-Lo/blackjack-specific, so it's skipped for DDM)
-- full deviations come from one of three sources:
-  - `--deviations-checkpoint <dir> --deviations-agent Pk`: that game's own
-    `AlternatingOptimization` checkpoint folder (`Pk_agent.json` plus,
-    unless the count was explicitly overridden, the matching `Wk.json`/`W0`
-    count config)
-  - `--strategy-checkpoint <dir>`: a `full_deviations_strategy.json` +
-    `full_deviations_meta.json` pair saved by a previous
-    `CompareCountStrategies` fresh-training run (mutually exclusive with
-    `--deviations-checkpoint`)
-  - neither flag: trained fresh, then auto-saved as the pair above into this
-    run's own output folder
+- evaluates one fixed count and one fixed playing policy
+- loads complete rules and performance defaults from an alternating checkpoint
+- also accepts named/custom counts, true- or running-count normalization,
+  constant/per-deck initial-count offsets, and explicit `f(c)=b+a*c`
+- accepts basic strategy, Illustrious 18, `Pk`, policy JSON, or fresh full deviations
 - writes:
   - `run.log`
-  - `ev_count_graph.json/svg`
-  - `count_histograms.json/svg`
-  under the game-specific comparison checkpoint root
-- writes aggregate Kelly growth curves and error bars; individual Kelly trial
-  debug printing is disabled
+  - `results.json/csv`
+  - `kelly_growth.json/svg`
+  - `kelly_exposure_at_1.json/csv/svg`
+- every Kelly multiplier records aggregate gross wager/bankroll and exact
+  `|round profit / bankroll| = |fX|` distributions across all measurements
+- Kelly evaluation can cap cumulative initial/split/double wagers as a fraction
+  of round-start bankroll; released wagers remain part of the cumulative cap
+- exposure SVGs use a logarithmic probability axis with grids, percentage
+  ticks, labeled axes, and side-by-side gross-exposure/`|fX|` bars
+- spread evaluation intentionally does not collect wager exposure
 
-### `QuantizationEffect`
+### Workflow scripts
 
-- loads a learned count `Wk` and its generating policy `P(k-1)` from an
+- `scripts/compare_count_strategies.py` evaluates basic, applicable I18, and
+  full-deviation policies as separate shared-evaluator runs and combines them
+- `scripts/quantization_effect.py` loads a learned count `Wk` and `P(k-1)` from an
   alternating checkpoint, defaulting to the latest complete pair
-- reconstructs full-precision learned tags from `raw_solution` and
+- reconstructs full-precision tags from `raw_solution` and
   `normalization_scale`
-- rounds to a user-supplied quantum grid while preserving a source zero-sum
+- quantizes on a user-supplied grid while preserving a source zero-sum
   constraint and shared 10/J/Q/K tags
-- reruns quantum zero once as an exact reference
-- evaluates 1:10 spread edge and a configurable Kelly multiplier sweep
-- can use deterministic common seeds across quantum levels
-- writes `run.log`, `results.json`, `results.csv`, and
-  `quantization_effect.svg` under `checkpoints/QuantizationEffect/`
+- evaluates quantum zero exactly once and reports multiplier-1 degradation
+  without treating empirical fraction retuning as mitigation
 
 ## Checkpoint And Logging Convention
 
@@ -272,8 +264,8 @@ Examples:
 
 - `checkpoints/alternating-checkpoints/<folder>/` (blackjack)
 - `checkpoints/double-down-madness-alternating-checkpoints/<folder>/` (DDM)
+- `checkpoints/EvaluateCountPolicy/<run-name>/` (blackjack-first)
 - `checkpoints/CompareCountStrategies/<run-name>/` (blackjack)
-- `checkpoints/DoubleDownMadnessCompareCountStrategies/<run-name>/` (DDM)
 - `checkpoints/QuantizationEffect/<run-name>/` (blackjack-first)
 
 `RunLogger` mirrors `stdout` and `stderr` into `run.log` inside those folders.

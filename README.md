@@ -6,16 +6,16 @@ A C++20 blackjack simulation and research project with:
 - Classic blackjack and Double Down Madness table variants
 - Table-driven and learned playing strategies
 - Card-count-aware betting and regression tooling
-- Three research apps — `AlternatingOptimization`, `CompareCountStrategies`,
-  and the blackjack-first `QuantizationEffect` evaluator — using the shared
-  `Game` traits/app-dispatch shape (see `apps/GameTraits.h`)
+- `AlternatingOptimization` plus one authoritative fixed count/policy evaluator,
+  `EvaluateCountPolicy`; Python workflows orchestrate policy comparisons and
+  count quantization through that evaluator
 - Standalone simulation regression targets
 
 ## Repository Layout
 
 ```text
 .
-├── apps/                         # Training, strategy comparison, and count-quantization apps
+├── apps/                         # Training and fixed count/policy evaluation apps
 ├── basic_strategy_tables/
 │   ├── blackjack/                # One JSON table per classic-blackjack rule combo
 │   └── double_down_madness/      # Base table + per-version overrides
@@ -28,6 +28,7 @@ A C++20 blackjack simulation and research project with:
 ├── hpo/                          # Python hyperparameter tuning helpers
 ├── include/                      # Third-party headers
 ├── regression/                   # Regression tests: sim output vs. reference JSON tables
+├── scripts/                      # Quantization and policy-comparison workflows
 ├── src/
 │   ├── Game/                     # Blackjack rules, table flow, players, betting
 │   ├── RL/                       # Strategy interfaces and learning implementations
@@ -55,7 +56,7 @@ Regression targets include:
 
 - `BasicStrategyRegressionTest`, `QLearningRegressionTest`,
   `DoubleDownMadnessEdgeRegressionTest`, `DoubleDownMadnessQLearningRegressionTest`,
-  `CountQuantizationTest`
+  `CountQuantizationTest`, `KellyExposureTest`, `CountPolicyEvaluationTest`
   — standalone regression executables (no GoogleTest) that compare simulated
   output against reference JSON tables, in `regression/`
 
@@ -73,38 +74,48 @@ Regression targets include:
 # Resume an interrupted/previous run by its checkpoint folder name:
 ./build/bin/AlternatingOptimization --game blackjack --load-checkpoint <folder-name>
 
-# Compare basic strategy / Illustrious 18 / full deviations under Hi-Lo (default):
-./build/bin/CompareCountStrategies --game blackjack
+# Evaluate one named count and one policy:
+./build/bin/EvaluateCountPolicy --game blackjack \
+    --count-name halves --policy basic --factor 0.005 --bias -0.005
 
-# Compare a specific policy+count learned by AlternatingOptimization (P1 with
-# its own W1) instead of training/using Hi-Lo:
-./build/bin/CompareCountStrategies --game blackjack \
-    --deviations-checkpoint <folder-name> --deviations-agent P1
+# Evaluate a learned W3 + P2 pair. Rules and simulation defaults come from the folder:
+./build/bin/EvaluateCountPolicy --game blackjack \
+    --checkpoint <folder-or-path> --count W3 --policy P2 --seed 12345
+
+# Cap the initial wager plus all split/double wagers at 25% of the bankroll
+# measured immediately before the round's initial wager:
+./build/bin/EvaluateCountPolicy --game blackjack \
+    --checkpoint <folder-or-path> --count W3 --policy P2 \
+    --max-total-wager-fraction 0.25
+
+# Compare basic / Illustrious 18 / full deviations through that same evaluator:
+./scripts/compare_count_strategies.py --game blackjack --count hilo
 
 # Measure W3 with the policy from which it was learned (P2) across the default
 # quantization grid. Rules and performance defaults come from meta.json:
-./build/bin/QuantizationEffect --game blackjack \
+./scripts/quantization_effect.py --game blackjack \
     --checkpoint <folder-or-path> --count W3 --policy P2 --seed 12345
 
 # Full flag reference:
 ./build/bin/AlternatingOptimization --game <blackjack|ddm> --help
-./build/bin/CompareCountStrategies --game <blackjack|ddm> --help
-./build/bin/QuantizationEffect --game blackjack --help
+./build/bin/EvaluateCountPolicy --game blackjack --help
+./scripts/compare_count_strategies.py --help
+./scripts/quantization_effect.py --help
 ```
 
 `<folder-name>` is whatever `AlternatingOptimization` printed after `Folder:`
-when it started (or `--checkpoint-name` if you set one) — both apps look for
-it under `checkpoints/alternating-checkpoints/` for blackjack and
-`checkpoints/double-down-madness-alternating-checkpoints/` for DDM.
+when it started (or `--checkpoint-name` if you set one). The evaluator also
+accepts an explicit path, including experiment folders under `paper_materials`.
 
 ## Apps
 
-The app surface has three executables, each implemented in one `.cpp` file.
-`AlternatingOptimization` and `CompareCountStrategies` are instantiated for
-both games. `QuantizationEffect` follows the same `template <typename Game>`
-and `--game` dispatch shape, but currently enables only its blackjack
-instantiation so Double Down Madness support can be added without redesigning
-the app.
+The primary app surface consists of `AlternatingOptimization` and
+`EvaluateCountPolicy`. The latter has the same `--game` dispatch shape as the
+other research apps, but intentionally enables blackjack only for now so a
+Spanish 21 implementation can be connected later without changing its CLI.
+The old C++ comparison/quantization executables remain temporarily for command
+compatibility; new work should use the scripts, which call only
+`EvaluateCountPolicy` for simulation.
 Earlier, standalone precursors — `FindDeviations` (Q-learning checkpoints),
 `FindOptimalCount` (OLS count checkpoints), and `MeasureEdge` (fixed-strategy
 evaluation) — have been removed; their functionality is fully covered by
@@ -146,32 +157,44 @@ evaluation) — have been removed; their functionality is fully covered by
   Learned rank tags are normalized so the average 10/J/Q/K value is `-1`, with
   inverse factor scaling preserving the fitted signal.
 
-- `CompareCountStrategies`
-  Uses the same `--game <blackjack|ddm>` selection. Blackjack compares basic
-  strategy, Illustrious 18, and full deviations; DDM compares its known
-  version-specific policy with full deviations (Illustrious 18 is Hi-Lo/blackjack-specific,
-  so it's skipped for DDM). Full deviations come from one of three sources:
-  - `--deviations-checkpoint <dir> --deviations-agent Pk` loads a policy
-    straight from an `AlternatingOptimization` checkpoint folder for the
-    same game — `Pk_agent.json` for the policy and, unless the count was
-    explicitly overridden on the command line, the matching `Wk.json`
-    (or `W0`'s implicit all-zero count) for the count config.
-  - `--strategy-checkpoint <dir>` reloads a policy that `CompareCountStrategies`
-    itself trained fresh in a *previous* run, together with whatever count
-    it was trained against (Hi-Lo by default, or any explicit `--count`).
-    Every fresh-training run auto-saves this into its own output folder as
-    `full_deviations_strategy.json` + `full_deviations_meta.json`, so pointing
-    `--strategy-checkpoint` at that folder (by name under the checkpoint
-    root, or by absolute path) skips retraining next time. Mutually
-    exclusive with `--deviations-checkpoint`.
-  - Neither flag: trains full deviations fresh using the RL flags, and
-    auto-saves it as above.
+- `EvaluateCountPolicy`
+  Takes one count and one matching fixed policy, then measures a 1:10 spread
+  edge and a Kelly-multiplier curve. Counts may be named, supplied as 13 rank
+  tags/JSON, or loaded as `Wk` from an alternating checkpoint. Policies may be
+  basic strategy, standard Hi-Lo Illustrious 18, a policy JSON, an alternating
+  `Pk`, or fresh full deviations trained under the selected count.
 
-  It writes a run log, EV-vs-count graph/data, a count histogram, spread-return variance,
-  conditional `E[X^2 | count]` curves, and an overlaid Kelly-multiplier sweep for
-  all policies. Irrelevant game-specific CLI flags are ignored with warnings.
+  The betting transform is explicit: `f(c)=bias+factor*c`. `c` can be a true
+  count or an unnormalized running count. `--initial-count` and
+  `--initial-count-per-deck` support systems with a nonzero initial running
+  count; for example Spanish 21's `-4*N` start uses
+  `--count-normalization running --initial-count-per-deck -4`.
 
-- `QuantizationEffect`
+  Every Kelly multiplier aggregates wager diagnostics across every measurement.
+  `gross_exposure` is the sum of all wagers placed in the complete round divided
+  by bankroll before the initial bet. Thus an initial wager followed by a split
+  and one double contributes `3x`; four hands all doubled contribute `8x`.
+  `absolute_return` is the realized `|round_profit / bankroll| = |fX|`. JSON
+  contains histograms, tail probabilities, exact `log(1+r)`, its quadratic
+  approximation `r-r^2/2`, and their error. Multiplier 1.0 is always evaluated
+  and receives dedicated JSON/CSV/SVG artifacts. Exposure SVGs use a logarithmic
+  probability axis, percentage ticks, grids, labeled axes, and side-by-side
+  gross-exposure/`|fX|` bars so the no-bet bin does not hide rare tails.
+
+  Kelly evaluation accepts `--max-total-wager-fraction <0..1>` (alias
+  `--max-total-wager`). The default is `1.0`. The cap is based on bankroll
+  immediately before the initial wager and applies to cumulative gross wagers:
+  the initial wager plus every split and double still counts after an earlier
+  hand settles. It does not cap positive payouts, so a 5% wager cap can still
+  produce a 7.5% `|fX|` on a 3:2 natural blackjack.
+
+- `scripts/compare_count_strategies.py`
+  Runs basic strategy, Illustrious 18 when the count is true-counted Hi-Lo, and
+  fresh or pre-calculated full deviations as separate calls to
+  `EvaluateCountPolicy`, then combines their spread, Kelly-at-1, and wager
+  diagnostics.
+
+- `scripts/quantization_effect.py`
   Loads a learned alternating pair `Wk + P(k-1)` (latest complete pair by
   default), reconstructs the learned tags from `raw_solution` at full
   precision, and evaluates the exact count plus user-selected quantization
@@ -181,7 +204,9 @@ evaluation) — have been removed; their functionality is fully covered by
   Rules, spread rounds, threads, and Kelly measurement count default from the
   source `meta.json`. Kelly multipliers default to `0.75..1.25` in `0.05`
   steps, and `--seed` provides repeatable common random seeds across quantum
-  levels. Results are written as a run log, JSON, CSV, and SVG under
+  levels. Each level is evaluated by `EvaluateCountPolicy`; the combined report
+  uses multiplier-1 Kelly results rather than the empirical optimum, so it does
+  not hide degradation through fraction retuning. Results are written under
   `checkpoints/QuantizationEffect/` unless `--output-dir` is supplied.
 
 Conditional second-moment curves use only flat simulations with an initial wager
@@ -189,13 +214,14 @@ of exactly 1, so `X` is the normalized net profit from one complete round. The
 statistics are accumulated in the same count bins as the EV graph and are not
 measured during spread simulations.
 
-Both apps accept `--kelly-fraction-min`, `--kelly-fraction-max`, and
-`--kelly-fraction-step`. By default, each curve rounds its flat-simulation estimate
-`1/E[X^2]` to the nearest fraction step, spans `+/-0.25` around that center, clamps
-the lower endpoint at zero, and uses increments of `0.05`. Explicit minimum and
-maximum flags override their respective dynamic endpoints.
-For `--count-quadratic-kelly`, the learned signal is already a wager fraction, so
-its multiplier sweep is centered at `1.0` instead of `1/E[X^2]`.
+`AlternatingOptimization` accepts `--kelly-fraction-min`,
+`--kelly-fraction-max`, and `--kelly-fraction-step`. Its classical-OLS curve is
+centered on the flat-simulation estimate `1/E[X^2]`; a quadratic-Kelly count is
+already a wager fraction, so its sweep is centered at `1.0`.
+`EvaluateCountPolicy` instead defaults to the explicit `0.75..1.25` multiplier
+range requested for fixed-count comparisons and accepts the shorter
+`--kelly-min`, `--kelly-max`, and `--kelly-step` flags (the longer aliases also
+work). It always inserts multiplier `1.0` as a direct, unmitigated reference.
 Each fraction runs 10 independent experiments by default, configurable with
 `--kelly-measurements`. Kelly graphs show the mean growth with error bars equal to
 the sample standard deviation across those experiments.
@@ -205,8 +231,9 @@ the net unit-bet return for one complete blackjack round.
 
 DDM permits repeated doubling, so an initially small bankroll fraction can
 become a catastrophic single-hand exposure after multiplication by `2^d`.
-Quadratic Kelly is only a second-order approximation and does not currently
-enforce `1+fX>0`. A ruined worker has log bankroll `-infinity`, which makes that
+The cumulative-wager cap applies to DDM doubling as well. Quadratic Kelly is
+only a second-order approximation; without a restrictive cap, a ruined worker
+has log bankroll `-infinity`, which makes that
 entire parallel Kelly experiment report zero growth. Treat DDM Kelly curves with
 large standard deviations as ruin mixtures, not ordinary Monte Carlo noise.
 
@@ -216,7 +243,8 @@ large standard deviations as ruin mixtures, not ordinary Monte Carlo noise.
   `meta.json`, `state.json`, `P*.json`, `P*_agent.json`, `P*_strategy.json`, `W*.json`,
   `W*_data.json`, `W*_second_moment_graph.json/svg`, cumulative
   `W*_second_moment_graph_overlay.json/svg`, `W*_kelly_graph.json/svg`, and
-  cumulative `W*_kelly_graph_overlay.json/svg`
+  cumulative `W*_kelly_graph_overlay.json/svg`. Each `Wk` also writes
+  `Wk_kelly_exposure_at_1.json/csv/svg`.
 
 - `checkpoints/double-down-madness-alternating-checkpoints/<folder>/`
   Uses the same resumable policy, count, EV, second-moment, histogram, and Kelly
@@ -227,29 +255,38 @@ large standard deviations as ruin mixtures, not ordinary Monte Carlo noise.
   graph artifacts.
 
 - `checkpoints/CompareCountStrategies/<run-name>/`
-  `run.log`, `ev_count_graph.json/svg`, `count_histograms.json/svg`,
-  `kelly_fraction_graph.json/svg`
+  One subfolder per policy, a combined `results.json/csv`, and each policy's
+  `kelly_exposure_at_1.json/csv/svg`.
+
+- `checkpoints/EvaluateCountPolicy/<run-name>/`
+  `run.log`, `results.json/csv`, `kelly_growth.json/svg`, and
+  `kelly_exposure_at_1.json/csv/svg`.
 
 - `checkpoints/QuantizationEffect/<run-name>/`
-  `run.log`, `results.json`, `results.csv`, and `quantization_effect.svg`
+  One subfolder per quantum, the exact quantized count JSON files, and a
+  combined `results.json/csv`. Every child contains its Kelly exposure artifacts.
 
 All apps log terminal output into their checkpoint/run folder through `RunLogger`.
 
 ## Current Research Direction
 
 The project's research path is joint count/policy improvement with alternating
-optimization (`AlternatingOptimization`). `CompareCountStrategies` exists to
-validate and inspect the resulting checkpoints against reference strategies.
+optimization (`AlternatingOptimization`). The comparison and quantization
+scripts validate those checkpoints through the shared fixed evaluator.
 
 ## Notes For Another Agent
 
 - `Player` is the bridge between raw table state and strategy state keys. Count discretization, betting context, regression sampling, EV-count bins, and streaming return moments all live there.
-- `BlackjackTable::round()` captures net round return after all splits, doubles, and settlements. Variance tracking stores only count, sum, and sum of squares, and these totals merge across threads without retaining outcome histories.
+- `BlackjackTable::round()` captures net round return and cumulative gross wager
+  after all splits, doubles, surrenders, and settlements. Streaming exposure
+  histograms merge across threads and Kelly measurements without retaining
+  individual rounds.
 - `DoubleDownMadnessTable` models the one-card player start, repeated doubling,
   continued play after hitting an initial Ace, a one-card limit when doubling
   that Ace, immediate version-specific blackjack payouts, a hidden dealer hole
   card, and a dealer-22 push.
-- `CompareCountStrategies` is an evaluation app; it should not leave a live `QLearningStrategy` exploring during measurement.
+- `EvaluateCountPolicy` converts a trained `QLearningStrategy` to a fixed greedy
+  `BasicStrategy` before measurement; exploration is never live during evaluation.
 
 ## Architecture Notes
 

@@ -1,0 +1,293 @@
+=== Global Configuration ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Seed:        1234
+Total test cases: 3456
+============================
+
+
+[1/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=2_ss17=True_das=False_sas=3_don=9-11_reSplitAces=True_hitSplitAces=False_surr=yes_peek=True_bj-pays=1.5
+============================
+
+NOTE: surr=yes + peek=True — using the available surr=2-10 theoretical edge as a comparison baseline; edge assertion skipped.
+Cut Card (Penetration: 75%) Theoretical Edge %: 0.4080% Cut Card Empiric Edge %: -0.4168%
+CSM (Penetration: 0.0%) Theoretical Edge %: 0.3450% CSM Empiric Edge %: -0.3502%
+CSM Error: -0.0052%, Cut Card Error: -0.0088%
+CSM Speed: 8124269 hands/sec, Cut Card Speed: 11037771 hands/sec
+
+[2/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=2_ss17=False_das=False_sas=2_don=10-11_reSplitAces=True_hitSplitAces=True_surr=no_peek=True_bj-pays=1.5
+============================
+
+Cut Card (Penetration: 75%) Theoretical Edge %: 0.6855% Cut Card Empiric Edge %: -0.6730%
+CSM (Penetration: 0.0%) Theoretical Edge %: 0.6225% CSM Empiric Edge %: -0.6160%
+CSM Error: 0.0065%, Cut Card Error: 0.0125%
+CSM Speed: 7981865 hands/sec, Cut Card Speed: 11455804 hands/sec
+
+[3/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=1_ss17=False_das=True_sas=4_don=9-11_reSplitAces=True_hitSplitAces=True_surr=yes_peek=True_bj-pays=1.5
+============================
+
+NOTE: surr=yes + peek=True — using the available surr=2-10 theoretical edge as a comparison baseline; edge assertion skipped.
+Cut Card (Penetration: 75%) Theoretical Edge %: 0.1208% Cut Card Empiric Edge %: -0.1391%
+CSM (Penetration: 0.0%) Theoretical Edge %: 0.0078% CSM Empiric Edge %: -0.0086%
+CSM Error: -0.0008%, Cut Card Error: -0.0183%
+CSM Speed: 9525715 hands/sec, Cut Card Speed: 11459217 hands/sec
+
+[4/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=6_ss17=False_das=True_sas=2_don=Any_reSplitAces=False_hitSplitAces=False_surr=yes_peek=True_bj-pays=1.2
+============================
+
+NOTE: surr=yes + peek=True — using the available surr=2-10 theoretical edge as a comparison baseline; edge assertion skipped.
+Cut Card (Penetration: 75%) Theoretical Edge %: 1.9634% Cut Card Empiric Edge %: -1.9673%
+CSM (Penetration: 0.0%) Theoretical Edge %: 1.9434% CSM Empiric Edge %: -1.9467%
+CSM Error: -0.0032%, Cut Card Error: -0.0039%
+CSM Speed: 4631559 hands/sec, Cut Card Speed: 11918241 hands/sec
+
+[5/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=1_ss17=True_das=False_sas=2_don=10-11_reSplitAces=True_hitSplitAces=True_surr=no_peek=False_bj-pays=1.2
+============================
+
+Cut Card (Penetration: 75%) Theoretical Edge %: 1.7668% Cut Card Empiric Edge %: -1.7601%
+CSM (Penetration: 0.0%) Theoretical Edge %: 1.6538% CSM Empiric Edge %: -1.6627%
+CSM Error: -0.0089%, Cut Card Error: 0.0067%
+CSM Speed: 9680730 hands/sec, Cut Card Speed: 11770522 hands/sec
+
+[6/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=2_ss17=False_das=False_sas=3_don=10-11_reSplitAces=False_hitSplitAces=True_surr=yes_peek=True_bj-pays=1.5
+============================
+
+NOTE: surr=yes + peek=True — using the available surr=2-10 theoretical edge as a comparison baseline; edge assertion skipped.
+Cut Card (Penetration: 75%) Theoretical Edge %: 0.5960% Cut Card Empiric Edge %: -0.5978%
+CSM (Penetration: 0.0%) Theoretical Edge %: 0.5330% CSM Empiric Edge %: -0.5297%
+CSM Error: 0.0033%, Cut Card Error: -0.0018%
+CSM Speed: 8092907 hands/sec, Cut Card Speed: 11156481 hands/sec
+
+[7/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=1_ss17=True_das=False_sas=3_don=10-11_reSplitAces=False_hitSplitAces=True_surr=no_peek=True_bj-pays=1.5
+============================
+
+Cut Card (Penetration: 75%) Theoretical Edge %: 0.2477% Cut Card Empiric Edge %: -0.2440%
+CSM (Penetration: 0.0%) Theoretical Edge %: 0.1347% CSM Empiric Edge %: -0.1279%
+CSM Error: 0.0068%, Cut Card Error: 0.0037%
+CSM Speed: 9688327 hands/sec, Cut Card Speed: 11787032 hands/sec
+
+[8/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=2_ss17=False_das=False_sas=4_don=10-11_reSplitAces=False_hitSplitAces=False_surr=2-10_peek=False_bj-pays=1.5
+============================
+
+NOTE: surr=2-10 + peek=False — theoretical table may not match implementation; edge assertion skipped.
+Cut Card (Penetration: 75%) Theoretical Edge %: 0.8562% Cut Card Empiric Edge %: -0.7200%
+CSM (Penetration: 0.0%) Theoretical Edge %: 0.7932% CSM Empiric Edge %: -0.6459%
+CSM Error: 0.1473%, Cut Card Error: 0.1362%
+CSM Speed: 7980910 hands/sec, Cut Card Speed: 10895976 hands/sec
+
+[9/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=6_ss17=True_das=False_sas=2_don=9-11_reSplitAces=True_hitSplitAces=False_surr=2-10_peek=False_bj-pays=1.2
+============================
+
+NOTE: surr=2-10 + peek=False — theoretical table may not match implementation; edge assertion skipped.
+Cut Card (Penetration: 75%) Theoretical Edge %: 2.0798% Cut Card Empiric Edge %: -1.9186%
+CSM (Penetration: 0.0%) Theoretical Edge %: 2.0598% CSM Empiric Edge %: -1.8906%
+CSM Error: 0.1692%, Cut Card Error: 0.1612%
+CSM Speed: 4461736 hands/sec, Cut Card Speed: 11391727 hands/sec
+
+[10/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=6_ss17=True_das=True_sas=2_don=Any_reSplitAces=False_hitSplitAces=True_surr=2-10_peek=False_bj-pays=1.5
+============================
+
+NOTE: surr=2-10 + peek=False — theoretical table may not match implementation; edge assertion skipped.
+Cut Card (Penetration: 75%) Theoretical Edge %: 0.3314% Cut Card Empiric Edge %: -0.1665%
+CSM (Penetration: 0.0%) Theoretical Edge %: 0.3114% CSM Empiric Edge %: -0.1466%
+CSM Error: 0.1648%, Cut Card Error: 0.1649%
+CSM Speed: 4485089 hands/sec, Cut Card Speed: 11638192 hands/sec
+
+[11/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=1_ss17=False_das=True_sas=3_don=9-11_reSplitAces=True_hitSplitAces=True_surr=2-10_peek=False_bj-pays=1.2
+============================
+
+NOTE: surr=2-10 + peek=False — theoretical table may not match implementation; edge assertion skipped.
+Cut Card (Penetration: 75%) Theoretical Edge %: 1.6330% Cut Card Empiric Edge %: -1.5188%
+CSM (Penetration: 0.0%) Theoretical Edge %: 1.5200% CSM Empiric Edge %: -1.3876%
+CSM Error: 0.1324%, Cut Card Error: 0.1143%
+CSM Speed: 8907258 hands/sec, Cut Card Speed: 11460793 hands/sec
+
+[12/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=6_ss17=True_das=True_sas=3_don=Any_reSplitAces=True_hitSplitAces=False_surr=no_peek=False_bj-pays=1.5
+============================
+
+Cut Card (Penetration: 75%) Theoretical Edge %: 0.4922% Cut Card Empiric Edge %: -0.4988%
+CSM (Penetration: 0.0%) Theoretical Edge %: 0.4722% CSM Empiric Edge %: -0.4606%
+CSM Error: 0.0116%, Cut Card Error: -0.0066%
+CSM Speed: 4402862 hands/sec, Cut Card Speed: 11400689 hands/sec
+
+[13/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=6_ss17=True_das=True_sas=4_don=10-11_reSplitAces=True_hitSplitAces=False_surr=2-10_peek=False_bj-pays=1.2
+============================
+
+NOTE: surr=2-10 + peek=False — theoretical table may not match implementation; edge assertion skipped.
+Cut Card (Penetration: 75%) Theoretical Edge %: 1.9471% Cut Card Empiric Edge %: -1.7819%
+CSM (Penetration: 0.0%) Theoretical Edge %: 1.9271% CSM Empiric Edge %: -1.7524%
+CSM Error: 0.1747%, Cut Card Error: 0.1652%
+CSM Speed: 4489056 hands/sec, Cut Card Speed: 11046428 hands/sec
+
+[14/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=1_ss17=False_das=True_sas=4_don=9-11_reSplitAces=True_hitSplitAces=False_surr=yes_peek=True_bj-pays=1.5
+============================
+
+NOTE: surr=yes + peek=True — using the available surr=2-10 theoretical edge as a comparison baseline; edge assertion skipped.
+Cut Card (Penetration: 75%) Theoretical Edge %: 0.2450% Cut Card Empiric Edge %: -0.2686%
+CSM (Penetration: 0.0%) Theoretical Edge %: 0.1320% CSM Empiric Edge %: -0.1387%
+CSM Error: -0.0068%, Cut Card Error: -0.0237%
+CSM Speed: 9319578 hands/sec, Cut Card Speed: 11410575 hands/sec
+
+[15/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=1_ss17=False_das=False_sas=3_don=9-11_reSplitAces=False_hitSplitAces=False_surr=no_peek=True_bj-pays=1.2
+============================
+
+Cut Card (Penetration: 75%) Theoretical Edge %: 1.8449% Cut Card Empiric Edge %: -1.8340%
+CSM (Penetration: 0.0%) Theoretical Edge %: 1.7319% CSM Empiric Edge %: -1.7316%
+CSM Error: 0.0003%, Cut Card Error: 0.0109%
+CSM Speed: 9464140 hands/sec, Cut Card Speed: 11473943 hands/sec
+
+[16/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=1_ss17=False_das=False_sas=4_don=10-11_reSplitAces=True_hitSplitAces=True_surr=no_peek=False_bj-pays=1.2
+============================
+
+Cut Card (Penetration: 75%) Theoretical Edge %: 1.9328% Cut Card Empiric Edge %: -1.9302%
+CSM (Penetration: 0.0%) Theoretical Edge %: 1.8198% CSM Empiric Edge %: -1.8203%
+CSM Error: -0.0005%, Cut Card Error: 0.0026%
+CSM Speed: 9145115 hands/sec, Cut Card Speed: 11371002 hands/sec
+
+[17/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=1_ss17=True_das=True_sas=2_don=Any_reSplitAces=True_hitSplitAces=False_surr=yes_peek=True_bj-pays=1.2
+============================
+
+NOTE: surr=yes + peek=True — using the available surr=2-10 theoretical edge as a comparison baseline; edge assertion skipped.
+Cut Card (Penetration: 75%) Theoretical Edge %: 1.3713% Cut Card Empiric Edge %: -1.3757%
+CSM (Penetration: 0.0%) Theoretical Edge %: 1.2583% CSM Empiric Edge %: -1.2664%
+CSM Error: -0.0081%, Cut Card Error: -0.0044%
+CSM Speed: 9732455 hands/sec, Cut Card Speed: 11932035 hands/sec
+
+[18/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=2_ss17=False_das=True_sas=3_don=9-11_reSplitAces=True_hitSplitAces=True_surr=no_peek=False_bj-pays=1.5
+============================
+
+Cut Card (Penetration: 75%) Theoretical Edge %: 0.5072% Cut Card Empiric Edge %: -0.5069%
+CSM (Penetration: 0.0%) Theoretical Edge %: 0.4442% CSM Empiric Edge %: -0.4529%
+CSM Error: -0.0088%, Cut Card Error: 0.0003%
+CSM Speed: 7987603 hands/sec, Cut Card Speed: 11016370 hands/sec
+
+[19/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=6_ss17=False_das=True_sas=3_don=Any_reSplitAces=True_hitSplitAces=False_surr=yes_peek=True_bj-pays=1.2
+============================
+
+NOTE: surr=yes + peek=True — using the available surr=2-10 theoretical edge as a comparison baseline; edge assertion skipped.
+Cut Card (Penetration: 75%) Theoretical Edge %: 1.8615% Cut Card Empiric Edge %: -1.8597%
+CSM (Penetration: 0.0%) Theoretical Edge %: 1.8415% CSM Empiric Edge %: -1.8405%
+CSM Error: 0.0010%, Cut Card Error: 0.0018%
+CSM Speed: 4666073 hands/sec, Cut Card Speed: 11673106 hands/sec
+
+[20/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=2_ss17=False_das=True_sas=3_don=10-11_reSplitAces=True_hitSplitAces=False_surr=yes_peek=True_bj-pays=1.2
+============================
+
+NOTE: surr=yes + peek=True — using the available surr=2-10 theoretical edge as a comparison baseline; edge assertion skipped.
+Cut Card (Penetration: 75%) Theoretical Edge %: 1.9595% Cut Card Empiric Edge %: -1.9530%
+CSM (Penetration: 0.0%) Theoretical Edge %: 1.8965% CSM Empiric Edge %: -1.9026%
+CSM Error: -0.0061%, Cut Card Error: 0.0065%
+CSM Speed: 8081722 hands/sec, Cut Card Speed: 11016492 hands/sec
+
+[21/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=1_ss17=False_das=False_sas=3_don=10-11_reSplitAces=True_hitSplitAces=True_surr=yes_peek=True_bj-pays=1.2
+============================
+
+NOTE: surr=yes + peek=True — using the available surr=2-10 theoretical edge as a comparison baseline; edge assertion skipped.
+Cut Card (Penetration: 75%) Theoretical Edge %: 1.7828% Cut Card Empiric Edge %: -1.7869%
+CSM (Penetration: 0.0%) Theoretical Edge %: 1.6698% CSM Empiric Edge %: -1.6700%
+CSM Error: -0.0003%, Cut Card Error: -0.0042%
+CSM Speed: 9626955 hands/sec, Cut Card Speed: 11652974 hands/sec
+
+[22/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=1_ss17=False_das=False_sas=4_don=10-11_reSplitAces=False_hitSplitAces=False_surr=no_peek=False_bj-pays=1.2
+============================
+
+Cut Card (Penetration: 75%) Theoretical Edge %: 2.0860% Cut Card Empiric Edge %: -2.0788%
+CSM (Penetration: 0.0%) Theoretical Edge %: 1.9730% CSM Empiric Edge %: -1.9747%
+CSM Error: -0.0017%, Cut Card Error: 0.0072%
+CSM Speed: 9641156 hands/sec, Cut Card Speed: 11633724 hands/sec
+
+[23/3456] 
+=== Starting Regression Test ===
+NUM_ROUNDS:  1000000000
+NUM_THREADS: 5
+Scenario:    decks=2_ss17=True_das=False_sas=3_don=Any_reSplitAces=False_hitSplitAces=False_surr=no_peek=True_bj-pays=1.5
+============================
+

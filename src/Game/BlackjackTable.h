@@ -31,6 +31,9 @@ private:
     Hand dealerHand;
     std::map<Player*, std::vector<Slot>> playerSlots;
     std::map<Player*, double> committedWagers;
+    std::map<Player*, double> initialWagers;
+    std::map<Player*, double> totalWagers;
+    std::map<Player*, double> roundStartingBankrolls;
     std::vector<double> moneyBeforeScratch;
     
     // Helper methods

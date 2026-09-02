@@ -7,7 +7,7 @@ set -Eeuo pipefail
 # The order is intentional: finish all Hi-Lo and QK cases before starting OLS.
 
 readonly PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-readonly COMPARE_BIN="${PROJECT_DIR}/build/bin/CompareCountStrategies"
+readonly COMPARE_BIN="${PROJECT_DIR}/scripts/compare_count_strategies.py"
 readonly ALTERNATING_BIN="${PROJECT_DIR}/build/bin/AlternatingOptimization"
 
 readonly NUM_THREADS=5

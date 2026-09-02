@@ -2,6 +2,107 @@
 #include <limits>
 #include <stdexcept>
 
+namespace {
+
+size_t histogramIndex(double value) {
+    if (!std::isfinite(value) || value >= KellyExposureStatistics::kHistogramMaximum)
+        return KellyExposureStatistics::kHistogramBins - 1;
+    if (value <= 0.0) return 0;
+    return std::min(
+        static_cast<size_t>(value / KellyExposureStatistics::kHistogramBinWidth),
+        KellyExposureStatistics::kRegularHistogramBins - 1);
+}
+
+} // namespace
+
+void KellyExposureStatistics::record(double bankrollBeforeRound,
+                                     double initialWager,
+                                     double totalWager,
+                                     double roundProfit) {
+    ++rounds;
+    if (!std::isfinite(bankrollBeforeRound) || bankrollBeforeRound <= 0.0 ||
+        !std::isfinite(initialWager) || !std::isfinite(totalWager) ||
+        !std::isfinite(roundProfit) || initialWager < 0.0 || totalWager < 0.0) {
+        ++invalidBankrollRounds;
+        return;
+    }
+
+    ++validBankrollRounds;
+    if (totalWager == 0.0) ++zeroWagerRounds;
+
+    const double grossExposure = totalWager / bankrollBeforeRound;
+    const double signedReturn = roundProfit / bankrollBeforeRound;
+    const double absoluteReturn = std::abs(signedReturn);
+    grossExposureSum += grossExposure;
+    grossExposureMaximum = std::max(grossExposureMaximum, grossExposure);
+    absoluteReturnSum += absoluteReturn;
+    absoluteReturnMaximum = std::max(absoluteReturnMaximum, absoluteReturn);
+    signedReturnSum += signedReturn;
+    signedReturnSquaredSum += signedReturn * signedReturn;
+    ++grossExposureHistogram[histogramIndex(grossExposure)];
+    ++absoluteReturnHistogram[histogramIndex(absoluteReturn)];
+
+    size_t wagerMultipleIndex = 0;
+    if (initialWager > 0.0) {
+        const double multiple = totalWager / initialWager;
+        const long long rounded = std::llround(multiple);
+        wagerMultipleIndex = rounded <= 0
+            ? 0
+            : std::min(static_cast<size_t>(rounded), kWagerMultipleBins - 1);
+    }
+    ++wagerMultipleHistogram[wagerMultipleIndex];
+
+    for (size_t i = 0; i < kTailThresholds.size(); ++i) {
+        if (grossExposure >= kTailThresholds[i]) ++grossExposureTailCounts[i];
+        if (absoluteReturn >= kTailThresholds[i]) ++absoluteReturnTailCounts[i];
+    }
+
+    if (signedReturn <= -1.0) {
+        ++invalidLogRounds;
+        return;
+    }
+    const double exact = std::log1p(signedReturn);
+    const double quadratic = signedReturn - 0.5 * signedReturn * signedReturn;
+    const double error = exact - quadratic;
+    exactLogIncrementSum += exact;
+    quadraticLogIncrementSum += quadratic;
+    taylorErrorSum += error;
+    absoluteTaylorErrorSum += std::abs(error);
+    absoluteTaylorErrorMaximum = std::max(absoluteTaylorErrorMaximum, std::abs(error));
+}
+
+KellyExposureStatistics& KellyExposureStatistics::operator+=(
+        const KellyExposureStatistics& other) {
+    rounds += other.rounds;
+    validBankrollRounds += other.validBankrollRounds;
+    invalidBankrollRounds += other.invalidBankrollRounds;
+    zeroWagerRounds += other.zeroWagerRounds;
+    invalidLogRounds += other.invalidLogRounds;
+    grossExposureSum += other.grossExposureSum;
+    grossExposureMaximum = std::max(grossExposureMaximum, other.grossExposureMaximum);
+    absoluteReturnSum += other.absoluteReturnSum;
+    absoluteReturnMaximum = std::max(absoluteReturnMaximum, other.absoluteReturnMaximum);
+    signedReturnSum += other.signedReturnSum;
+    signedReturnSquaredSum += other.signedReturnSquaredSum;
+    exactLogIncrementSum += other.exactLogIncrementSum;
+    quadraticLogIncrementSum += other.quadraticLogIncrementSum;
+    taylorErrorSum += other.taylorErrorSum;
+    absoluteTaylorErrorSum += other.absoluteTaylorErrorSum;
+    absoluteTaylorErrorMaximum =
+        std::max(absoluteTaylorErrorMaximum, other.absoluteTaylorErrorMaximum);
+    for (size_t i = 0; i < kHistogramBins; ++i) {
+        grossExposureHistogram[i] += other.grossExposureHistogram[i];
+        absoluteReturnHistogram[i] += other.absoluteReturnHistogram[i];
+    }
+    for (size_t i = 0; i < kWagerMultipleBins; ++i)
+        wagerMultipleHistogram[i] += other.wagerMultipleHistogram[i];
+    for (size_t i = 0; i < kTailThresholds.size(); ++i) {
+        grossExposureTailCounts[i] += other.grossExposureTailCounts[i];
+        absoluteReturnTailCounts[i] += other.absoluteReturnTailCounts[i];
+    }
+    return *this;
+}
+
 // Constructor
 Player::Player(double initialMoney, std::unique_ptr<Strategy> strat, std::string name)
     : money(initialMoney), strategy(std::move(strat)), name(name) {
@@ -12,21 +113,11 @@ Player::Player(double initialMoney, std::unique_ptr<Strategy> strat, std::string
 
 // Convert a raw State to a StateKey
 StateKey Player::stateToKey(const State& state) const {
-    // Compute raw count as dot product of weights and removed cards
-    double rawCount = 0.0;
-    int totalRemoved = 0;
-    for (int i = 0; i < 13; ++i) {
-        rawCount += countWeights[i] * static_cast<double>(state.removedCards[i]);
-        totalRemoved += state.removedCards[i];
-    }
-
-    // Normalize by remaining decks to get the true count
-    double remainingDecks = static_cast<double>(numDecks * 52 - totalRemoved) / 52.0;
-    double trueCount = (remainingDecks > 0.0) ? (rawCount / remainingDecks) : 0.0;
+    const double selectedCount = countValue(state.removedCards);
 
     // Discretize: round to nearest multiple of countResolution, clamp to [minCount, maxCount]
     int discretizedCount = std::clamp(
-        static_cast<int>(std::round(trueCount / countResolution) * countResolution),
+        static_cast<int>(std::round(selectedCount / countResolution) * countResolution),
         minCount, maxCount);
 
     // Determine hand type — treat as PAIR only if split is actually allowed
@@ -59,28 +150,35 @@ Action Player::getAction(const State& state,
 double Player::getBet(const std::array<int, 13>& removedCards) {
     if (!bettingStrategy) return 1.0;
 
-    int totalRemoved = 0;
-    for (int c : removedCards) totalRemoved += c;
-    double remainingDecks = static_cast<double>(numDecks * 52 - totalRemoved) / 52.0;
-
     BettingContext ctx;
     ctx.bankroll = money;
-
-    if (remainingDecks > 0.0) {
-        double rawCount = 0.0;
-        for (int i = 0; i < 13; ++i)
-            rawCount += countWeights[i] * static_cast<double>(removedCards[i]);
-        double tc = rawCount / remainingDecks;
-        // Discretize to the same resolution used for strategy state keys
-        if (!continuousBettingCount && countResolution > 0.0)
-            tc = std::round(tc / countResolution) * countResolution;
-        ctx.trueCount = tc;
-    } else {
-        ctx.trueCount = 0.0;
-    }
+    ctx.trueCount = countValue(removedCards);
+    if (!continuousBettingCount && countResolution > 0.0)
+        ctx.trueCount = std::round(ctx.trueCount / countResolution) * countResolution;
     ctx.expectedValue = countBias + countFactor * ctx.trueCount;
 
     return bettingStrategy->getBet(ctx);
+}
+
+double Player::countValue(const std::array<int, 13>& removedCards) const {
+    double runningCount = initialCount + initialCountPerDeck * static_cast<double>(numDecks);
+    int totalRemoved = 0;
+    for (int i = 0; i < 13; ++i) {
+        runningCount += countWeights[i] * static_cast<double>(removedCards[i]);
+        totalRemoved += removedCards[i];
+    }
+    if (countNormalization == CountNormalization::RUNNING_COUNT)
+        return runningCount;
+    const double remainingDecks =
+        static_cast<double>(numDecks * 52 - totalRemoved) / 52.0;
+    return remainingDecks > 0.0 ? runningCount / remainingDecks : 0.0;
+}
+
+double Player::bettingSignal(const std::array<int, 13>& removedCards) const {
+    double count = countValue(removedCards);
+    if (!continuousBettingCount && countResolution > 0.0)
+        count = std::round(count / countResolution) * countResolution;
+    return countBias + countFactor * count;
 }
 
 double Player::getLogMoney() const {
@@ -103,6 +201,33 @@ bool Player::canAffordAdditionalWager(double additionalWager,
 
     constexpr double tolerance = 1e-12;
     return additionalWager <= money - committedWager + tolerance;
+}
+
+void Player::setMaximumTotalWagerFraction(double fraction) {
+    if (!std::isfinite(fraction) || fraction < 0.0 || fraction > 1.0) {
+        throw std::invalid_argument(
+            "Maximum total wager fraction must be finite and between 0 and 1");
+    }
+    maximumTotalWagerFraction = fraction;
+}
+
+bool Player::canAffordAdditionalWager(double additionalWager,
+                                     double committedWager,
+                                     double cumulativeWager,
+                                     double bankrollBeforeRound) const {
+    if (!enforceBankrollActionLimits) return true;
+    if (!std::isfinite(additionalWager) || !std::isfinite(committedWager) ||
+        !std::isfinite(cumulativeWager) || !std::isfinite(bankrollBeforeRound) ||
+        additionalWager < 0.0 || committedWager < 0.0 || cumulativeWager < 0.0 ||
+        bankrollBeforeRound < 0.0) {
+        return false;
+    }
+
+    const double tolerance = 1e-12 * std::max(1.0, bankrollBeforeRound);
+    const double maximumTotalWager =
+        bankrollBeforeRound * maximumTotalWagerFraction;
+    return additionalWager <= money - committedWager + tolerance &&
+           cumulativeWager + additionalWager <= maximumTotalWager + tolerance;
 }
 
 // Update the player's money with SARS parameters for learning strategies
@@ -155,11 +280,24 @@ void Player::recordRoundOutcome(double reward) {
     roundRewardSumSq += reward * reward;
 }
 
-void Player::recordRound(const std::array<double, 13>& x, double y) {
+void Player::recordKellyExposure(double bankrollBeforeRound,
+                                 double initialWager,
+                                 double totalWager,
+                                 double roundProfit) {
+    if (!kellyExposureStatsEnabled) return;
+    kellyExposureStats.record(
+        bankrollBeforeRound, initialWager, totalWager, roundProfit);
+}
+
+void Player::recordRound(const std::array<double, 13>& x,
+                         double y,
+                         std::optional<double> observedCount) {
     if (countGraphEnabled) {
-        double trueCount = 0.0;
-        for (int i = 0; i < 13; ++i)
-            trueCount += countWeights[i] * x[i];
+        double trueCount = observedCount.value_or(0.0);
+        if (!observedCount) {
+            for (int i = 0; i < 13; ++i)
+                trueCount += countWeights[i] * x[i];
+        }
         int binIndex = (countGraphResolution > 0.0)
             ? static_cast<int>(std::llround(trueCount / countGraphResolution))
             : static_cast<int>(std::llround(trueCount / 0.25));
@@ -227,6 +365,10 @@ Player& Player::operator+=(const Player& other) {
         roundRewardSum += other.roundRewardSum;
         roundRewardSumSq += other.roundRewardSumSq;
     }
+    if (kellyExposureStatsEnabled || other.kellyExposureStatsEnabled) {
+        kellyExposureStatsEnabled = true;
+        kellyExposureStats += other.kellyExposureStats;
+    }
     return *this;
 }
 
@@ -270,10 +412,16 @@ Player* Player::clone() const {
     p->roundStatsCount = roundStatsCount;
     p->roundRewardSum = roundRewardSum;
     p->roundRewardSumSq = roundRewardSumSq;
+    p->kellyExposureStatsEnabled = kellyExposureStatsEnabled;
+    p->kellyExposureStats = kellyExposureStats;
     if (bettingStrategy) p->bettingStrategy = std::unique_ptr<BettingStrategy>(bettingStrategy->clone());
     p->enforceBankrollActionLimits = enforceBankrollActionLimits;
+    p->maximumTotalWagerFraction = maximumTotalWagerFraction;
     p->countFactor = countFactor;
     p->countBias   = countBias;
     p->continuousBettingCount = continuousBettingCount;
+    p->countNormalization = countNormalization;
+    p->initialCount = initialCount;
+    p->initialCountPerDeck = initialCountPerDeck;
     return p;
 }

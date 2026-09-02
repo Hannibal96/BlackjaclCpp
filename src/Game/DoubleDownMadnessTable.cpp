@@ -26,6 +26,8 @@ DoubleDownMadnessTable::DoubleDownMadnessTable(
     for (auto* player : players) {
         playerHands.emplace(player, Hand{});
         committedWagers.emplace(player, 0.0);
+        totalWagers.emplace(player, 0.0);
+        roundStartingBankrolls.emplace(player, player->getMoney());
     }
 }
 
@@ -92,16 +94,26 @@ void DoubleDownMadnessTable::clearHands() {
     for (auto& [player, hand] : playerHands) {
         hand.clear();
         committedWagers[player] = 0.0;
+        totalWagers[player] = 0.0;
+        roundStartingBankrolls[player] = player->getMoney();
     }
 }
 
 void DoubleDownMadnessTable::collectBets() {
     for (auto* player : players) {
-        const double bet =
+        double bet =
             std::clamp(player->getBet(shoe->getRemovedCards()), minBet, maxBet);
+        if (player->shouldEnforceBankrollActionLimits()) {
+            const double bankroll = std::max(0.0, player->getMoney());
+            bet = std::min(
+                bet, bankroll * player->getMaximumTotalWagerFraction());
+            roundStartingBankrolls[player] = bankroll;
+        }
         playerHands.at(player).setBet(bet);
-        if (player->shouldEnforceBankrollActionLimits())
+        if (player->shouldEnforceBankrollActionLimits()) {
             committedWagers[player] = bet;
+            totalWagers[player] = bet;
+        }
     }
 }
 
@@ -142,7 +154,9 @@ DoubleDownMadnessTable::playersPlay() {
             std::vector<Action> affordableActions = allowedActions;
             if (player->shouldEnforceBankrollActionLimits() &&
                 !player->canAffordAdditionalWager(
-                    hand.getBet(), committedWagers.at(player))) {
+                    hand.getBet(), committedWagers.at(player),
+                    totalWagers.at(player),
+                    roundStartingBankrolls.at(player))) {
                 affordableActions.erase(
                     std::remove(affordableActions.begin(), affordableActions.end(),
                                 Action::DOUBLE_DOWN),
@@ -166,8 +180,10 @@ DoubleDownMadnessTable::playersPlay() {
                 hand.cardCount() == 1 &&
                 hand[0].rank == Rank::ACE;
             if (action == Action::DOUBLE_DOWN) {
-                if (player->shouldEnforceBankrollActionLimits())
+                if (player->shouldEnforceBankrollActionLimits()) {
                     committedWagers[player] += hand.getBet();
+                    totalWagers[player] += hand.getBet();
+                }
                 hand.multiplyBet(2.0f);
             }
             hand.addCard(shoe->dealCard());

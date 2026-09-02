@@ -1,0 +1,45 @@
+
+=== EvaluateCountPolicy ===
+Command:          /home/neria/Desktop/BlackjaclCpp/build/bin/EvaluateCountPolicy --game blackjack --decks 6 --penetration 75 --ss17 false --peek true --surr no --das true --sas 4 --don ANY --rsa false --hsa false --bj 1.2 --count-name hilo --factor 0.005 --bias -0.0199842 --count-normalization true --continuous-betting-count true --policy-file /home/neria/Desktop/BlackjaclCpp/paper_materials/performance-suites/h17c03_5b_hilo_bias_continuous/bj6-5/fixed_0p5pct_d6/full_deviations/full_deviations_strategy.json --eval-rounds 10 --kelly-rounds 1000000 --kelly-measurements 1000 --kelly-min 0.50 --kelly-max 1.00 --kelly-step 0.05 --max-total-wager-fraction 1.0 --num-threads 10 --seed 12345 --output-dir /home/neria/Desktop/BlackjaclCpp/paper_materials/performance-suites/h17c03_5b_hilo_bias_continuous/wizard_edge_wager_caps/bj6-5/d6/max_wager_1p0
+Game:             blackjack
+Scenario:         decks=6_ss17=False_das=True_sas=4_don=Any_reSplitAces=False_hitSplitAces=False_surr=no_peek=True_bj-pays=1.2
+Penetration:      75%
+Count:            named count hilo
+Policy:           policy file /home/neria/Desktop/BlackjaclCpp/paper_materials/performance-suites/h17c03_5b_hilo_bias_continuous/bj6-5/fixed_0p5pct_d6/full_deviations/full_deviations_strategy.json
+Spread:           10 rounds, 1:10
+Kelly:            1000 x 1000000 rounds per multiplier
+Kelly search:     0.5 to 1 step 0.05
+Total wager cap:  1 x round-start bankroll
+Threads:          10
+Seed:             12345
+Output:           /home/neria/Desktop/BlackjaclCpp/paper_materials/performance-suites/h17c03_5b_hilo_bias_continuous/wizard_edge_wager_caps/bj6-5/d6/max_wager_1p0/
+
+Count weights:
+   2  1
+   3  1
+   4  1
+   5  1
+   6  1
+   7  0
+   8  0
+   9  0
+  10  -1
+   J  -1
+   Q  -1
+   K  -1
+   A  -1
+Transform: running = 0 + (0 * decks) + tags; selected=true_count
+Signal f(c) = -0.0199842 + 0.005 * c
+
+Running spread and Kelly evaluations...
+
+=== Result ===
+Spread edge:               -0.0799999952316
+Kelly growth @1:           1.00000175883
+Kelly exposure rounds @1: 1000000000
+Mean gross wager/bankroll: 0.00043217688872
+Max gross wager/bankroll:  0.423443933333
+Mean |fX|:                 0.000393942282576
+Max |fX|:                  0.423443933333
+
+Saved results to /home/neria/Desktop/BlackjaclCpp/paper_materials/performance-suites/h17c03_5b_hilo_bias_continuous/wizard_edge_wager_caps/bj6-5/d6/max_wager_1p0/

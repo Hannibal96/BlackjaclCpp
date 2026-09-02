@@ -8,6 +8,7 @@
 #include "RL/DecayingParameter.h"
 #include "Utils/RunLogger.h"
 #include "Utils/SimulationAnalysis.h"
+#include "Utils/CountPolicyEvaluation.h"
 #include "Utils/Utils.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -93,6 +94,7 @@ struct AlternatingOptimizationApp {
         double evaluationSpreadSecondMoment = 0.0;
         double evaluationKellyGrowth = 1.0;
         double evaluationKellyGrowthStddev = 0.0;
+        KellyExposureStatistics evaluationKellyExposure;
         double handsPerSec = 0.0;
         uint64_t trainingRounds = 0;
     };
@@ -124,6 +126,7 @@ struct AlternatingOptimizationApp {
     struct KellyEvaluationResult {
         double growthMean = 1.0;
         double growthStddev = 0.0;
+        KellyExposureStatistics exposure;
     };
 
     struct EvCountGraphPoint {
@@ -180,6 +183,7 @@ struct AlternatingOptimizationApp {
     static inline CountRegressionConstraint g_count_regression_constraint =
         CountRegressionConstraint::SUM_ZERO_FIXED_W1_BIAS;
     static inline int         g_kelly_measurements  = 10;
+    static inline double      g_maximum_total_wager_fraction = 1.0;
     static inline std::optional<double> g_kelly_fraction_min;
     static inline std::optional<double> g_kelly_fraction_max;
     static inline double      g_kelly_fraction_step = 0.05;
@@ -340,9 +344,18 @@ struct AlternatingOptimizationApp {
             ? json(*g_kelly_fraction_max) : json(nullptr);
         meta["algorithm_config"]["kelly_fraction_step"] = g_kelly_fraction_step;
         meta["algorithm_config"]["kelly_measurements"] = g_kelly_measurements;
+        meta["algorithm_config"]["maximum_total_wager_fraction"] =
+            g_maximum_total_wager_fraction;
+        meta["algorithm_config"]["kelly_rounds_per_measurement"] =
+            kKellyMeasurementRounds;
         meta["algorithm_config"]["initial_count"]["weights"] = ZERO_WEIGHTS;
         meta["algorithm_config"]["initial_count"]["factor"]  = 1.0;
         meta["algorithm_config"]["initial_count"]["bias"]    = 0.0;
+        meta["algorithm_config"]["initial_count"]["continuous_betting_count"] = false;
+        meta["algorithm_config"]["initial_count"]["count_normalization"] =
+            countNormalizationToString(CountNormalization::TRUE_COUNT);
+        meta["algorithm_config"]["initial_count"]["initial_count"] = 0.0;
+        meta["algorithm_config"]["initial_count"]["initial_count_per_deck"] = 0.0;
         meta["algorithm_config"]["learned_count_normalization"] = "ten_value_average";
         meta["algorithm_config"]["learned_count_target_ten_value_tag"] = kTargetTenValueTag;
         meta["algorithm_config"]["count_regression_objective"] =
@@ -453,6 +466,7 @@ struct AlternatingOptimizationApp {
         Rules rules = buildRules(c, 0.0, std::numeric_limits<double>::max());
         double growthSum = 0.0;
         double growthSqSum = 0.0;
+        KellyExposureStatistics exposure;
 
         for (int rep = 0; rep < g_kelly_measurements; ++rep) {
             auto cloned = strategy.clone();
@@ -464,6 +478,9 @@ struct AlternatingOptimizationApp {
             player->setCountRange(strategyMinCount, strategyMaxCount);
             player->setBettingStrategy(std::make_unique<KellyBetting>(kellyFraction));
             player->setEnforceBankrollActionLimits(true);
+            player->setMaximumTotalWagerFraction(
+                g_maximum_total_wager_fraction);
+            player->enableKellyExposureStats();
 
             std::vector<Player*> results =
                 runParallelSimulation(rules, {player}, kKellyMeasurementRounds, g_num_threads);
@@ -480,17 +497,30 @@ struct AlternatingOptimizationApp {
             }
             growthSum += growthRate;
             growthSqSum += growthRate * growthRate;
+            exposure += result->getKellyExposureStats();
             delete result;
         }
 
-        KellyEvaluationResult result;
+        if constexpr (std::is_same_v<Game, BlackjackGame>) {
+            const uint64_t expectedRounds = kKellyMeasurementRounds *
+                static_cast<uint64_t>(g_kelly_measurements);
+            if (exposure.rounds != expectedRounds) {
+                throw std::runtime_error(
+                    "Incomplete Kelly exposure statistics: expected " +
+                    std::to_string(expectedRounds) + ", got " +
+                    std::to_string(exposure.rounds));
+            }
+        }
+
+        KellyEvaluationResult evaluation;
+        evaluation.exposure = std::move(exposure);
         const double n = static_cast<double>(g_kelly_measurements);
-        result.growthMean = growthSum / n;
+        evaluation.growthMean = growthSum / n;
         if (g_kelly_measurements > 1) {
             double sampleVariance = (growthSqSum - (growthSum * growthSum / n)) / (n - 1.0);
-            result.growthStddev = std::sqrt(std::max(0.0, sampleVariance));
+            evaluation.growthStddev = std::sqrt(std::max(0.0, sampleVariance));
         }
-        return result;
+        return evaluation;
     }
 
     static KellyGrowthCurve evaluateKellyGrowthCurve(const std::string& label,
@@ -504,11 +534,19 @@ struct AlternatingOptimizationApp {
         const KellyFractionRange range = resolveKellyFractionRange(
             predictedOptimalFraction, g_kelly_fraction_min, g_kelly_fraction_max,
             g_kelly_fraction_step);
-        for (double fraction : makeKellyFractionGrid(
-                 range.minimum, range.maximum, g_kelly_fraction_step)) {
+        std::vector<double> fractions = makeKellyFractionGrid(
+            range.minimum, range.maximum, g_kelly_fraction_step);
+        if (std::none_of(fractions.begin(), fractions.end(), [](double fraction) {
+                return std::abs(fraction - 1.0) <= 1e-12;
+            })) {
+            fractions.push_back(1.0);
+            std::sort(fractions.begin(), fractions.end());
+        }
+        for (double fraction : fractions) {
             const KellyEvaluationResult result = evaluateKellyGrowth(
                 c, strategy, count, kKellyMeasurementRounds, kKellyInitialMoney, fraction);
-            curve.points.push_back({fraction, result.growthMean, result.growthStddev});
+            curve.points.push_back(
+                {fraction, result.growthMean, result.growthStddev, result.exposure});
         }
         return curve;
     }
@@ -690,6 +728,9 @@ struct AlternatingOptimizationApp {
         j["factor"] = count.system.factor;
         j["bias"] = count.system.bias;
         j["continuous_betting_count"] = count.system.continuousBettingCount;
+        j["count_normalization"] = countNormalizationToString(count.system.normalization);
+        j["initial_count"] = count.system.initialCount;
+        j["initial_count_per_deck"] = count.system.initialCountPerDeck;
         j["resolution"] = count.resolution;
         j["min_count"] = count.minCount;
         j["max_count"] = count.maxCount;
@@ -1296,6 +1337,13 @@ struct AlternatingOptimizationApp {
         count.system.bias = j.value("bias", 0.0);
         count.system.continuousBettingCount =
             j.value("continuous_betting_count", false);
+        const auto normalization = countNormalizationFromString(
+            j.value("count_normalization", std::string("true_count")));
+        if (!normalization)
+            throw std::runtime_error("Invalid count_normalization in checkpoint");
+        count.system.normalization = *normalization;
+        count.system.initialCount = j.value("initial_count", 0.0);
+        count.system.initialCountPerDeck = j.value("initial_count_per_deck", 0.0);
         count.resolution = j.value("resolution", 1.0);
         count.minCount = j.value("min_count", -5);
         count.maxCount = j.value("max_count", 5);
@@ -1473,8 +1521,16 @@ struct AlternatingOptimizationApp {
         }
         g_kelly_fraction_step = a.value("kelly_fraction_step", 0.05);
         g_kelly_measurements = a.value("kelly_measurements", 10);
+        g_maximum_total_wager_fraction =
+            a.value("maximum_total_wager_fraction", 1.0);
         if (g_kelly_measurements < 1)
             throw std::runtime_error("Checkpoint kelly_measurements must be >= 1");
+        if (!std::isfinite(g_maximum_total_wager_fraction) ||
+            g_maximum_total_wager_fraction < 0.0 ||
+            g_maximum_total_wager_fraction > 1.0) {
+            throw std::runtime_error(
+                "Checkpoint maximum_total_wager_fraction must be between 0 and 1");
+        }
         (void)makeKellyFractionGrid(0.0, 0.0, g_kelly_fraction_step);
         if (g_kelly_fraction_min && g_kelly_fraction_max) {
             (void)makeKellyFractionGrid(
@@ -1581,12 +1637,27 @@ struct AlternatingOptimizationApp {
                 artifact.evaluationSpreadSecondMoment;
             summary["evaluation_kelly_growth"] = artifact.evaluationKellyGrowth;
             summary["evaluation_kelly_growth_stddev"] = artifact.evaluationKellyGrowthStddev;
+            if (artifact.evaluationKellyExposure.rounds > 0) {
+                summary["evaluation_kelly_exposure_at_1"] =
+                    kellyExposureStatisticsToJson(artifact.evaluationKellyExposure);
+                std::ofstream(root / (label + "_kelly_exposure_at_1.json"))
+                    << std::setw(2)
+                    << kellyExposureStatisticsToJson(artifact.evaluationKellyExposure)
+                    << "\n";
+                std::ofstream(root / (label + "_kelly_exposure_at_1.csv"))
+                    << kellyExposureStatisticsToCsv(artifact.evaluationKellyExposure);
+                std::ofstream(root / (label + "_kelly_exposure_at_1.svg"))
+                    << kellyExposureStatisticsToSvg(
+                           label + " Kelly exposure at multiplier 1.0",
+                           artifact.evaluationKellyExposure);
+            }
         } else {
             summary["evaluation_edge_spread_1_10"] = nullptr;
             summary["evaluation_edge_spread_1_10_stddev"] = nullptr;
             summary["evaluation_edge_spread_1_10_second_moment"] = nullptr;
             summary["evaluation_kelly_growth"] = nullptr;
             summary["evaluation_kelly_growth_stddev"] = nullptr;
+            summary["evaluation_kelly_exposure_at_1"] = nullptr;
         }
         summary["hands_per_sec"] = artifact.handsPerSec;
         summary["count_config"] = countConfigToJson(count, true);
@@ -1748,6 +1819,18 @@ struct AlternatingOptimizationApp {
             << std::setw(2) << kellyGrowthCurvesToJson(curves) << "\n";
         std::ofstream(root / (label + "_kelly_graph.svg"))
             << kellyGrowthCurvesToSvg(label + " Kelly growth", curves);
+        if (const KellyGrowthPoint* atOne =
+                kellyPointAtFraction(curve, 1.0, 1e-9)) {
+            std::ofstream(root / (label + "_kelly_exposure_at_1.json"))
+                << std::setw(2)
+                << kellyExposureStatisticsToJson(atOne->exposure) << "\n";
+            std::ofstream(root / (label + "_kelly_exposure_at_1.csv"))
+                << kellyExposureStatisticsToCsv(atOne->exposure);
+            std::ofstream(root / (label + "_kelly_exposure_at_1.svg"))
+                << kellyExposureStatisticsToSvg(
+                       label + " Kelly exposure at multiplier 1.0",
+                       atOne->exposure);
+        }
     }
 
     static void saveCumulativeKellyGrowthGraphArtifact(const std::filesystem::path& root,
@@ -1880,6 +1963,7 @@ struct AlternatingOptimizationApp {
                 c, *policy, count, (g_eval_rounds == 0 ? g_num_rounds : g_eval_rounds));
             artifact.evaluationKellyGrowth = kelly.growthMean;
             artifact.evaluationKellyGrowthStddev = kelly.growthStddev;
+            artifact.evaluationKellyExposure = std::move(kelly.exposure);
             artifact.hasCountBettingEvaluation = true;
         }
         artifact.qStrategy = std::move(clonedQ);
@@ -2328,6 +2412,7 @@ struct AlternatingOptimizationApp {
         std::cout << "                                                                      Unit-wager E[X^2 | count]\n";
         std::cout << "    " << kAlternatingCheckpointRoot << "/<folder>/W*_graph_overlay.*    Cumulative W1..Wk comparison graph\n\n";
         std::cout << "    " << kAlternatingCheckpointRoot << "/<folder>/W*_kelly_graph.*     Kelly multiplier sweep\n";
+        std::cout << "    " << kAlternatingCheckpointRoot << "/<folder>/{P,W}*_kelly_exposure_at_1.*  Gross wager and |fX| distributions\n";
         std::cout << "    " << kAlternatingCheckpointRoot << "/<folder>/W*_kelly_graph_overlay.*  Cumulative Kelly comparison\n\n";
 
         std::cout << "SIMULATION:\n";
@@ -2345,6 +2430,7 @@ struct AlternatingOptimizationApp {
         std::cout << "  --sample-every <N>    Record every N-th round for count regression (default: 1)\n";
         std::cout << "                        The count phase plays N * num-rounds rounds to retain about num-rounds samples.\n";
         std::cout << "  --kelly-measurements <N>  Experiments per Kelly fraction, 1,000,000 rounds each (default: 10)\n";
+        std::cout << "  --max-total-wager-fraction <0..1>  Cap cumulative round wagers / starting bankroll (default: 1)\n";
         std::cout << "  --kelly-fraction-min <v>   Override sweep minimum\n";
         std::cout << "  --kelly-fraction-max <v>   Override sweep maximum\n";
         std::cout << "                              Default: nearest step to 1/E[X^2] +/- 0.25, clamped at 0\n";
@@ -2420,6 +2506,10 @@ struct AlternatingOptimizationApp {
         else if (arg == "--penetration"      && i + 1 < argc) g_penetration = std::stod(argv[++i]);
         else if (arg == "--sample-every"     && i + 1 < argc) g_sample_every = std::stoull(argv[++i]);
         else if (arg == "--kelly-measurements" && i + 1 < argc) g_kelly_measurements = std::stoi(argv[++i]);
+        else if ((arg == "--max-total-wager-fraction" || arg == "--max-total-wager") &&
+                 i + 1 < argc) {
+            g_maximum_total_wager_fraction = std::stod(argv[++i]);
+        }
         else if (arg == "--kelly-fraction-min" && i + 1 < argc) g_kelly_fraction_min = std::stod(argv[++i]);
         else if (arg == "--kelly-fraction-max" && i + 1 < argc) g_kelly_fraction_max = std::stod(argv[++i]);
         else if (arg == "--kelly-fraction-step" && i + 1 < argc) g_kelly_fraction_step = std::stod(argv[++i]);
@@ -2494,6 +2584,12 @@ struct AlternatingOptimizationApp {
     std::vector<Case> cases;
     if (g_kelly_measurements < 1) {
         std::cerr << "Error: --kelly-measurements must be >= 1.\n";
+        return 1;
+    }
+    if (!std::isfinite(g_maximum_total_wager_fraction) ||
+        g_maximum_total_wager_fraction < 0.0 ||
+        g_maximum_total_wager_fraction > 1.0) {
+        std::cerr << "Error: --max-total-wager-fraction must be between 0 and 1.\n";
         return 1;
     }
     try {

@@ -8,9 +8,33 @@
 
 // Index mapping: 0=2, 1=3, 2=4, 3=5, 4=6, 5=7, 6=8, 7=9, 8=10, 9=J, 10=Q, 11=K, 12=A
 
-// A counting system describes the signal used for betting:
-//   signal = bias + factor * trueCount
-//   trueCount = dot(weights, removedCards) / remainingDecks
+enum class CountNormalization {
+    TRUE_COUNT,
+    RUNNING_COUNT
+};
+
+inline const char* countNormalizationToString(CountNormalization value) {
+    return value == CountNormalization::RUNNING_COUNT
+        ? "running_count"
+        : "true_count";
+}
+
+inline std::optional<CountNormalization> countNormalizationFromString(
+        std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(), ::tolower);
+    if (value == "true" || value == "true_count" || value == "normalized")
+        return CountNormalization::TRUE_COUNT;
+    if (value == "running" || value == "running_count" || value == "unnormalized")
+        return CountNormalization::RUNNING_COUNT;
+    return std::nullopt;
+}
+
+// A counting system describes the count transform and signal used for betting:
+//   runningCount = initialCount + initialCountPerDeck * numDecks
+//                + dot(weights, removedCards)
+//   count = runningCount / remainingDecks  (TRUE_COUNT)
+//        or runningCount                   (RUNNING_COUNT)
+//   signal = bias + factor * count
 //
 // For OLS-derived systems: set weights = w[0..12], factor = 1.0, bias = w[13].
 //   The weights already encode expectancy directly, so no extra scaling is needed.
@@ -22,11 +46,14 @@ struct CountingSystem {
     double factor = 1.0;               // signal change per unit of true count
     double bias   = 0.0;               // signal at neutral count
     bool continuousBettingCount = false; // true when w'c is a directly fitted wager fraction
+    CountNormalization normalization = CountNormalization::TRUE_COUNT;
+    double initialCount = 0.0;
+    double initialCountPerDeck = 0.0;
 };
 
 namespace CountingMethods {
 
-// No counting — always returns trueCount=0, E[game]=bias.
+// No counting — the selected count is always zero, E[game]=bias.
 inline constexpr std::array<double, 13> None = {};
 
 // Hi-Lo (Thorp): 2-6=+1, 7-9=0, 10/J/Q/K/A=-1  [balanced]

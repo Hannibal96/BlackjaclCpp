@@ -9,8 +9,49 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
+#include <vector>
 #include <algorithm>
 #include <cmath>
+
+struct KellyExposureStatistics {
+    static constexpr double kHistogramBinWidth = 0.001;
+    static constexpr double kHistogramMaximum = 1.0;
+    static constexpr size_t kRegularHistogramBins = 1000;
+    static constexpr size_t kHistogramBins = kRegularHistogramBins + 1; // last is >= 1
+    static constexpr size_t kWagerMultipleBins = 33; // last is >= 32
+    static constexpr std::array<double, 9> kTailThresholds = {
+        0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0
+    };
+
+    uint64_t rounds = 0;
+    uint64_t validBankrollRounds = 0;
+    uint64_t invalidBankrollRounds = 0;
+    uint64_t zeroWagerRounds = 0;
+    uint64_t invalidLogRounds = 0;
+    double grossExposureSum = 0.0;
+    double grossExposureMaximum = 0.0;
+    double absoluteReturnSum = 0.0;
+    double absoluteReturnMaximum = 0.0;
+    double signedReturnSum = 0.0;
+    double signedReturnSquaredSum = 0.0;
+    double exactLogIncrementSum = 0.0;
+    double quadraticLogIncrementSum = 0.0;
+    double taylorErrorSum = 0.0;
+    double absoluteTaylorErrorSum = 0.0;
+    double absoluteTaylorErrorMaximum = 0.0;
+    std::array<uint64_t, kHistogramBins> grossExposureHistogram{};
+    std::array<uint64_t, kHistogramBins> absoluteReturnHistogram{};
+    std::array<uint64_t, kWagerMultipleBins> wagerMultipleHistogram{};
+    std::array<uint64_t, kTailThresholds.size()> grossExposureTailCounts{};
+    std::array<uint64_t, kTailThresholds.size()> absoluteReturnTailCounts{};
+
+    void record(double bankrollBeforeRound,
+                double initialWager,
+                double totalWager,
+                double roundProfit);
+    KellyExposureStatistics& operator+=(const KellyExposureStatistics& other);
+};
 
 enum class RegressionObjective {
     EXPECTED_VALUE_OLS,
@@ -40,14 +81,21 @@ protected:
     // bankroll is already committed to the current round. Kelly simulations
     // enable this; training and fixed/spread edge simulations leave it off.
     bool enforceBankrollActionLimits = false;
+    // Maximum cumulative gross wager in one round, expressed as a fraction of
+    // bankroll immediately before the initial wager. This is deliberately
+    // cumulative: wagers remain part of the limit after a hand busts or settles.
+    double maximumTotalWagerFraction = 1.0;
 
-    // Betting signal = countBias + countFactor * trueCount. Usually this is EV;
+    // Betting signal = countBias + countFactor * selectedCount. Usually this is EV;
     // quadratic-Kelly counts fit the wager fraction directly.
     // For OLS-derived systems: countFactor=1.0, countBias=w[13] (weights already in EV units).
     // For traditional systems (Hi-Lo etc.): countFactor≈0.005, countBias≈-(house edge).
     double countFactor = 1.0;
     double countBias   = 0.0;
     bool continuousBettingCount = false;
+    CountNormalization countNormalization = CountNormalization::TRUE_COUNT;
+    double initialCount = 0.0;
+    double initialCountPerDeck = 0.0;
 
     // Streaming regression accumulation. OLS stores X^T X; quadratic Kelly
     // stores sum(y^2 X^T X). Both store X^T y in Xty.
@@ -77,6 +125,9 @@ protected:
     double roundRewardSum = 0.0;
     double roundRewardSumSq = 0.0;
 
+    bool kellyExposureStatsEnabled = false;
+    KellyExposureStatistics kellyExposureStats;
+
 public:
     // Constructor
     Player(double initialMoney, std::unique_ptr<Strategy> strat, std::string name = "Uzan");
@@ -94,6 +145,9 @@ public:
     // Get bet amount — receives current shoe removed-cards for count-aware sizing.
     // Currently always returns 1.0; override or extend for count-based betting.
     virtual double getBet(const std::array<int, 13>& removedCards);
+
+    double countValue(const std::array<int, 13>& removedCards) const;
+    double bettingSignal(const std::array<int, 13>& removedCards) const;
 
     // Update the player's money with SARS parameters for learning strategies
     void updateMoney(double reward, const State& state, Action action,
@@ -131,8 +185,16 @@ public:
     bool shouldEnforceBankrollActionLimits() const {
         return enforceBankrollActionLimits;
     }
+    void setMaximumTotalWagerFraction(double fraction);
+    double getMaximumTotalWagerFraction() const {
+        return maximumTotalWagerFraction;
+    }
     bool canAffordAdditionalWager(double additionalWager,
                                   double committedWager) const;
+    bool canAffordAdditionalWager(double additionalWager,
+                                  double committedWager,
+                                  double cumulativeWager,
+                                  double bankrollBeforeRound) const;
 
     // Set E[game] model parameters individually or from a CountingSystem.
     void setCountFactor(double f) { countFactor = f; }
@@ -142,6 +204,9 @@ public:
         setCountFactor(cs.factor);
         setCountBias(cs.bias);
         continuousBettingCount = cs.continuousBettingCount;
+        countNormalization = cs.normalization;
+        initialCount = cs.initialCount;
+        initialCountPerDeck = cs.initialCountPerDeck;
     }
 
     // Set card counting weights (rank tags only; resolution is separate)
@@ -178,8 +243,20 @@ public:
     double getRoundRewardSum() const { return roundRewardSum; }
     double getRoundRewardSumSq() const { return roundRewardSumSq; }
 
+    void enableKellyExposureStats() { kellyExposureStatsEnabled = true; }
+    bool isKellyExposureStatsEnabled() const { return kellyExposureStatsEnabled; }
+    void recordKellyExposure(double bankrollBeforeRound,
+                             double initialWager,
+                             double totalWager,
+                             double roundProfit);
+    const KellyExposureStatistics& getKellyExposureStats() const {
+        return kellyExposureStats;
+    }
+
     // Accumulate one round: x = pre-round normalized removed-cards, y = round net outcome
-    void recordRound(const std::array<double, 13>& x, double y);
+    void recordRound(const std::array<double, 13>& x,
+                     double y,
+                     std::optional<double> observedCount = std::nullopt);
 
     const std::array<std::array<double, 14>, 14>& getXtX() const { return XtX; }
     const std::array<double, 14>& getXty() const { return Xty; }

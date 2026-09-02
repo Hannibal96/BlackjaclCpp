@@ -141,6 +141,29 @@ bool BasicStrategy::mergeFromFile(const std::string& filepath) {
     }
 }
 
+void BasicStrategy::mergeFromStrategy(const BasicStrategy& other) {
+    if (!other.lookupTable) return;
+    if (!lookupTable) {
+        lookupTable = std::make_shared<std::map<
+            int,
+            std::map<HandType, std::map<int, std::map<int, ActionWithFallback>>>>>();
+    } else if (!lookupTable.unique()) {
+        lookupTable = std::make_shared<std::map<
+            int,
+            std::map<HandType, std::map<int, std::map<int, ActionWithFallback>>>>>(
+                *lookupTable);
+    }
+    for (const auto& [count, handTypes] : *other.lookupTable) {
+        for (const auto& [handType, playerSums] : handTypes) {
+            for (const auto& [playerSum, dealerCards] : playerSums) {
+                for (const auto& [dealerCard, action] : dealerCards) {
+                    (*lookupTable)[count][handType][playerSum][dealerCard] = action;
+                }
+            }
+        }
+    }
+}
+
 Action BasicStrategy::getAction(const StateKey& key, const std::vector<Action>& allowedActions) {
     const auto& [count, handType, playerSum, dealerValue] = key;
 

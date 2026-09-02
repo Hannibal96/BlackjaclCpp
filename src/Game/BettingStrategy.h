@@ -9,7 +9,9 @@
 
 // Pre-computed values passed from Player to BettingStrategy each round.
 struct BettingContext {
-    double trueCount;     // dot(countWeights, removedCards) / remainingDecks
+    // Selected count value. This is a true count or running count according to
+    // the CountingSystem configured on the player.
+    double trueCount;
     double expectedValue; // EV estimate, or a directly fitted wager fraction for quadratic Kelly
     double bankroll;      // player's current money
 };
@@ -21,7 +23,7 @@ public:
     virtual BettingStrategy* clone() const = 0;
 };
 
-// Step-function bet sizing keyed on true count.
+// Step-function bet sizing keyed on the selected true or running count.
 // Format: sorted (threshold, betAmount) pairs.
 // Semantics: return the bet for the highest threshold that the count strictly exceeds.
 //   "1:10"        → count > 1: bet 10; count <= 1: return 0 (table clamps to minBet)
@@ -65,6 +67,33 @@ public:
 
     BettingStrategy* clone() const override {
         return new SpreadBetting(steps_);
+    }
+};
+
+// Two-level spread keyed directly on the configured betting signal. Unlike a
+// count-threshold spread, this remains correct when f(c)=b+a*c has a negative
+// slope. The table supplies the low bet through minBet when this returns zero.
+class PositiveSignalSpreadBetting : public BettingStrategy {
+    double highBet_;
+    bool includeZero_;
+
+public:
+    explicit PositiveSignalSpreadBetting(double highBet, bool includeZero = true)
+        : highBet_(highBet), includeZero_(includeZero) {
+        if (!std::isfinite(highBet_) || highBet_ < 0.0)
+            throw std::invalid_argument(
+                "PositiveSignalSpreadBetting: high bet must be finite and non-negative");
+    }
+
+    double getBet(const BettingContext& ctx) const override {
+        const bool positive = includeZero_
+            ? ctx.expectedValue >= 0.0
+            : ctx.expectedValue > 0.0;
+        return positive ? highBet_ : 0.0;
+    }
+
+    BettingStrategy* clone() const override {
+        return new PositiveSignalSpreadBetting(highBet_, includeZero_);
     }
 };
 

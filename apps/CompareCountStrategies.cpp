@@ -8,6 +8,7 @@
 #include "RL/DecayingParameter.h"
 #include "Utils/RunLogger.h"
 #include "Utils/SimulationAnalysis.h"
+#include "Utils/CountPolicyEvaluation.h"
 #include "Utils/Utils.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -81,6 +82,7 @@ struct CompareCountStrategiesApp {
     struct KellyEvaluationResult {
         double growthMean = 1.0;
         double growthStddev = 0.0;
+        KellyExposureStatistics exposure;
     };
 
     struct EvCountGraphPoint {
@@ -110,6 +112,9 @@ struct CompareCountStrategiesApp {
         double factor = 1.0;
         double bias = 0.0;
         bool continuousBettingCount = false;
+        CountNormalization normalization = CountNormalization::TRUE_COUNT;
+        double initialCount = 0.0;
+        double initialCountPerDeck = 0.0;
         double resolution = 1.0;
         int    minCount   = 0;
         int    maxCount   = 0;
@@ -121,6 +126,7 @@ struct CompareCountStrategiesApp {
     static inline int         g_num_threads  = 10;
     static inline double      g_penetration  = 75.0;
     static inline int         g_kelly_measurements = 10;
+    static inline double      g_maximum_total_wager_fraction = 1.0;
     static inline std::optional<double> g_kelly_fraction_min;
     static inline std::optional<double> g_kelly_fraction_max;
     static inline double      g_kelly_fraction_step = 0.05;
@@ -745,6 +751,7 @@ struct CompareCountStrategiesApp {
         Rules rules = buildRules(c, 0.0, std::numeric_limits<double>::max());
         double growthSum = 0.0;
         double growthSqSum = 0.0;
+        KellyExposureStatistics exposure;
         for (int rep = 0; rep < g_kelly_measurements; ++rep) {
             auto* player = new Player(1.0, strategy.clone());
             player->setNumDecks(c.deckSize);
@@ -754,6 +761,9 @@ struct CompareCountStrategiesApp {
             player->setCountRange(strategyMinCount, strategyMaxCount);
             player->setBettingStrategy(std::make_unique<KellyBetting>(kellyFraction));
             player->setEnforceBankrollActionLimits(true);
+            player->setMaximumTotalWagerFraction(
+                g_maximum_total_wager_fraction);
+            player->enableKellyExposureStats();
 
             std::vector<Player*> results =
                 runParallelSimulation(rules, {player}, kKellyMeasurementRounds, g_num_threads);
@@ -768,17 +778,30 @@ struct CompareCountStrategiesApp {
                 : 0.0;
             growthSum += growthRate;
             growthSqSum += growthRate * growthRate;
+            exposure += result->getKellyExposureStats();
             delete result;
         }
 
-        KellyEvaluationResult result;
+        if constexpr (std::is_same_v<Game, BlackjackGame>) {
+            const uint64_t expectedRounds = kKellyMeasurementRounds *
+                static_cast<uint64_t>(g_kelly_measurements);
+            if (exposure.rounds != expectedRounds) {
+                throw std::runtime_error(
+                    "Incomplete Kelly exposure statistics: expected " +
+                    std::to_string(expectedRounds) + ", got " +
+                    std::to_string(exposure.rounds));
+            }
+        }
+
+        KellyEvaluationResult evaluation;
+        evaluation.exposure = std::move(exposure);
         const double n = static_cast<double>(g_kelly_measurements);
-        result.growthMean = growthSum / n;
+        evaluation.growthMean = growthSum / n;
         if (g_kelly_measurements > 1) {
             double sampleVariance = (growthSqSum - (growthSum * growthSum / n)) / (n - 1.0);
-            result.growthStddev = std::sqrt(std::max(0.0, sampleVariance));
+            evaluation.growthStddev = std::sqrt(std::max(0.0, sampleVariance));
         }
-        return result;
+        return evaluation;
     }
 
     static KellyGrowthCurve evaluateKellyGrowthCurve(const std::string& label,
@@ -792,11 +815,19 @@ struct CompareCountStrategiesApp {
         const KellyFractionRange range = resolveKellyFractionRange(
             predictedOptimalFraction, g_kelly_fraction_min, g_kelly_fraction_max,
             g_kelly_fraction_step);
-        for (double fraction : makeKellyFractionGrid(
-                 range.minimum, range.maximum, g_kelly_fraction_step)) {
+        std::vector<double> fractions = makeKellyFractionGrid(
+            range.minimum, range.maximum, g_kelly_fraction_step);
+        if (std::none_of(fractions.begin(), fractions.end(), [](double fraction) {
+                return std::abs(fraction - 1.0) <= 1e-12;
+            })) {
+            fractions.push_back(1.0);
+            std::sort(fractions.begin(), fractions.end());
+        }
+        for (double fraction : fractions) {
             const KellyEvaluationResult result =
                 evaluateKellyGrowth(label, c, strategy, count, fraction);
-            curve.points.push_back({fraction, result.growthMean, result.growthStddev});
+            curve.points.push_back(
+                {fraction, result.growthMean, result.growthStddev, result.exposure});
         }
         return curve;
     }
@@ -1007,6 +1038,13 @@ struct CompareCountStrategiesApp {
         outCount.bias = countJson.at("bias").get<double>();
         outCount.continuousBettingCount =
             countJson.value("continuous_betting_count", false);
+        const auto normalization = countNormalizationFromString(
+            countJson.value("count_normalization", std::string("true_count")));
+        if (!normalization)
+            throw std::runtime_error("Invalid count_normalization in checkpoint count");
+        outCount.normalization = *normalization;
+        outCount.initialCount = countJson.value("initial_count", 0.0);
+        outCount.initialCountPerDeck = countJson.value("initial_count_per_deck", 0.0);
         outCount.resolution = countJson.at("resolution").get<double>();
         outCount.minCount = countJson.at("min_count").get<int>();
         outCount.maxCount = countJson.at("max_count").get<int>();
@@ -1065,6 +1103,10 @@ struct CompareCountStrategiesApp {
         meta["count"]["factor"] = count.system.factor;
         meta["count"]["bias"] = count.system.bias;
         meta["count"]["continuous_betting_count"] = count.system.continuousBettingCount;
+        meta["count"]["count_normalization"] =
+            countNormalizationToString(count.system.normalization);
+        meta["count"]["initial_count"] = count.system.initialCount;
+        meta["count"]["initial_count_per_deck"] = count.system.initialCountPerDeck;
         meta["count"]["resolution"] = count.resolution;
         meta["count"]["min_count"] = count.minCount;
         meta["count"]["max_count"] = count.maxCount;
@@ -1094,6 +1136,13 @@ struct CompareCountStrategiesApp {
         outCount.factor = countJson.at("factor").get<double>();
         outCount.bias = countJson.at("bias").get<double>();
         outCount.continuousBettingCount = countJson.value("continuous_betting_count", false);
+        const auto normalization = countNormalizationFromString(
+            countJson.value("count_normalization", std::string("true_count")));
+        if (!normalization)
+            throw std::runtime_error("Invalid count_normalization in strategy checkpoint");
+        outCount.normalization = *normalization;
+        outCount.initialCount = countJson.value("initial_count", 0.0);
+        outCount.initialCountPerDeck = countJson.value("initial_count_per_deck", 0.0);
         outCount.resolution = countJson.at("resolution").get<double>();
         outCount.minCount = countJson.at("min_count").get<int>();
         outCount.maxCount = countJson.at("max_count").get<int>();
@@ -1188,6 +1237,8 @@ struct CompareCountStrategiesApp {
         std::cout << "Eval rounds:   " << evalRounds << "  Threads: " << g_num_threads << "\n";
         std::cout << "Graph rounds:  " << graphRounds << "\n";
         std::cout << "Kelly eval:    " << g_kelly_measurements << " x " << kKellyMeasurementRounds << " rounds\n";
+        std::cout << "Wager cap:     " << g_maximum_total_wager_fraction
+                  << " x round-start bankroll\n";
         std::cout << "Kelly sweep:   centered at nearest step to 1/E[X^2] +/- 0.25 (minimum 0)";
         if (g_kelly_fraction_min) std::cout << "  min override=" << *g_kelly_fraction_min;
         if (g_kelly_fraction_max) std::cout << "  max override=" << *g_kelly_fraction_max;
@@ -1215,6 +1266,9 @@ struct CompareCountStrategiesApp {
             checkpointCount.system.bias = ckptCount.bias;
             checkpointCount.system.continuousBettingCount =
                 ckptCount.continuousBettingCount;
+            checkpointCount.system.normalization = ckptCount.normalization;
+            checkpointCount.system.initialCount = ckptCount.initialCount;
+            checkpointCount.system.initialCountPerDeck = ckptCount.initialCountPerDeck;
             checkpointCount.resolution = ckptCount.resolution;
             checkpointCount.minCount = ckptCount.minCount;
             checkpointCount.maxCount = ckptCount.maxCount;
@@ -1238,6 +1292,10 @@ struct CompareCountStrategiesApp {
                 !approxEqual(ckptCount.bias, requestedCount.system.bias) ||
                 ckptCount.continuousBettingCount !=
                     requestedCount.system.continuousBettingCount ||
+                ckptCount.normalization != requestedCount.system.normalization ||
+                !approxEqual(ckptCount.initialCount, requestedCount.system.initialCount) ||
+                !approxEqual(ckptCount.initialCountPerDeck,
+                             requestedCount.system.initialCountPerDeck) ||
                 !approxEqual(ckptCount.resolution, requestedCount.resolution) ||
                 ckptCount.minCount != requestedCount.minCount ||
                 ckptCount.maxCount != requestedCount.maxCount) {
@@ -1259,6 +1317,9 @@ struct CompareCountStrategiesApp {
             checkpointCount.system.bias = ckptCount.bias;
             checkpointCount.system.continuousBettingCount =
                 ckptCount.continuousBettingCount;
+            checkpointCount.system.normalization = ckptCount.normalization;
+            checkpointCount.system.initialCount = ckptCount.initialCount;
+            checkpointCount.system.initialCountPerDeck = ckptCount.initialCountPerDeck;
             checkpointCount.resolution = ckptCount.resolution;
             checkpointCount.minCount = ckptCount.minCount;
             checkpointCount.maxCount = ckptCount.maxCount;
@@ -1281,6 +1342,10 @@ struct CompareCountStrategiesApp {
                 !approxEqual(ckptCount.bias, requestedCount.system.bias) ||
                 ckptCount.continuousBettingCount !=
                     requestedCount.system.continuousBettingCount ||
+                ckptCount.normalization != requestedCount.system.normalization ||
+                !approxEqual(ckptCount.initialCount, requestedCount.system.initialCount) ||
+                !approxEqual(ckptCount.initialCountPerDeck,
+                             requestedCount.system.initialCountPerDeck) ||
                 !approxEqual(ckptCount.resolution, requestedCount.resolution) ||
                 ckptCount.minCount != requestedCount.minCount ||
                 ckptCount.maxCount != requestedCount.maxCount) {
@@ -1385,6 +1450,23 @@ struct CompareCountStrategiesApp {
             << std::setw(2) << kellyGrowthCurvesToJson(kellyCurves) << "\n";
         std::ofstream(logger.pathFor("kelly_fraction_graph.svg"))
             << kellyGrowthCurvesToSvg("Kelly growth by strategy", kellyCurves);
+        json exposureAtOne;
+        exposureAtOne["definitions"] =
+            "Kelly wager distributions aggregated across every measurement at multiplier 1.0";
+        exposureAtOne["policies"] = json::array();
+        for (const auto& curve : kellyCurves) {
+            const KellyGrowthPoint* atOne =
+                kellyPointAtFraction(curve, 1.0, 1e-9);
+            if (atOne == nullptr) continue;
+            exposureAtOne["policies"].push_back({
+                {"label", curve.label},
+                {"growth_mean", atOne->growthMean},
+                {"growth_stddev", atOne->growthStddev},
+                {"exposure", kellyExposureStatisticsToJson(atOne->exposure)}
+            });
+        }
+        std::ofstream(logger.pathFor("kelly_exposure_at_1.json"))
+            << std::setw(2) << exposureAtOne << "\n";
 
         std::cout << "\nSaved artifacts:\n";
         std::cout << "  " << logger.pathFor("run.log").string() << "\n";
@@ -1396,6 +1478,7 @@ struct CompareCountStrategiesApp {
         std::cout << "  " << logger.pathFor("second_moment_count_graph.svg").string() << "\n";
         std::cout << "  " << logger.pathFor("kelly_fraction_graph.json").string() << "\n";
         std::cout << "  " << logger.pathFor("kelly_fraction_graph.svg").string() << "\n";
+        std::cout << "  " << logger.pathFor("kelly_exposure_at_1.json").string() << "\n";
         if (savedFreshStrategyCheckpoint) {
             std::cout << "  " << logger.pathFor("full_deviations_strategy.json").string()
                       << "  (reload with --strategy-checkpoint " << outputPath.string() << ")\n";
@@ -1427,6 +1510,7 @@ struct CompareCountStrategiesApp {
         std::cout << "  --num-threads <N>      Threads (default: 10)\n";
         std::cout << "  --penetration <val>    Shoe penetration % (default: 75.0)\n";
         std::cout << "  --kelly-measurements <N>  Experiments per Kelly fraction, 1,000,000 rounds each (default: 10)\n\n";
+        std::cout << "  --max-total-wager-fraction <0..1>  Cap cumulative round wagers / starting bankroll (default: 1)\n";
         std::cout << "  --kelly-fraction-min <v>   Override sweep minimum\n";
         std::cout << "  --kelly-fraction-max <v>   Override sweep maximum\n";
         std::cout << "                              Default: nearest step to 1/E[X^2] +/- 0.25, clamped at 0\n";
@@ -1470,7 +1554,7 @@ struct CompareCountStrategiesApp {
         std::cout << "  --output-dir <path>         Write this run directly to path\n\n";
         std::cout << "  Logs and graph artifacts are saved under " << kCompareCheckpointRoot << "/<run-name>/\n";
         std::cout << "  Files include run.log, EV/count, unit-wager conditional second-moment,\n";
-        std::cout << "  histogram, and kelly_fraction_graph artifacts.\n\n";
+        std::cout << "  histogram, kelly_fraction_graph, and kelly_exposure_at_1 artifacts.\n\n";
 
         std::cout << "GAME CONFIG:\n";
         std::cout << "  --decks <list>          Deck counts (default: [6])\n";
@@ -1492,6 +1576,10 @@ struct CompareCountStrategiesApp {
         else if (arg == "--num-threads"      && i+1<argc) g_num_threads = std::stoi(argv[++i]);
         else if (arg == "--penetration"      && i+1<argc) g_penetration = std::stod(argv[++i]);
         else if (arg == "--kelly-measurements" && i+1<argc) g_kelly_measurements = std::stoi(argv[++i]);
+        else if ((arg == "--max-total-wager-fraction" || arg == "--max-total-wager") &&
+                 i+1<argc) {
+            g_maximum_total_wager_fraction = std::stod(argv[++i]);
+        }
         else if (arg == "--kelly-fraction-min" && i+1<argc) g_kelly_fraction_min = std::stod(argv[++i]);
         else if (arg == "--kelly-fraction-max" && i+1<argc) g_kelly_fraction_max = std::stod(argv[++i]);
         else if (arg == "--kelly-fraction-step" && i+1<argc) g_kelly_fraction_step = std::stod(argv[++i]);
@@ -1562,6 +1650,12 @@ struct CompareCountStrategiesApp {
     }
     if (g_kelly_measurements < 1) {
         std::cerr << "Error: --kelly-measurements must be >= 1.\n";
+        return 1;
+    }
+    if (!std::isfinite(g_maximum_total_wager_fraction) ||
+        g_maximum_total_wager_fraction < 0.0 ||
+        g_maximum_total_wager_fraction > 1.0) {
+        std::cerr << "Error: --max-total-wager-fraction must be between 0 and 1.\n";
         return 1;
     }
     try {

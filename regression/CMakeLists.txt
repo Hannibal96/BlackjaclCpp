@@ -75,3 +75,32 @@ target_include_directories(CountQuantizationTest
         ${CMAKE_SOURCE_DIR}/include
 )
 set_property(TARGET CountQuantizationTest PROPERTY CXX_STANDARD 20)
+
+add_executable(KellyExposureTest
+    ${CMAKE_CURRENT_SOURCE_DIR}/KellyExposureTest.cpp
+)
+target_link_libraries(KellyExposureTest
+    PRIVATE
+        $<TARGET_OBJECTS:blackjack_objs>
+)
+target_include_directories(KellyExposureTest
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+)
+set_property(TARGET KellyExposureTest PROPERTY CXX_STANDARD 20)
+
+add_executable(CountPolicyEvaluationTest
+    ${CMAKE_CURRENT_SOURCE_DIR}/CountPolicyEvaluationTest.cpp
+)
+target_link_libraries(CountPolicyEvaluationTest
+    PRIVATE
+        $<TARGET_OBJECTS:blackjack_objs>
+)
+target_include_directories(CountPolicyEvaluationTest
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+set_property(TARGET CountPolicyEvaluationTest PROPERTY CXX_STANDARD 20)

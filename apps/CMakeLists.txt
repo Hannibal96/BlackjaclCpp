@@ -57,3 +57,20 @@ target_include_directories(QuantizationEffect
         ${CMAKE_SOURCE_DIR}/regression
 )
 set_property(TARGET QuantizationEffect PROPERTY CXX_STANDARD 20)
+
+# EvaluateCountPolicy — authoritative fixed count + fixed policy evaluator.
+# Higher-level comparison and quantization workflows orchestrate this binary.
+add_executable(EvaluateCountPolicy
+    ${CMAKE_CURRENT_SOURCE_DIR}/EvaluateCountPolicy.cpp
+)
+target_link_libraries(EvaluateCountPolicy
+    PRIVATE
+        $<TARGET_OBJECTS:blackjack_objs>
+)
+target_include_directories(EvaluateCountPolicy
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/regression
+)
+set_property(TARGET EvaluateCountPolicy PROPERTY CXX_STANDARD 20)

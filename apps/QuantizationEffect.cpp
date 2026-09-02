@@ -50,6 +50,7 @@ struct QuantizationEffectApp {
     struct KellyEvaluationResult {
         double growthMean = 1.0;
         double growthStddev = 0.0;
+        KellyExposureStatistics exposure;
     };
 
     struct Evaluation {
@@ -77,6 +78,7 @@ struct QuantizationEffectApp {
     static inline std::optional<double> g_kelly_minimum_override;
     static inline std::optional<double> g_kelly_maximum_override;
     static inline std::optional<double> g_kelly_step_override;
+    static inline std::optional<double> g_maximum_total_wager_fraction_override;
     static inline std::optional<uint64_t> g_seed;
 
     static inline uint64_t g_eval_rounds = 0;
@@ -86,6 +88,7 @@ struct QuantizationEffectApp {
     static inline double g_kelly_minimum = kDefaultKellyMinimum;
     static inline double g_kelly_maximum = kDefaultKellyMaximum;
     static inline double g_kelly_step = kDefaultKellyStep;
+    static inline double g_maximum_total_wager_fraction = 1.0;
     static inline double g_penetration = 75.0;
 
     static std::string currentTimestamp() {
@@ -226,6 +229,13 @@ struct QuantizationEffectApp {
         count.system.bias = stored.value("bias", 0.0);
         count.system.continuousBettingCount =
             stored.value("continuous_betting_count", false);
+        const auto normalization = countNormalizationFromString(
+            stored.value("count_normalization", std::string("true_count")));
+        if (!normalization)
+            throw std::runtime_error("Invalid count_normalization in " + countLabel + ".json");
+        count.system.normalization = *normalization;
+        count.system.initialCount = stored.value("initial_count", 0.0);
+        count.system.initialCountPerDeck = stored.value("initial_count_per_deck", 0.0);
         count.resolution = stored.value("resolution", 1.0);
         count.minCount = stored.value("min_count", -5);
         count.maxCount = stored.value("max_count", 5);
@@ -339,12 +349,16 @@ struct QuantizationEffectApp {
             gameCase, g_penetration, 0.0, std::numeric_limits<double>::max());
         double sum = 0.0;
         double sumSquares = 0.0;
+        KellyExposureStatistics exposure;
 
         for (int measurement = 0; measurement < g_kelly_measurements; ++measurement) {
             auto* player = new Player(1.0, policy.clone());
             configurePlayer(*player, gameCase, policy, count);
             player->setBettingStrategy(std::make_unique<KellyBetting>(multiplier));
             player->setEnforceBankrollActionLimits(true);
+            player->setMaximumTotalWagerFraction(
+                g_maximum_total_wager_fraction);
+            player->enableKellyExposureStats();
 
             const uint64_t stream = 0x4b454c4c59000000ULL
                 + static_cast<uint64_t>(multiplierIndex) *
@@ -365,18 +379,29 @@ struct QuantizationEffectApp {
                 : 0.0;
             sum += growth;
             sumSquares += growth * growth;
+            exposure += result->getKellyExposureStats();
             delete result;
         }
 
-        KellyEvaluationResult result;
+        const uint64_t expectedRounds = g_kelly_rounds *
+            static_cast<uint64_t>(g_kelly_measurements);
+        if (exposure.rounds != expectedRounds) {
+            throw std::runtime_error(
+                "Incomplete Kelly exposure statistics: expected " +
+                std::to_string(expectedRounds) + ", got " +
+                std::to_string(exposure.rounds));
+        }
+
+        KellyEvaluationResult evaluation;
+        evaluation.exposure = std::move(exposure);
         const double measurements = static_cast<double>(g_kelly_measurements);
-        result.growthMean = sum / measurements;
+        evaluation.growthMean = sum / measurements;
         if (g_kelly_measurements > 1) {
             const double sampleVariance =
                 (sumSquares - sum * sum / measurements) / (measurements - 1.0);
-            result.growthStddev = std::sqrt(std::max(0.0, sampleVariance));
+            evaluation.growthStddev = std::sqrt(std::max(0.0, sampleVariance));
         }
-        return result;
+        return evaluation;
     }
 
     static KellyGrowthCurve evaluateKellyCurve(const Case& gameCase,
@@ -386,8 +411,14 @@ struct QuantizationEffectApp {
         KellyGrowthCurve curve;
         curve.label = "quantum=" + formatNumber(quantum);
         curve.predictedOptimalFraction = 1.0;
-        const auto multipliers = makeKellyFractionGrid(
+        auto multipliers = makeKellyFractionGrid(
             g_kelly_minimum, g_kelly_maximum, g_kelly_step);
+        if (std::none_of(multipliers.begin(), multipliers.end(), [](double multiplier) {
+                return std::abs(multiplier - 1.0) <= 1e-12;
+            })) {
+            multipliers.push_back(1.0);
+            std::sort(multipliers.begin(), multipliers.end());
+        }
         for (size_t index = 0; index < multipliers.size(); ++index) {
             const double multiplier = multipliers[index];
             std::cout << "  Kelly multiplier " << formatNumber(multiplier)
@@ -395,7 +426,7 @@ struct QuantizationEffectApp {
             const KellyEvaluationResult result =
                 evaluateKelly(gameCase, policy, count, multiplier, index);
             curve.points.push_back(
-                {multiplier, result.growthMean, result.growthStddev});
+                {multiplier, result.growthMean, result.growthStddev, result.exposure});
         }
         return curve;
     }
@@ -444,16 +475,20 @@ struct QuantizationEffectApp {
         result["search_step"] = g_kelly_step;
         result["points"] = json::array();
         for (const auto& point : curve.points) {
-            result["points"].push_back({
+            json pointJson = {
                 {"multiplier", point.fraction},
                 {"growth_mean", point.growthMean},
                 {"growth_stddev", point.growthStddev}
-            });
+            };
+            if (point.exposure.rounds > 0)
+                pointJson["exposure"] = kellyExposureStatisticsToJson(point.exposure);
+            result["points"].push_back(std::move(pointJson));
         }
         if (const auto* atOne = pointAtOne(curve)) {
             result["at_multiplier_1"] = {
                 {"growth_mean", atOne->growthMean},
-                {"growth_stddev", atOne->growthStddev}
+                {"growth_stddev", atOne->growthStddev},
+                {"exposure", kellyExposureStatisticsToJson(atOne->exposure)}
             };
         } else {
             result["at_multiplier_1"] = nullptr;
@@ -489,6 +524,7 @@ struct QuantizationEffectApp {
             {"kelly_multiplier_minimum", g_kelly_minimum},
             {"kelly_multiplier_maximum", g_kelly_maximum},
             {"kelly_multiplier_step", g_kelly_step},
+            {"maximum_total_wager_fraction", g_maximum_total_wager_fraction},
             {"seed", g_seed ? json(*g_seed) : json(nullptr)},
             {"common_random_seeds_across_quantization_levels", g_seed.has_value()}
         };
@@ -498,6 +534,9 @@ struct QuantizationEffectApp {
             {"factor", sourceCount.system.factor},
             {"bias", sourceCount.system.bias},
             {"continuous_betting_count", sourceCount.system.continuousBettingCount},
+            {"count_normalization", countNormalizationToString(sourceCount.system.normalization)},
+            {"initial_count", sourceCount.system.initialCount},
+            {"initial_count_per_deck", sourceCount.system.initialCountPerDeck},
             {"resolution", sourceCount.resolution},
             {"min_count", sourceCount.minCount},
             {"max_count", sourceCount.maxCount}
@@ -728,6 +767,8 @@ struct QuantizationEffectApp {
         g_kelly_minimum = kDefaultKellyMinimum;
         g_kelly_maximum = kDefaultKellyMaximum;
         g_kelly_step = kDefaultKellyStep;
+        g_maximum_total_wager_fraction =
+            algorithm.value("maximum_total_wager_fraction", 1.0);
 
         if (g_eval_rounds_override) g_eval_rounds = *g_eval_rounds_override;
         if (g_num_threads_override) g_num_threads = *g_num_threads_override;
@@ -737,6 +778,10 @@ struct QuantizationEffectApp {
         if (g_kelly_minimum_override) g_kelly_minimum = *g_kelly_minimum_override;
         if (g_kelly_maximum_override) g_kelly_maximum = *g_kelly_maximum_override;
         if (g_kelly_step_override) g_kelly_step = *g_kelly_step_override;
+        if (g_maximum_total_wager_fraction_override) {
+            g_maximum_total_wager_fraction =
+                *g_maximum_total_wager_fraction_override;
+        }
 
         if (g_eval_rounds == 0 || g_kelly_rounds == 0)
             throw std::invalid_argument("Evaluation and Kelly rounds must be positive");
@@ -748,6 +793,12 @@ struct QuantizationEffectApp {
         }
         if (g_kelly_measurements < 1)
             throw std::invalid_argument("Kelly measurements must be at least 1");
+        if (!std::isfinite(g_maximum_total_wager_fraction) ||
+            g_maximum_total_wager_fraction < 0.0 ||
+            g_maximum_total_wager_fraction > 1.0) {
+            throw std::invalid_argument(
+                "Maximum total wager fraction must be between 0 and 1");
+        }
         (void)makeKellyFractionGrid(g_kelly_minimum, g_kelly_maximum, g_kelly_step);
     }
 
@@ -796,6 +847,8 @@ struct QuantizationEffectApp {
                   << " step " << g_kelly_step << "\n"
                   << "Kelly experiment: " << g_kelly_measurements << " x " << g_kelly_rounds
                   << " rounds per multiplier\n"
+                  << "Total wager cap:  " << g_maximum_total_wager_fraction
+                  << " x round-start bankroll\n"
                   << "Seed:             "
                   << (g_seed ? std::to_string(*g_seed) + " (common across quanta)" : "random")
                   << "\nOutput:           " << logger.runDir().string() << "/\n"
@@ -842,12 +895,38 @@ struct QuantizationEffectApp {
         saveCsv(logger.pathFor("results.csv"), evaluations);
         std::ofstream(logger.pathFor("quantization_effect.svg"))
             << resultsToSvg(evaluations);
+        json exposureAtOne;
+        exposureAtOne["definitions"] =
+            "Kelly wager distributions aggregated across every measurement at multiplier 1.0";
+        exposureAtOne["quantization_levels"] = json::array();
+        for (const Evaluation& evaluation : evaluations) {
+            const KellyGrowthPoint* atOne = pointAtOne(evaluation.kellyCurve);
+            if (atOne == nullptr) continue;
+            exposureAtOne["quantization_levels"].push_back({
+                {"quantum", evaluation.quantum},
+                {"growth_mean", atOne->growthMean},
+                {"growth_stddev", atOne->growthStddev},
+                {"exposure", kellyExposureStatisticsToJson(atOne->exposure)}
+            });
+            const std::string stem =
+                "kelly_exposure_quantum=" + formatNumber(evaluation.quantum) + "_at_1";
+            std::ofstream(logger.pathFor(stem + ".csv"))
+                << kellyExposureStatisticsToCsv(atOne->exposure);
+            std::ofstream(logger.pathFor(stem + ".svg"))
+                << kellyExposureStatisticsToSvg(
+                       "Quantum " + formatNumber(evaluation.quantum) +
+                           " Kelly exposure at multiplier 1.0",
+                       atOne->exposure);
+        }
+        std::ofstream(logger.pathFor("kelly_exposure_at_1.json"))
+            << std::setw(2) << exposureAtOne << "\n";
 
         std::cout << "\nSaved artifacts:\n"
                   << "  " << logger.pathFor("run.log").string() << "\n"
                   << "  " << logger.pathFor("results.json").string() << "\n"
                   << "  " << logger.pathFor("results.csv").string() << "\n"
-                  << "  " << logger.pathFor("quantization_effect.svg").string() << "\n";
+                  << "  " << logger.pathFor("quantization_effect.svg").string() << "\n"
+                  << "  " << logger.pathFor("kelly_exposure_at_1.json").string() << "\n";
     }
 
     static void printHelp(const char* program) {
@@ -872,11 +951,13 @@ struct QuantizationEffectApp {
                   << "  --kelly-min <v>           Multiplier minimum (default: 0.75)\n"
                   << "  --kelly-max <v>           Multiplier maximum (default: 1.25)\n"
                   << "  --kelly-step <v>          Multiplier step (default: 0.05)\n"
+                  << "  --max-total-wager-fraction <0..1>\n"
+                  << "                            Cap cumulative round wagers / starting bankroll\n"
                   << "  --seed <N>                Deterministic common seed across quanta\n\n"
                   << "OUTPUT:\n"
                   << "  --output-dir <path>       Exact output folder override\n"
                   << "  Default: checkpoints/QuantizationEffect/<timestamp_and_case>/\n"
-                  << "  Artifacts: run.log, results.json, results.csv, quantization_effect.svg\n";
+                  << "  Artifacts include run.log, results, plots, and Kelly exposure/|fX| distributions.\n";
     }
 
     static int run(int argc, char** argv) {
@@ -910,6 +991,9 @@ struct QuantizationEffectApp {
                 g_kelly_maximum_override = std::stod(argv[++i]);
             } else if (argument == "--kelly-step" && i + 1 < argc) {
                 g_kelly_step_override = std::stod(argv[++i]);
+            } else if ((argument == "--max-total-wager-fraction" ||
+                        argument == "--max-total-wager") && i + 1 < argc) {
+                g_maximum_total_wager_fraction_override = std::stod(argv[++i]);
             } else if (argument == "--seed" && i + 1 < argc) {
                 g_seed = std::stoull(argv[++i]);
             } else if (argument == "--output-dir" && i + 1 < argc) {

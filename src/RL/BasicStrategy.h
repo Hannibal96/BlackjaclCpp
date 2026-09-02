@@ -42,6 +42,12 @@ public:
 
     // Merge entries from a project-relative JSON file into the current table.
     bool mergeFromFile(const std::string& filepath);
+
+    // Overlay every entry from another in-memory BasicStrategy. This is used
+    // to put a learned greedy policy on top of a complete basic-strategy
+    // fallback, so rare states that were not visited during training remain
+    // evaluable.
+    void mergeFromStrategy(const BasicStrategy& other);
     
     // Get action based on state key and allowed actions (implements pure virtual from Strategy)
     Action getAction(const StateKey& key, const std::vector<Action>& allowedActions) override;

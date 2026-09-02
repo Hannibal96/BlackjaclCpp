@@ -27,6 +27,12 @@ BlackjackTable::BlackjackTable(const BlackjackRules& gameRules, std::vector<Play
     for (auto* player : players) {
         playerSlots[player] = std::vector<Slot>();
         committedWagers[player] = 0.0;
+        if (player->isKellyExposureStatsEnabled() ||
+            player->shouldEnforceBankrollActionLimits()) {
+            initialWagers[player] = 0.0;
+            totalWagers[player] = 0.0;
+            roundStartingBankrolls[player] = player->getMoney();
+        }
     }
 }
 
@@ -43,15 +49,19 @@ void BlackjackTable::round() {
             anyRoundTracking = true;
             anyFeatureTracking = true;
         }
-        if (p->isRoundStatsEnabled()) anyRoundTracking = true;
+        if (p->isRoundStatsEnabled() || p->isKellyExposureStatsEnabled())
+            anyRoundTracking = true;
     }
 
     std::array<int, 13> removedBefore{};
     double remainingDecksBefore = 0.0;
+    std::vector<double> countBefore(players.size(), 0.0);
     if (anyRoundTracking) {
         if (anyFeatureTracking) {
             removedBefore = shoe->getRemovedCards();
             remainingDecksBefore = shoe->cardsRemaining() / 52.0;
+            for (size_t i = 0; i < players.size(); ++i)
+                countBefore[i] = players[i]->countValue(removedBefore);
         }
         for (size_t i = 0; i < players.size(); ++i)
             moneyBeforeScratch[i] = players[i]->getMoney();
@@ -116,8 +126,13 @@ void BlackjackTable::round() {
         for (size_t i = 0; i < players.size(); ++i) {
             const double reward = players[i]->getMoney() - moneyBeforeScratch[i];
             players[i]->recordRoundOutcome(reward);
+            if (players[i]->isKellyExposureStatsEnabled()) {
+                players[i]->recordKellyExposure(
+                    moneyBeforeScratch[i], initialWagers.at(players[i]),
+                    totalWagers.at(players[i]), reward);
+            }
             if (players[i]->isRegressionEnabled() || players[i]->isCountGraphEnabled())
-                players[i]->recordRound(x, reward);
+                players[i]->recordRound(x, reward, countBefore[i]);
         }
     }
 }
@@ -128,6 +143,12 @@ void BlackjackTable::clearHands() {
     for (auto& pair : playerSlots) {
         pair.second.clear();
         committedWagers[pair.first] = 0.0;
+        if (pair.first->isKellyExposureStatsEnabled() ||
+            pair.first->shouldEnforceBankrollActionLimits()) {
+            initialWagers[pair.first] = 0.0;
+            totalWagers[pair.first] = 0.0;
+            roundStartingBankrolls[pair.first] = pair.first->getMoney();
+        }
     }
 }
 
@@ -135,7 +156,18 @@ void BlackjackTable::clearHands() {
 void BlackjackTable::collectBets() {
     for (auto* player : players) {
         double bet = std::clamp(player->getBet(shoe->getRemovedCards()), minBet, maxBet);
+        if (player->shouldEnforceBankrollActionLimits()) {
+            const double bankroll = std::max(0.0, player->getMoney());
+            bet = std::min(
+                bet, bankroll * player->getMaximumTotalWagerFraction());
+            roundStartingBankrolls[player] = bankroll;
+        }
         playerSlots[player].emplace_back(bet, maxSplits);
+        if (player->isKellyExposureStatsEnabled() ||
+            player->shouldEnforceBankrollActionLimits()) {
+            initialWagers[player] = bet;
+            totalWagers[player] = bet;
+        }
         if (player->shouldEnforceBankrollActionLimits())
             committedWagers[player] = bet;
     }
@@ -194,7 +226,9 @@ std::vector<std::tuple<Player*, Hand*, State, Action>> BlackjackTable::playersPl
                     std::vector<Action> affordableActions = allowedActions;
                     if (player->shouldEnforceBankrollActionLimits() &&
                         !player->canAffordAdditionalWager(
-                            hand.getBet(), committedWagers.at(player))) {
+                            hand.getBet(), committedWagers.at(player),
+                            totalWagers.at(player),
+                            roundStartingBankrolls.at(player))) {
                         affordableActions.erase(
                             std::remove(affordableActions.begin(), affordableActions.end(),
                                         Action::DOUBLE_DOWN),
@@ -231,6 +265,9 @@ std::vector<std::tuple<Player*, Hand*, State, Action>> BlackjackTable::playersPl
                     }
                     else if (action == Action::DOUBLE_DOWN) {
                         const double additionalWager = hand.getBet();
+                        if (player->isKellyExposureStatsEnabled() ||
+                            player->shouldEnforceBankrollActionLimits())
+                            totalWagers[player] += additionalWager;
                         hand.multiplyBet(2.0f);
                         if (player->shouldEnforceBankrollActionLimits())
                             committedWagers[player] += additionalWager;
@@ -250,6 +287,9 @@ std::vector<std::tuple<Player*, Hand*, State, Action>> BlackjackTable::playersPl
                     else if (action == Action::SPLIT) {
                         // Split the hand - new hand is added to the slot
                         Hand newHand = hand.split();
+                        if (player->isKellyExposureStatsEnabled() ||
+                            player->shouldEnforceBankrollActionLimits())
+                            totalWagers[player] += newHand.getBet();
                         slot.addHand(newHand);
                         if (player->shouldEnforceBankrollActionLimits())
                             committedWagers[player] += newHand.getBet();

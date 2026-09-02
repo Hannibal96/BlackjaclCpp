@@ -11,7 +11,8 @@ BlackjaclCpp/
 │   ├── Game/          # Game mechanics, table flow, betting, player state
 │   ├── RL/            # Strategies and reinforcement learning
 │   └── Utils/         # Parallel simulation + run logging
-├── apps/              # Training, comparison, and quantization-effect executables
+├── apps/              # Training and authoritative fixed count/policy evaluator
+├── scripts/           # Comparison and quantization orchestration
 ├── regression/        # Regression tests: sim output vs. reference JSON tables
 ├── basic_strategy_tables/
 │   ├── blackjack/
@@ -27,19 +28,21 @@ BlackjaclCpp/
 
 ## Main App Targets
 
-There are three app binaries using the shared `template <typename Game>` shape
-and game traits (`apps/GameTraits.h`):
+The primary binaries use the shared `template <typename Game>` shape and game
+traits (`apps/GameTraits.h`):
 
 | App | Purpose | Output Root |
 |---|---|---|
 | `AlternatingOptimization` | Blackjack/DDM RL and count-regression pipeline selected by `--game` | Game-specific alternating checkpoint root |
-| `CompareCountStrategies` | Blackjack/DDM strategy comparison selected by `--game` | Game-specific comparison checkpoint root |
-| `QuantizationEffect` | Quantized `Wk + P(k-1)` spread/Kelly evaluation; blackjack enabled first | `checkpoints/QuantizationEffect/` |
+| `EvaluateCountPolicy` | One fixed count + one fixed policy; blackjack enabled first | `checkpoints/EvaluateCountPolicy/` |
+
+`scripts/compare_count_strategies.py` and `scripts/quantization_effect.py`
+orchestrate repeated `EvaluateCountPolicy` calls. This keeps spread/Kelly and
+wager-distribution semantics in one implementation.
 
 The older standalone `FindDeviations`, `FindOptimalCount`, and `MeasureEdge`
 apps have been removed; `AlternatingOptimization` covers their training
-workflows and `CompareCountStrategies` reads its checkpoints directly via
-`--deviations-checkpoint`.
+workflows and `EvaluateCountPolicy` reads its `Wk`/`Pk` artifacts directly.
 
 ## Class / Type Hierarchy
 
@@ -95,7 +98,8 @@ QTableKey = (StateKey, action)
 
 `Player::stateToKey()` is the central place where:
 
-- true count is computed
+- the selected true count or running count is computed, including constant and
+  per-deck initial-count offsets
 - count is discretized / clamped
 - hand type is derived
 - raw table state becomes a strategy lookup key
@@ -111,7 +115,7 @@ BlackjackTable::round()
 ├── playersPlay()
 ├── dealerPlays()
 ├── evaluate()
-└── record round outcome for moments, regression, and graph bins
+└── record round outcome, gross wagers, regression, and graph bins
 ```
 
 `DoubleDownMadnessTable::round()` follows the same outer tracking skeleton but
@@ -147,21 +151,17 @@ The Double Down Madness optimizer writes the same artifact set beneath
 `checkpoints/double-down-madness-alternating-checkpoints/`; its metadata records
 the paytable version in addition to decks, H17/S17, and penetration.
 
-### Compare artifacts
+### Policy-comparison artifacts
 
 - `run.log`
-- `ev_count_graph.json/svg`
-- `count_histograms.json/svg`
-- `second_moment_count_graph.json/svg` overlaying all compared policies
-- `kelly_fraction_graph.json/svg` overlaying all compared policies
-- `full_deviations_strategy.json` + `full_deviations_meta.json`, written
-  whenever full deviations were trained fresh this run (skipped when loaded
-  from either `--deviations-checkpoint` or `--strategy-checkpoint`)
+- one child folder per fixed policy
+- combined `results.json/csv`
+- each child's `kelly_growth.json/svg` and
+  `kelly_exposure_at_1.json/csv/svg`
 
-The DDM comparison app writes the same artifact families for known basic
-strategy and full deviations. A loaded alternating policy `Pk` is paired with
-`Wk` by default so both policies use the same count and betting model; a
-loaded `--strategy-checkpoint` is paired with its own saved count the same way.
+The new shared evaluator is blackjack-only at present. Its `--game` dispatch
+boundary is ready for additional games once their table implementation is
+available on the relevant branch.
 
 ### Return moments and Kelly sweeps
 
@@ -181,6 +181,22 @@ not contribute to these conditional curves.
 quadratic approximation, the optimal multiplier is therefore `k = 1/E[X^2]`.
 The apps compare that prediction with empirical growth over a configurable
 fraction grid.
+
+During every Kelly measurement, `BlackjackTable` also streams two distributions:
+gross exposure `total wagers / pre-round bankroll`, and the exact realized
+absolute return `|round profit / pre-round bankroll| = |fX|`. Total wagers add
+the initial bet plus every split and double wager; surrender does not erase
+money that was originally at risk. The same accumulator compares exact
+`log(1+r)` with `r-r^2/2`, and thread/measurement merges preserve absolute
+histogram counts. Spread simulations deliberately do not collect these metrics.
+
+Kelly players also carry a configurable maximum total-wager fraction. Tables
+cap the initial wager and remove split/double actions when cumulative gross
+wagers would exceed that fraction of the round-start bankroll; settled or
+released wagers still count. The default is `1.0`, exposed by
+`--max-total-wager-fraction`. Exposure SVGs plot the 0.1%-bankroll histograms
+side by side against a base-10 logarithmic probability axis with percentage
+ticks, labeled axes, and grid lines.
 
 Alternating optimization separates the count objective from its constraints.
 Classical OLS streams `A=E[cc^T]`, `d=E[Xc]`; quadratic Kelly streams
@@ -237,5 +253,7 @@ near-Bernoulli standard deviation. This remains an open research issue.
 - [src/RL/QLearningStrategy.h](src/RL/QLearningStrategy.h)
 - [apps/GameTraits.h](apps/GameTraits.h) — everything that differs between blackjack and DDM
 - [apps/AlternatingOptimization.cpp](apps/AlternatingOptimization.cpp) — engine + both instantiations + main()
-- [apps/CompareCountStrategies.cpp](apps/CompareCountStrategies.cpp) — engine + both instantiations + main()
-- [apps/QuantizationEffect.cpp](apps/QuantizationEffect.cpp) — checkpoint-driven quantization evaluator; blackjack instantiation + game dispatcher
+- [src/Utils/CountPolicyEvaluation.h](src/Utils/CountPolicyEvaluation.h) — shared spread/Kelly evaluator
+- [apps/EvaluateCountPolicy.cpp](apps/EvaluateCountPolicy.cpp) — count/policy loading, full-deviation training, CLI, artifacts
+- [scripts/compare_count_strategies.py](scripts/compare_count_strategies.py)
+- [scripts/quantization_effect.py](scripts/quantization_effect.py)

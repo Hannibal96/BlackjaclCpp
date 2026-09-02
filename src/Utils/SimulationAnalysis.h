@@ -18,6 +18,7 @@ struct KellyGrowthPoint {
     double fraction = 1.0;
     double growthMean = 1.0;
     double growthStddev = 0.0;
+    KellyExposureStatistics exposure;
 };
 
 struct KellyGrowthCurve {
@@ -67,6 +68,13 @@ double learnedCountNormalizationScale(
     double targetTenValueTag = -1.0);
 nlohmann::json kellyGrowthCurvesToJson(const std::vector<KellyGrowthCurve>& curves);
 KellyGrowthCurve kellyGrowthCurveFromJson(const nlohmann::json& value);
+nlohmann::json kellyExposureStatisticsToJson(
+    const KellyExposureStatistics& statistics);
+std::string kellyExposureStatisticsToCsv(
+    const KellyExposureStatistics& statistics);
+std::string kellyExposureStatisticsToSvg(
+    const std::string& title,
+    const KellyExposureStatistics& statistics);
 std::string kellyGrowthCurvesToSvg(const std::string& title,
                                    const std::vector<KellyGrowthCurve>& curves);
 nlohmann::json conditionalSecondMomentCurvesToJson(

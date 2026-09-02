@@ -4,11 +4,11 @@ set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd -- "$script_dir/.." && pwd)"
-quantization_effect="$repo_root/build/bin/QuantizationEffect"
+quantization_effect="$repo_root/scripts/quantization_effect.py"
 
 if [[ ! -x "$quantization_effect" ]]; then
-    echo "QuantizationEffect is not built: $quantization_effect" >&2
-    echo "Build it first with: cmake --build '$repo_root/build' --target QuantizationEffect" >&2
+    echo "Quantization workflow is not executable: $quantization_effect" >&2
+    echo "Build EvaluateCountPolicy first with: cmake --build '$repo_root/build' --target EvaluateCountPolicy" >&2
     exit 1
 fi
 

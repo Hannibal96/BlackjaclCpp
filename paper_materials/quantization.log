@@ -1,0 +1,1212 @@
+
+===== QuantizationEffect: paper_materials/blackjack results 5.2/alternating-checkpoints/h17c03_5b_qk_s0_decks=1_ss17=False_das=True_surr=no_peek=True =====
+
+
+=== QuantizationEffect ===
+Command:          /home/neria/Desktop/BlackjaclCpp/build/bin/QuantizationEffect --game blackjack --checkpoint 'paper_materials/blackjack results 5.2/alternating-checkpoints/h17c03_5b_qk_s0_decks=1_ss17=False_das=True_surr=no_peek=True' --seed 12345 --num-threads 10 --kelly-measurements 1000 --eval-rounds 5000000000 --kelly-min 0.85 --kelly-max 1.15
+Checkpoint:       /home/neria/Desktop/BlackjaclCpp/paper_materials/blackjack results 5.2/alternating-checkpoints/h17c03_5b_qk_s0_decks=1_ss17=False_das=True_surr=no_peek=True
+Pair:             W3 + P2
+Weight source:    raw_solution x normalization_scale
+Scenario:         decks=1_ss17=False_das=True_sas=4_don=Any_reSplitAces=False_hitSplitAces=False_surr=no_peek=True_bj-pays=1.5
+Penetration:      75%
+Eval rounds:      5000000000
+Threads:          10
+Kelly search:     0.85 to 1.15 step 0.05
+Kelly experiment: 1000 x 1000000 rounds per multiplier
+Seed:             12345 (common across quanta)
+Output:           /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260829_202654_W3_P2_decks=1_ss17=False_das=True_surr=no_peek=True/
+==========================
+
+=== Quantum 0 (exact fresh reference) ===
+Rank                Weight
+2             0.6527844597
+3             0.8054373174
+4             1.1284473370
+5             1.3932103516
+6             0.8992541656
+7             0.5221410924
+8             0.0345896209
+9            -0.3034119780
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.1324523665
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=0.000000000000001
+Spread threshold: -0.678376842407488
+Running spread evaluation...
+Spread edge: 0.1116189031  std(X): 9.1472423470  E[X^2]: 83.6845013169
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.01 ===
+Rank                Weight
+2             0.6500000000
+3             0.8100000000
+4             1.1300000000
+5             1.3900000000
+6             0.9000000000
+7             0.5200000000
+8             0.0300000000
+9            -0.3000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.1300000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=0.000000000000001
+Spread threshold: -0.678376842407488
+Running spread evaluation...
+Spread edge: 0.1116297929  std(X): 9.1475133459  E[X^2]: 83.6894616069
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.05 ===
+Rank                Weight
+2             0.6500000000
+3             0.8000000000
+4             1.1500000000
+5             1.4000000000
+6             0.9000000000
+7             0.5000000000
+8             0.0500000000
+9            -0.3000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.1500000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=0.000000000000001
+Spread threshold: -0.678376842407488
+Running spread evaluation...
+Spread edge: 0.1114405581  std(X): 9.1471401616  E[X^2]: 83.6825921168
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.1 ===
+Rank                Weight
+2             0.7000000000
+3             0.8000000000
+4             1.1000000000
+5             1.4000000000
+6             0.9000000000
+7             0.5000000000
+8             0.0000000000
+9            -0.3000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.1000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=0.000000000000000
+Spread threshold: -0.678376842407488
+Running spread evaluation...
+Spread edge: 0.1117699806  std(X): 9.1502001876  E[X^2]: 83.7386559842
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.5 ===
+Rank                Weight
+2             0.5000000000
+3             1.0000000000
+4             1.0000000000
+5             1.5000000000
+6             1.0000000000
+7             0.5000000000
+8             0.0000000000
+9            -0.5000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.0000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)
+Spread threshold: -0.678376842407488
+Running spread evaluation...
+Spread edge: 0.1117203358  std(X): 9.1512863122  E[X^2]: 83.7585225848
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 1 ===
+Rank                Weight
+2             1.0000000000
+3             1.0000000000
+4             1.0000000000
+5             1.0000000000
+6             1.0000000000
+7             0.0000000000
+8             0.0000000000
+9             0.0000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.0000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)
+Spread threshold: -0.678376842407488
+Running spread evaluation...
+Spread edge: 0.1072952245  std(X): 9.2092558402  E[X^2]: 84.8219053779
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantization comparison ===
+Quantum          Spread edge    Spread delta       Kelly @ 1  Opt multiplier    Optimal growth
+----------------------------------------------------------------------------------------------
+0                0.111618903     0.000000000     1.000205115            1.10       1.000206660
+0.01             0.111629793     0.000010890     1.000205112            1.10       1.000206681
+0.05             0.111440558    -0.000178345     1.000204826            1.10       1.000206235
+0.1              0.111769981     0.000151077     1.000204846            1.10       1.000206536
+0.5              0.111720336     0.000101433     1.000203267            1.10       1.000204593
+1                0.107295224    -0.004323679     1.000185016            1.10       1.000185859
+
+Saved artifacts:
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260829_202654_W3_P2_decks=1_ss17=False_das=True_surr=no_peek=True/run.log
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260829_202654_W3_P2_decks=1_ss17=False_das=True_surr=no_peek=True/results.json
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260829_202654_W3_P2_decks=1_ss17=False_das=True_surr=no_peek=True/results.csv
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260829_202654_W3_P2_decks=1_ss17=False_das=True_surr=no_peek=True/quantization_effect.svg
+
+===== QuantizationEffect: paper_materials/blackjack results 5.2/alternating-checkpoints/h17c03_5b_qk_s0_decks=2_ss17=False_das=True_surr=no_peek=True =====
+
+
+=== QuantizationEffect ===
+Command:          /home/neria/Desktop/BlackjaclCpp/build/bin/QuantizationEffect --game blackjack --checkpoint 'paper_materials/blackjack results 5.2/alternating-checkpoints/h17c03_5b_qk_s0_decks=2_ss17=False_das=True_surr=no_peek=True' --seed 12345 --num-threads 10 --kelly-measurements 1000 --eval-rounds 5000000000 --kelly-min 0.85 --kelly-max 1.15
+Checkpoint:       /home/neria/Desktop/BlackjaclCpp/paper_materials/blackjack results 5.2/alternating-checkpoints/h17c03_5b_qk_s0_decks=2_ss17=False_das=True_surr=no_peek=True
+Pair:             W3 + P2
+Weight source:    raw_solution x normalization_scale
+Scenario:         decks=2_ss17=False_das=True_sas=4_don=Any_reSplitAces=False_hitSplitAces=False_surr=no_peek=True_bj-pays=1.5
+Penetration:      75%
+Eval rounds:      5000000000
+Threads:          10
+Kelly search:     0.85 to 1.15 step 0.05
+Kelly experiment: 1000 x 1000000 rounds per multiplier
+Seed:             12345 (common across quanta)
+Output:           /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260829_214658_W3_P2_decks=2_ss17=False_das=True_surr=no_peek=True/
+==========================
+
+=== Quantum 0 (exact fresh reference) ===
+Rank                Weight
+2             0.7143466905
+3             0.8651287000
+4             1.1910154237
+5             1.4440788735
+6             0.8518191631
+7             0.4630693507
+8            -0.0635830196
+9            -0.3625646003
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.1033105817
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=-0.000000000000000
+Spread threshold: 0.452240859311039
+Running spread evaluation...
+Spread edge: 0.0599764550  std(X): 7.4509022187  E[X^2]: 55.5195410364
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.01 ===
+Rank                Weight
+2             0.7100000000
+3             0.8700000000
+4             1.1900000000
+5             1.4400000000
+6             0.8500000000
+7             0.4600000000
+8            -0.0600000000
+9            -0.3600000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.1000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=-0.000000000000000
+Spread threshold: 0.452240859311039
+Running spread evaluation...
+Spread edge: 0.0599892403  std(X): 7.4496198876  E[X^2]: 55.5004351683
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.05 ===
+Rank                Weight
+2             0.7000000000
+3             0.8500000000
+4             1.2000000000
+5             1.4500000000
+6             0.8500000000
+7             0.4500000000
+8            -0.0500000000
+9            -0.3500000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.1000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=0.000000000000001
+Spread threshold: 0.452240859311039
+Running spread evaluation...
+Spread edge: 0.0599896854  std(X): 7.4469313429  E[X^2]: 55.4603851766
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.1 ===
+Rank                Weight
+2             0.7000000000
+3             0.9000000000
+4             1.2000000000
+5             1.4000000000
+6             0.9000000000
+7             0.5000000000
+8            -0.1000000000
+9            -0.4000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.1000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=0.000000000000000
+Spread threshold: 0.452240859311039
+Running spread evaluation...
+Spread edge: 0.0599657403  std(X): 7.4496414062  E[X^2]: 55.5007529602
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.5 ===
+Rank                Weight
+2             0.5000000000
+3             1.0000000000
+4             1.0000000000
+5             1.5000000000
+6             1.0000000000
+7             0.5000000000
+8             0.0000000000
+9            -0.5000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.0000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)
+Spread threshold: 0.452240859311039
+Running spread evaluation...
+Spread edge: 0.0598905852  std(X): 7.4637214704  E[X^2]: 55.7107250582
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 1 ===
+Rank                Weight
+2             1.0000000000
+3             1.0000000000
+4             1.0000000000
+5             1.0000000000
+6             1.0000000000
+7             0.0000000000
+8             0.0000000000
+9             0.0000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.0000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)
+Spread threshold: 0.452240859311039
+Running spread evaluation...
+Spread edge: 0.0563820298  std(X): 7.4735575743  E[X^2]: 55.8572417382
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantization comparison ===
+Quantum          Spread edge    Spread delta       Kelly @ 1  Opt multiplier    Optimal growth
+----------------------------------------------------------------------------------------------
+0                0.059976455     0.000000000     1.000082170            1.05       1.000082778
+0.01             0.059989240     0.000012785     1.000082208            1.05       1.000082784
+0.05             0.059989685     0.000013230     1.000082273            1.05       1.000082835
+0.1              0.059965740    -0.000010715     1.000082091            1.05       1.000082714
+0.5              0.059890585    -0.000085870     1.000081670            1.05       1.000082321
+1                0.056382030    -0.003594425     1.000074316            1.05       1.000074988
+
+Saved artifacts:
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260829_214658_W3_P2_decks=2_ss17=False_das=True_surr=no_peek=True/run.log
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260829_214658_W3_P2_decks=2_ss17=False_das=True_surr=no_peek=True/results.json
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260829_214658_W3_P2_decks=2_ss17=False_das=True_surr=no_peek=True/results.csv
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260829_214658_W3_P2_decks=2_ss17=False_das=True_surr=no_peek=True/quantization_effect.svg
+
+===== QuantizationEffect: paper_materials/blackjack results 5.2/alternating-checkpoints/h17c03_5b_qk_s0_decks=6_ss17=False_das=True_surr=no_peek=True =====
+
+
+=== QuantizationEffect ===
+Command:          /home/neria/Desktop/BlackjaclCpp/build/bin/QuantizationEffect --game blackjack --checkpoint 'paper_materials/blackjack results 5.2/alternating-checkpoints/h17c03_5b_qk_s0_decks=6_ss17=False_das=True_surr=no_peek=True' --seed 12345 --num-threads 10 --kelly-measurements 1000 --eval-rounds 5000000000 --kelly-min 0.85 --kelly-max 1.15
+Checkpoint:       /home/neria/Desktop/BlackjaclCpp/paper_materials/blackjack results 5.2/alternating-checkpoints/h17c03_5b_qk_s0_decks=6_ss17=False_das=True_surr=no_peek=True
+Pair:             W3 + P2
+Weight source:    raw_solution x normalization_scale
+Scenario:         decks=6_ss17=False_das=True_sas=4_don=Any_reSplitAces=False_hitSplitAces=False_surr=no_peek=True_bj-pays=1.5
+Penetration:      75%
+Eval rounds:      5000000000
+Threads:          10
+Kelly search:     0.85 to 1.15 step 0.05
+Kelly experiment: 1000 x 1000000 rounds per multiplier
+Seed:             12345 (common across quanta)
+Output:           /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260829_230539_W3_P2_decks=6_ss17=False_das=True_surr=no_peek=True/
+==========================
+
+=== Quantum 0 (exact fresh reference) ===
+Rank                Weight
+2             0.7339432983
+3             0.8881843506
+4             1.2012586509
+5             1.4402377651
+6             0.8336955631
+7             0.4574564902
+8            -0.1088801885
+9            -0.4197065510
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.0261893787
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=0.000000000000000
+Spread threshold: 1.073118439271564
+Running spread evaluation...
+Spread edge: 0.0178993161  std(X): 6.0663136266  E[X^2]: 36.8004813948
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.01 ===
+Rank                Weight
+2             0.7400000000
+3             0.8900000000
+4             1.2000000000
+5             1.4400000000
+6             0.8300000000
+7             0.4600000000
+8            -0.1100000000
+9            -0.4200000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.0300000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=-0.000000000000001
+Spread threshold: 1.073118439271564
+Running spread evaluation...
+Spread edge: 0.0178969958  std(X): 6.0673839754  E[X^2]: 36.8134686002
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.05 ===
+Rank                Weight
+2             0.7500000000
+3             0.9000000000
+4             1.2000000000
+5             1.4500000000
+6             0.8500000000
+7             0.4500000000
+8            -0.1000000000
+9            -0.4500000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.0500000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=0.000000000000001
+Spread threshold: 1.073118439271564
+Running spread evaluation...
+Spread edge: 0.0178577538  std(X): 6.0806590728  E[X^2]: 36.9747336511
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.1 ===
+Rank                Weight
+2             0.7000000000
+3             0.9000000000
+4             1.2000000000
+5             1.4000000000
+6             0.8000000000
+7             0.5000000000
+8            -0.1000000000
+9            -0.4000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.0000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)
+Spread threshold: 1.073118439271564
+Running spread evaluation...
+Spread edge: 0.0179231671  std(X): 6.0455416786  E[X^2]: 36.5488954201
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.5 ===
+Rank                Weight
+2             0.5000000000
+3             1.0000000000
+4             1.0000000000
+5             1.5000000000
+6             1.0000000000
+7             0.5000000000
+8             0.0000000000
+9            -0.5000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.0000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)
+Spread threshold: 1.073118439271564
+Running spread evaluation...
+Spread edge: 0.0176938830  std(X): 6.0695610728  E[X^2]: 36.8398846821
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 1 ===
+Rank                Weight
+2             1.0000000000
+3             1.0000000000
+4             1.0000000000
+5             1.0000000000
+6             1.0000000000
+7             0.0000000000
+8             0.0000000000
+9             0.0000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.0000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)
+Spread threshold: 1.073118439271564
+Running spread evaluation...
+Spread edge: 0.0162097133  std(X): 5.9733265690  E[X^2]: 35.6808930472
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantization comparison ===
+Quantum          Spread edge    Spread delta       Kelly @ 1  Opt multiplier    Optimal growth
+----------------------------------------------------------------------------------------------
+0                0.017899316     0.000000000     1.000017812            0.90       1.000017833
+0.01             0.017896996    -0.000002320     1.000017803            0.90       1.000017833
+0.05             0.017857754    -0.000041562     1.000017769            0.90       1.000017819
+0.1              0.017923167     0.000023851     1.000017842            1.10       1.000017843
+0.5              0.017693883    -0.000205433     1.000017562            0.90       1.000017591
+1                0.016209713    -0.001689603     1.000015901            0.90       1.000015903
+
+Saved artifacts:
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260829_230539_W3_P2_decks=6_ss17=False_das=True_surr=no_peek=True/run.log
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260829_230539_W3_P2_decks=6_ss17=False_das=True_surr=no_peek=True/results.json
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260829_230539_W3_P2_decks=6_ss17=False_das=True_surr=no_peek=True/results.csv
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260829_230539_W3_P2_decks=6_ss17=False_das=True_surr=no_peek=True/quantization_effect.svg
+
+===== QuantizationEffect: paper_materials/blackjack 6:5 5.3/alternating-checkpoints/h17c03_5b_bj6-5_qk_s0_decks=1_ss17=False_das=True_surr=no_peek=True =====
+
+
+=== QuantizationEffect ===
+Command:          /home/neria/Desktop/BlackjaclCpp/build/bin/QuantizationEffect --game blackjack --checkpoint 'paper_materials/blackjack 6:5 5.3/alternating-checkpoints/h17c03_5b_bj6-5_qk_s0_decks=1_ss17=False_das=True_surr=no_peek=True' --seed 12345 --num-threads 10 --kelly-measurements 1000 --eval-rounds 5000000000 --kelly-min 0.85 --kelly-max 1.15
+Checkpoint:       /home/neria/Desktop/BlackjaclCpp/paper_materials/blackjack 6:5 5.3/alternating-checkpoints/h17c03_5b_bj6-5_qk_s0_decks=1_ss17=False_das=True_surr=no_peek=True
+Pair:             W3 + P2
+Weight source:    raw_solution x normalization_scale
+Scenario:         decks=1_ss17=False_das=True_sas=4_don=Any_reSplitAces=False_hitSplitAces=False_surr=no_peek=True_bj-pays=1.2
+Penetration:      75%
+Eval rounds:      5000000000
+Threads:          10
+Kelly search:     0.85 to 1.15 step 0.05
+Kelly experiment: 1000 x 1000000 rounds per multiplier
+Seed:             12345 (common across quanta)
+Output:           /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260830_002410_W3_P2_decks=1_ss17=False_das=True_surr=no_peek=True/
+==========================
+
+=== Quantum 0 (exact fresh reference) ===
+Rank                Weight
+2             0.5886432871
+3             0.7485387475
+4             1.1069622936
+5             1.3965353466
+6             0.8089776900
+7             0.5194143201
+8            -0.0781541999
+9            -0.4217468885
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -0.6691705965
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=0.000000000000000
+Spread threshold: 2.058051262560393
+Running spread evaluation...
+Spread edge: 0.0455940619  std(X): 6.1513888968  E[X^2]: 37.8416641711
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.01 ===
+Rank                Weight
+2             0.5900000000
+3             0.7500000000
+4             1.1100000000
+5             1.3900000000
+6             0.8100000000
+7             0.5200000000
+8            -0.0800000000
+9            -0.4200000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -0.6700000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=-0.000000000000000
+Spread threshold: 2.058051262560393
+Running spread evaluation...
+Spread edge: 0.0455863032  std(X): 6.1493937500  E[X^2]: 37.8171215962
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.05 ===
+Rank                Weight
+2             0.6000000000
+3             0.7500000000
+4             1.1000000000
+5             1.4000000000
+6             0.8000000000
+7             0.5000000000
+8            -0.1000000000
+9            -0.4000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -0.6500000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=0.000000000000000
+Spread threshold: 2.058051262560393
+Running spread evaluation...
+Spread edge: 0.0456483300  std(X): 6.1446082245  E[X^2]: 37.7582939949
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.1 ===
+Rank                Weight
+2             0.6000000000
+3             0.8000000000
+4             1.1000000000
+5             1.4000000000
+6             0.8000000000
+7             0.5000000000
+8            -0.1000000000
+9            -0.4000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -0.7000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=0.000000000000000
+Spread threshold: 2.058051262560393
+Running spread evaluation...
+Spread edge: 0.0453467866  std(X): 6.1610305419  E[X^2]: 37.9603536621
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.5 ===
+Rank                Weight
+2             0.5000000000
+3             0.5000000000
+4             1.0000000000
+5             1.5000000000
+6             1.0000000000
+7             0.5000000000
+8             0.0000000000
+9            -0.5000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -0.5000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)
+Spread threshold: 2.058051262560393
+Running spread evaluation...
+Spread edge: 0.0454054630  std(X): 6.1381038915  E[X^2]: 37.6783810314
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 1 ===
+Rank                Weight
+2             1.0000000000
+3             1.0000000000
+4             1.0000000000
+5             1.0000000000
+6             1.0000000000
+7             0.0000000000
+8             0.0000000000
+9             0.0000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.0000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)
+Spread threshold: 2.058051262560393
+Running spread evaluation...
+Spread edge: 0.0359809887  std(X): 6.2550252854  E[X^2]: 39.1266359445
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantization comparison ===
+Quantum          Spread edge    Spread delta       Kelly @ 1  Opt multiplier    Optimal growth
+----------------------------------------------------------------------------------------------
+0                0.045594062     0.000000000     1.000094536            1.10       1.000096297
+0.01             0.045586303    -0.000007759     1.000094536            1.10       1.000096300
+0.05             0.045648330     0.000054268     1.000094180            1.10       1.000096044
+0.1              0.045346787    -0.000247275     1.000094010            1.10       1.000095623
+0.5              0.045405463    -0.000188599     1.000094100            1.10       1.000096095
+1                0.035980989    -0.009613073     1.000074309            0.95       1.000074624
+
+Saved artifacts:
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260830_002410_W3_P2_decks=1_ss17=False_das=True_surr=no_peek=True/run.log
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260830_002410_W3_P2_decks=1_ss17=False_das=True_surr=no_peek=True/results.json
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260830_002410_W3_P2_decks=1_ss17=False_das=True_surr=no_peek=True/results.csv
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260830_002410_W3_P2_decks=1_ss17=False_das=True_surr=no_peek=True/quantization_effect.svg
+
+===== QuantizationEffect: paper_materials/blackjack 6:5 5.3/alternating-checkpoints/h17c03_5b_bj6-5_qk_s0_decks=2_ss17=False_das=True_surr=no_peek=True =====
+
+
+=== QuantizationEffect ===
+Command:          /home/neria/Desktop/BlackjaclCpp/build/bin/QuantizationEffect --game blackjack --checkpoint 'paper_materials/blackjack 6:5 5.3/alternating-checkpoints/h17c03_5b_bj6-5_qk_s0_decks=2_ss17=False_das=True_surr=no_peek=True' --seed 12345 --num-threads 10 --kelly-measurements 1000 --eval-rounds 5000000000 --kelly-min 0.85 --kelly-max 1.15
+Checkpoint:       /home/neria/Desktop/BlackjaclCpp/paper_materials/blackjack 6:5 5.3/alternating-checkpoints/h17c03_5b_bj6-5_qk_s0_decks=2_ss17=False_das=True_surr=no_peek=True
+Pair:             W3 + P2
+Weight source:    raw_solution x normalization_scale
+Scenario:         decks=2_ss17=False_das=True_sas=4_don=Any_reSplitAces=False_hitSplitAces=False_surr=no_peek=True_bj-pays=1.2
+Penetration:      75%
+Eval rounds:      5000000000
+Threads:          10
+Kelly search:     0.85 to 1.15 step 0.05
+Kelly experiment: 1000 x 1000000 rounds per multiplier
+Seed:             12345 (common across quanta)
+Output:           /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260830_014239_W3_P2_decks=2_ss17=False_das=True_surr=no_peek=True/
+==========================
+
+=== Quantum 0 (exact fresh reference) ===
+Rank                Weight
+2             0.6512428028
+3             0.8123072242
+4             1.1876989947
+5             1.4658224994
+6             0.7712659904
+7             0.3872389211
+8            -0.1798156908
+9            -0.5101483853
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -0.5856123564
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=-0.000000000000000
+Spread threshold: 3.161483058547773
+Running spread evaluation...
+Spread edge: 0.0080061758  std(X): 4.8177771360  E[X^2]: 23.2110406264
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.01 ===
+Rank                Weight
+2             0.6500000000
+3             0.8100000000
+4             1.1900000000
+5             1.4700000000
+6             0.7700000000
+7             0.3900000000
+8            -0.1800000000
+9            -0.5100000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -0.5900000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=0.000000000000001
+Spread threshold: 3.161483058547773
+Running spread evaluation...
+Spread edge: 0.0080015633  std(X): 4.8203376437  E[X^2]: 23.2357190195
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.05 ===
+Rank                Weight
+2             0.6500000000
+3             0.8000000000
+4             1.2000000000
+5             1.4500000000
+6             0.8000000000
+7             0.4000000000
+8            -0.2000000000
+9            -0.5000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -0.6000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=0.000000000000000
+Spread threshold: 3.161483058547773
+Running spread evaluation...
+Spread edge: 0.0079580474  std(X): 4.8220261662  E[X^2]: 23.2519996737
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.1 ===
+Rank                Weight
+2             0.6000000000
+3             0.8000000000
+4             1.2000000000
+5             1.5000000000
+6             0.8000000000
+7             0.4000000000
+8            -0.2000000000
+9            -0.5000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -0.6000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=0.000000000000000
+Spread threshold: 3.161483058547773
+Running spread evaluation...
+Spread edge: 0.0079739490  std(X): 4.8351922113  E[X^2]: 23.3791472996
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.5 ===
+Rank                Weight
+2             0.5000000000
+3             1.0000000000
+4             1.0000000000
+5             1.5000000000
+6             0.5000000000
+7             0.5000000000
+8             0.0000000000
+9            -0.5000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -0.5000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)
+Spread threshold: 3.161483058547773
+Running spread evaluation...
+Spread edge: 0.0077982274  std(X): 4.7494151166  E[X^2]: 22.5570047575
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 1 ===
+Rank                Weight
+2             1.0000000000
+3             1.0000000000
+4             1.0000000000
+5             1.0000000000
+6             1.0000000000
+7             0.0000000000
+8             0.0000000000
+9             0.0000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.0000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)
+Spread threshold: 3.161483058547773
+Running spread evaluation...
+Spread edge: 0.0037344243  std(X): 4.8116674708  E[X^2]: 23.1521577905
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantization comparison ===
+Quantum          Spread edge    Spread delta       Kelly @ 1  Opt multiplier    Optimal growth
+----------------------------------------------------------------------------------------------
+0                0.008006176     0.000000000     1.000028055            1.05       1.000028506
+0.01             0.008001563    -0.000004613     1.000028056            1.05       1.000028494
+0.05             0.007958047    -0.000048128     1.000028033            1.05       1.000028455
+0.1              0.007973949    -0.000032227     1.000028085            1.05       1.000028478
+0.5              0.007798227    -0.000207948     1.000027677            1.05       1.000028118
+1                0.003734424    -0.004271752     1.000022086            0.90       1.000022456
+
+Saved artifacts:
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260830_014239_W3_P2_decks=2_ss17=False_das=True_surr=no_peek=True/run.log
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260830_014239_W3_P2_decks=2_ss17=False_das=True_surr=no_peek=True/results.json
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260830_014239_W3_P2_decks=2_ss17=False_das=True_surr=no_peek=True/results.csv
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260830_014239_W3_P2_decks=2_ss17=False_das=True_surr=no_peek=True/quantization_effect.svg
+
+===== QuantizationEffect: paper_materials/blackjack 6:5 5.3/alternating-checkpoints/h17c03_5b_bj6-5_qk_s0_decks=6_ss17=False_das=True_surr=no_peek=True =====
+
+
+=== QuantizationEffect ===
+Command:          /home/neria/Desktop/BlackjaclCpp/build/bin/QuantizationEffect --game blackjack --checkpoint 'paper_materials/blackjack 6:5 5.3/alternating-checkpoints/h17c03_5b_bj6-5_qk_s0_decks=6_ss17=False_das=True_surr=no_peek=True' --seed 12345 --num-threads 10 --kelly-measurements 1000 --eval-rounds 5000000000 --kelly-min 0.85 --kelly-max 1.15
+Checkpoint:       /home/neria/Desktop/BlackjaclCpp/paper_materials/blackjack 6:5 5.3/alternating-checkpoints/h17c03_5b_bj6-5_qk_s0_decks=6_ss17=False_das=True_surr=no_peek=True
+Pair:             W3 + P2
+Weight source:    raw_solution x normalization_scale
+Scenario:         decks=6_ss17=False_das=True_sas=4_don=Any_reSplitAces=False_hitSplitAces=False_surr=no_peek=True_bj-pays=1.2
+Penetration:      75%
+Eval rounds:      5000000000
+Threads:          10
+Kelly search:     0.85 to 1.15 step 0.05
+Kelly experiment: 1000 x 1000000 rounds per multiplier
+Seed:             12345 (common across quanta)
+Output:           /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260830_030323_W3_P2_decks=6_ss17=False_das=True_surr=no_peek=True/
+==========================
+
+=== Quantum 0 (exact fresh reference) ===
+Rank                Weight
+2             0.6764763143
+3             0.8409215987
+4             1.2075314424
+5             1.4714085705
+6             0.7662538034
+7             0.3710727922
+8            -0.2411315779
+9            -0.5633781849
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -0.5291547586
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=-0.000000000000001
+Spread threshold: 3.758904377761787
+Running spread evaluation...
+Spread edge: -0.0148857566  std(X): 2.9657214360  E[X^2]: 8.7957252200
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.01 ===
+Rank                Weight
+2             0.6800000000
+3             0.8400000000
+4             1.2100000000
+5             1.4700000000
+6             0.7600000000
+7             0.3700000000
+8            -0.2400000000
+9            -0.5600000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -0.5300000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=-0.000000000000001
+Spread threshold: 3.758904377761787
+Running spread evaluation...
+Spread edge: -0.0148848307  std(X): 2.9644696348  E[X^2]: 8.7883017721
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.05 ===
+Rank                Weight
+2             0.7000000000
+3             0.8500000000
+4             1.2000000000
+5             1.5000000000
+6             0.7500000000
+7             0.3500000000
+8            -0.2500000000
+9            -0.5500000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -0.5500000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)  floating residual=-0.000000000000000
+Spread threshold: 3.758904377761787
+Running spread evaluation...
+Spread edge: -0.0149087782  std(X): 2.9781040195  E[X^2]: 8.8693258211
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.1 ===
+Rank                Weight
+2             0.7000000000
+3             0.8000000000
+4             1.2000000000
+5             1.5000000000
+6             0.8000000000
+7             0.4000000000
+8            -0.3000000000
+9            -0.6000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -0.5000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)
+Spread threshold: 3.758904377761787
+Running spread evaluation...
+Spread edge: -0.0149284562  std(X): 2.9875207780  E[X^2]: 8.9255032560
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 0.5 ===
+Rank                Weight
+2             0.5000000000
+3             1.0000000000
+4             1.0000000000
+5             1.5000000000
+6             1.0000000000
+7             0.5000000000
+8            -0.5000000000
+9            -0.5000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -0.5000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)
+Spread threshold: 3.758904377761787
+Running spread evaluation...
+Spread edge: -0.0151421459  std(X): 3.0140494295  E[X^2]: 9.0847232461
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantum 1 ===
+Rank                Weight
+2             1.0000000000
+3             1.0000000000
+4             1.0000000000
+5             2.0000000000
+6             1.0000000000
+7             0.0000000000
+8             0.0000000000
+9            -1.0000000000
+10           -1.0000000000
+J            -1.0000000000
+Q            -1.0000000000
+K            -1.0000000000
+A            -1.0000000000
+Sum(weights): 0.000000000000000  (zero-sum constraint preserved)
+Spread threshold: 3.758904377761787
+Running spread evaluation...
+Spread edge: -0.0166125990  std(X): 3.4399359592  E[X^2]: 11.8334353794
+Running Kelly search...
+  Kelly multiplier 0.85 (1000 measurements)
+  Kelly multiplier 0.9 (1000 measurements)
+  Kelly multiplier 0.95 (1000 measurements)
+  Kelly multiplier 1 (1000 measurements)
+  Kelly multiplier 1.05 (1000 measurements)
+  Kelly multiplier 1.1 (1000 measurements)
+  Kelly multiplier 1.15 (1000 measurements)
+
+=== Quantization comparison ===
+Quantum          Spread edge    Spread delta       Kelly @ 1  Opt multiplier    Optimal growth
+----------------------------------------------------------------------------------------------
+0               -0.014885757     0.000000000     1.000002824            0.90       1.000002885
+0.01            -0.014884831     0.000000926     1.000002823            0.90       1.000002881
+0.05            -0.014908778    -0.000023022     1.000002804            0.90       1.000002872
+0.1             -0.014928456    -0.000042700     1.000002797            0.90       1.000002870
+0.5             -0.015142146    -0.000256389     1.000002619            0.90       1.000002703
+1               -0.016612599    -0.001726842     1.000001023            0.85       1.000001655
+
+Saved artifacts:
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260830_030323_W3_P2_decks=6_ss17=False_das=True_surr=no_peek=True/run.log
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260830_030323_W3_P2_decks=6_ss17=False_das=True_surr=no_peek=True/results.json
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260830_030323_W3_P2_decks=6_ss17=False_das=True_surr=no_peek=True/results.csv
+  /home/neria/Desktop/BlackjaclCpp/checkpoints/QuantizationEffect/20260830_030323_W3_P2_decks=6_ss17=False_das=True_surr=no_peek=True/quantization_effect.svg
