@@ -169,6 +169,9 @@ evaluation) — have been removed; their functionality is fully covered by
   `--initial-count-per-deck` support systems with a nonzero initial running
   count; for example Spanish 21's `-4*N` start uses
   `--count-normalization running --initial-count-per-deck -4`.
+  The named `ko` preset uses its unnormalized running count with an IRC of
+  zero. A shifted KO IRC can be supplied with the same flags, together with
+  the corresponding bias/index shift needed to preserve the strategy.
 
   Every Kelly multiplier aggregates wager diagnostics across every measurement.
   `gross_exposure` is the sum of all wagers placed in the complete round divided

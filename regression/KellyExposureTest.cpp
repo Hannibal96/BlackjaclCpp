@@ -1,4 +1,5 @@
 #include "Game/Player.h"
+#include "Game/CountingMethods.h"
 #include "RL/BasicStrategy.h"
 #include "Utils/SimulationAnalysis.h"
 
@@ -68,6 +69,14 @@ int main() {
     removed[0] = 2;
     const double remainingDecks = 50.0 / 52.0;
     check(close(player.countValue(removed), 2.0 / remainingDecks), "true count");
+
+    const auto namedKo = CountingMethods::fromName("ko");
+    check(namedKo.has_value(), "named KO exists");
+    check(namedKo->normalization == CountNormalization::RUNNING_COUNT,
+          "named KO uses a running count");
+    check(close(namedKo->initialCount, 0.0) &&
+              close(namedKo->initialCountPerDeck, 0.0),
+          "named KO uses the zero-IRC convention");
 
     player.setEnforceBankrollActionLimits(true);
     player.setMaximumTotalWagerFraction(0.25);

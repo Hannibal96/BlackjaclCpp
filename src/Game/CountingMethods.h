@@ -60,7 +60,10 @@ inline constexpr std::array<double, 13> None = {};
 inline constexpr std::array<double, 13> HiLo =
     {1, 1, 1, 1, 1, 0, 0, 0, -1, -1, -1, -1, -1};
 
-// KO / Knock-Out (Vancura & Fuchs): like Hi-Lo but 7=+1  [unbalanced +4/deck]
+// KO / Knock-Out (Vancura & Fuchs): like Hi-Lo but 7=+1  [unbalanced +4/deck].
+// The named preset uses the zero-IRC running-count convention. A traditional
+// deck-dependent IRC is an equivalent relabeling when its betting intercept
+// and playing indices are shifted by the same amount.
 inline constexpr std::array<double, 13> KO =
     {1, 1, 1, 1, 1, 1, 0, 0, -1, -1, -1, -1, -1};
 
@@ -102,7 +105,11 @@ inline std::optional<CountingSystem> fromName(std::string name) {
     std::transform(name.begin(), name.end(), name.begin(), ::tolower);
     if (name == "none")                             return CountingSystem{None,    kDefaultFactor, kDefaultBias};
     if (name == "hilo")                             return CountingSystem{HiLo,    kDefaultFactor, kDefaultBias};
-    if (name == "ko")                               return CountingSystem{KO,      kDefaultFactor, kDefaultBias};
+    if (name == "ko") {
+        CountingSystem system{KO, kDefaultFactor, kDefaultBias};
+        system.normalization = CountNormalization::RUNNING_COUNT;
+        return system;
+    }
     if (name == "hiopt1" || name == "hi-opt-1")     return CountingSystem{HiOptI,  kDefaultFactor, kDefaultBias};
     if (name == "hiopt2" || name == "hi-opt-2")     return CountingSystem{HiOptII, kDefaultFactor, kDefaultBias};
     if (name == "omega2" || name == "omegaii")      return CountingSystem{OmegaII, kDefaultFactor, kDefaultBias};
