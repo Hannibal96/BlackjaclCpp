@@ -10,7 +10,7 @@ add_executable(AlternatingOptimization
 )
 target_link_libraries(AlternatingOptimization
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(AlternatingOptimization
     PRIVATE
@@ -29,7 +29,7 @@ add_executable(CompareCountStrategies
 )
 target_link_libraries(CompareCountStrategies
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(CompareCountStrategies
     PRIVATE
@@ -48,7 +48,7 @@ add_executable(QuantizationEffect
 )
 target_link_libraries(QuantizationEffect
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(QuantizationEffect
     PRIVATE
@@ -65,7 +65,7 @@ add_executable(EvaluateCountPolicy
 )
 target_link_libraries(EvaluateCountPolicy
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(EvaluateCountPolicy
     PRIVATE

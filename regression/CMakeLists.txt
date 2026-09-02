@@ -8,7 +8,7 @@ add_executable(BasicStrategyRegressionTest
 )
 target_link_libraries(BasicStrategyRegressionTest
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(BasicStrategyRegressionTest
     PRIVATE
@@ -24,7 +24,7 @@ add_executable(QLearningRegressionTest
 )
 target_link_libraries(QLearningRegressionTest
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(QLearningRegressionTest
     PRIVATE
@@ -39,7 +39,7 @@ add_executable(DoubleDownMadnessEdgeRegressionTest
 )
 target_link_libraries(DoubleDownMadnessEdgeRegressionTest
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(DoubleDownMadnessEdgeRegressionTest
     PRIVATE
@@ -53,7 +53,7 @@ add_executable(DoubleDownMadnessQLearningRegressionTest
 )
 target_link_libraries(DoubleDownMadnessQLearningRegressionTest
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(DoubleDownMadnessQLearningRegressionTest
     PRIVATE
@@ -67,7 +67,7 @@ add_executable(CountQuantizationTest
 )
 target_link_libraries(CountQuantizationTest
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(CountQuantizationTest
     PRIVATE
@@ -81,7 +81,7 @@ add_executable(KellyExposureTest
 )
 target_link_libraries(KellyExposureTest
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(KellyExposureTest
     PRIVATE
@@ -95,7 +95,7 @@ add_executable(CountPolicyEvaluationTest
 )
 target_link_libraries(CountPolicyEvaluationTest
     PRIVATE
-        $<TARGET_OBJECTS:blackjack_objs>
+        blackjack_objs
 )
 target_include_directories(CountPolicyEvaluationTest
     PRIVATE

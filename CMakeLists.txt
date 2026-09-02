@@ -6,6 +6,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 
+# std::thread requires the platform thread flags/library on systems where
+# pthread symbols are not provided by libc. Prefer -pthread when available and
+# propagate the portable imported target to every consumer of blackjack_objs.
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 # put test executables in build/bin
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
@@ -36,6 +42,10 @@ target_include_directories(blackjack_objs
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(blackjack_objs
+    PUBLIC
+        Threads::Threads
 )
 
 # Regression tests: compare simulation output against reference JSON tables.
