@@ -11,7 +11,7 @@ This report measures the effect of limiting cumulative gross wagers in a blackja
 - Maximum total-wager fractions: 0.10, 0.25, 0.50, 0.75, and 1.00
 - The 1.00 result is the unclipped reference.
 - Exposure-table cells are `P(total gross wager / bankroll) / P(|fX|)`.
-- The 0–1% exposure bin includes no-wager rounds. The wager-multiple tables separate no-wager rounds as multiple 0.
+- Except where an explicit 0% row is shown, the 0–1% exposure bin includes no-wager rounds. The wager-multiple tables separate no-wager rounds as multiple 0.
 - Duplicate 0.75 artifacts were de-duplicated using the payout, deck count, and cap stored inside `results.json`.
 
 ## Main conclusions
@@ -51,7 +51,8 @@ Each cell is **total wager / |fX|**.
 
 | Bankroll-fraction bin | 0.10 | 0.25 | 0.50 | 0.75 | 1.00 ref |
 |---|---:|---:|---:|---:|---:|
-| 0–1% | 74.163% / 76.147% | 74.239% / 76.207% | 74.242% / 76.203% | 74.242% / 76.203% | 74.242% / 76.203% |
+| 0% exactly | 65.1656124% / 68.0831057% | 65.2327234% / 68.1346948% | 65.2354818% / 68.1305369% | 65.2354996% / 68.1304384% | 65.2354995% / 68.1304328% |
+| >0–1% | 8.9969180% / 8.0643041% | 9.0057991% / 8.0723008% | 9.0061814% / 8.0726416% | 9.0061839% / 8.0726440% | 9.0061840% / 8.0726441% |
 | 1–2% | 8.8122% / 8.0259% | 8.8140% / 8.0278% | 8.8142% / 8.0280% | 8.8142% / 8.0280% | 8.8142% / 8.0280% |
 | 2–5% | 11.742% / 10.836% | 11.723% / 10.822% | 11.723% / 10.822% | 11.723% / 10.822% | 11.723% / 10.822% |
 | 5–10% | 5.0450% / 4.7219% | 4.3943% / 4.1404% | 4.3923% / 4.1271% | 4.3922% / 4.1271% | 4.3922% / 4.1271% |
@@ -322,4 +323,3 @@ The wager multiple is total gross wager divided by the initial wager.
 ## Source artifacts
 
 The source results are the per-case `results.json` and `kelly_exposure_at_1.*` files under this directory. The compact growth-oriented CSV is `kelly_summary.csv`.
-
