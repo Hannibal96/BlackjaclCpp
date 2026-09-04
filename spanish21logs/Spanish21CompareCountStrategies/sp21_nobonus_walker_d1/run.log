@@ -1,0 +1,118 @@
+
+=== Spanish21CompareCountStrategies (Walker) ===
+Command:       /home/pliops/Desktop/BlackJackS/build/bin/CompareCountStrategies --game spanish21 --penetration 75 --ss17 false --redouble 1 --ddr true --card-count-bonuses false --num-threads 10 --stop-mode diff --sample-rounds 100000000 --diff-threshold 0.005 --num-rounds 5000000000 --eval-rounds 5000000000 --graph-rounds 500000000 --kelly-measurements 1000 --kelly-fraction-step 0.05 --decks 1 --output-dir checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d1
+Scenario:      decks=1_ss17=false_redouble=1_ddr=true_cardCountBonuses=false_penetration=75%
+Eval rounds:   5000000000  Threads: 10
+Graph rounds:  500000000
+Train rounds:  5000000000
+Count grid:    range=[-15,10]
+===============================
+Katarina Walker's Spanish 21 index deviations (true-counted Hi-Lo, running count starts at -4/deck):
+  16 vs X: Surrender -2, Stand +3
+  17 vs A: Surrender -6, Stand -3
+  doubled 17 vs A: Forfeit +2
+  A,6 vs 4: Double -5
+  A,7 vs 4: Double -5
+  8,8 vs 9: Split -11
+  9 vs 6: Double -3
+  11 vs 9: Double -5
+
+Full deviations sample rounds=100000000  speed=3394548 hands/sec  avg|ΔQ|=0.252669  threshold=0.005000
+Full deviations sample rounds=200000000  speed=3309395 hands/sec  avg|ΔQ|=0.058496  threshold=0.005000
+Full deviations sample rounds=300000000  speed=3289041 hands/sec  avg|ΔQ|=0.033443  threshold=0.005000
+Full deviations sample rounds=400000000  speed=3269256 hands/sec  avg|ΔQ|=0.023632  threshold=0.005000
+Full deviations sample rounds=500000000  speed=3220135 hands/sec  avg|ΔQ|=0.018623  threshold=0.005000
+Full deviations sample rounds=600000000  speed=3196539 hands/sec  avg|ΔQ|=0.015601  threshold=0.005000
+Full deviations sample rounds=700000000  speed=3178495 hands/sec  avg|ΔQ|=0.013549  threshold=0.005000
+Full deviations sample rounds=800000000  speed=3154786 hands/sec  avg|ΔQ|=0.012107  threshold=0.005000
+Full deviations sample rounds=900000000  speed=3130195 hands/sec  avg|ΔQ|=0.011009  threshold=0.005000
+Full deviations sample rounds=1000000000  speed=3113180 hands/sec  avg|ΔQ|=0.010176  threshold=0.005000
+Full deviations sample rounds=1100000000  speed=3093459 hands/sec  avg|ΔQ|=0.009505  threshold=0.005000
+Full deviations sample rounds=1200000000  speed=3083168 hands/sec  avg|ΔQ|=0.008954  threshold=0.005000
+Full deviations sample rounds=1300000000  speed=3060156 hands/sec  avg|ΔQ|=0.008453  threshold=0.005000
+Full deviations sample rounds=1400000000  speed=3052976 hands/sec  avg|ΔQ|=0.008100  threshold=0.005000
+Full deviations sample rounds=1500000000  speed=3035368 hands/sec  avg|ΔQ|=0.007754  threshold=0.005000
+Full deviations sample rounds=1600000000  speed=3020851 hands/sec  avg|ΔQ|=0.007413  threshold=0.005000
+Full deviations sample rounds=1700000000  speed=3011061 hands/sec  avg|ΔQ|=0.007146  threshold=0.005000
+Full deviations sample rounds=1800000000  speed=2995163 hands/sec  avg|ΔQ|=0.006912  threshold=0.005000
+Full deviations sample rounds=1900000000  speed=2980907 hands/sec  avg|ΔQ|=0.006708  threshold=0.005000
+Full deviations sample rounds=2000000000  speed=2973637 hands/sec  avg|ΔQ|=0.006488  threshold=0.005000
+Full deviations sample rounds=2100000000  speed=2957671 hands/sec  avg|ΔQ|=0.006279  threshold=0.005000
+Full deviations sample rounds=2200000000  speed=2948959 hands/sec  avg|ΔQ|=0.006128  threshold=0.005000
+Full deviations sample rounds=2300000000  speed=2939763 hands/sec  avg|ΔQ|=0.005991  threshold=0.005000
+Full deviations sample rounds=2400000000  speed=2933670 hands/sec  avg|ΔQ|=0.005826  threshold=0.005000
+Full deviations sample rounds=2500000000  speed=2922353 hands/sec  avg|ΔQ|=0.005731  threshold=0.005000
+Full deviations sample rounds=2600000000  speed=2912049 hands/sec  avg|ΔQ|=0.005557  threshold=0.005000
+Full deviations sample rounds=2700000000  speed=2904847 hands/sec  avg|ΔQ|=0.005445  threshold=0.005000
+Full deviations sample rounds=2800000000  speed=2898164 hands/sec  avg|ΔQ|=0.005369  threshold=0.005000
+Full deviations sample rounds=2900000000  speed=2891404 hands/sec  avg|ΔQ|=0.005238  threshold=0.005000
+Full deviations sample rounds=3000000000  speed=2879974 hands/sec  avg|ΔQ|=0.005143  threshold=0.005000
+Full deviations sample rounds=3100000000  speed=2873289 hands/sec  avg|ΔQ|=0.005020  threshold=0.005000
+Full deviations sample rounds=3200000000  speed=2863150 hands/sec  avg|ΔQ|=0.004938  threshold=0.005000
+Full deviations sample rounds=100000000  speed=3602565 hands/sec  avg|ΔQ|=0.213541  threshold=0.005000
+Full deviations sample rounds=200000000  speed=3396105 hands/sec  avg|ΔQ|=0.044326  threshold=0.005000
+Full deviations sample rounds=300000000  speed=3341836 hands/sec  avg|ΔQ|=0.026406  threshold=0.005000
+Full deviations sample rounds=400000000  speed=3361203 hands/sec  avg|ΔQ|=0.019351  threshold=0.005000
+Full deviations sample rounds=500000000  speed=3342648 hands/sec  avg|ΔQ|=0.015692  threshold=0.005000
+Full deviations sample rounds=600000000  speed=3321082 hands/sec  avg|ΔQ|=0.013379  threshold=0.005000
+Full deviations sample rounds=700000000  speed=3297500 hands/sec  avg|ΔQ|=0.011738  threshold=0.005000
+Full deviations sample rounds=800000000  speed=3282213 hands/sec  avg|ΔQ|=0.010559  threshold=0.005000
+Full deviations sample rounds=900000000  speed=3280517 hands/sec  avg|ΔQ|=0.009740  threshold=0.005000
+Full deviations sample rounds=1000000000  speed=3265690 hands/sec  avg|ΔQ|=0.009010  threshold=0.005000
+Full deviations sample rounds=1100000000  speed=3250937 hands/sec  avg|ΔQ|=0.008432  threshold=0.005000
+Full deviations sample rounds=1200000000  speed=3237992 hands/sec  avg|ΔQ|=0.007979  threshold=0.005000
+Full deviations sample rounds=1300000000  speed=3229196 hands/sec  avg|ΔQ|=0.007580  threshold=0.005000
+Full deviations sample rounds=1400000000  speed=3212416 hands/sec  avg|ΔQ|=0.007191  threshold=0.005000
+Full deviations sample rounds=1500000000  speed=3199550 hands/sec  avg|ΔQ|=0.006962  threshold=0.005000
+Full deviations sample rounds=1600000000  speed=3190492 hands/sec  avg|ΔQ|=0.006627  threshold=0.005000
+Full deviations sample rounds=1700000000  speed=3174230 hands/sec  avg|ΔQ|=0.006408  threshold=0.005000
+Full deviations sample rounds=1800000000  speed=3164457 hands/sec  avg|ΔQ|=0.006200  threshold=0.005000
+Full deviations sample rounds=1900000000  speed=3152386 hands/sec  avg|ΔQ|=0.005991  threshold=0.005000
+Full deviations sample rounds=2000000000  speed=3140975 hands/sec  avg|ΔQ|=0.005855  threshold=0.005000
+Full deviations sample rounds=2100000000  speed=3127252 hands/sec  avg|ΔQ|=0.005646  threshold=0.005000
+Full deviations sample rounds=2200000000  speed=3115035 hands/sec  avg|ΔQ|=0.005495  threshold=0.005000
+Full deviations sample rounds=2300000000  speed=3107629 hands/sec  avg|ΔQ|=0.005385  threshold=0.005000
+Full deviations sample rounds=2400000000  speed=3095524 hands/sec  avg|ΔQ|=0.005256  threshold=0.005000
+Full deviations sample rounds=2500000000  speed=3089253 hands/sec  avg|ΔQ|=0.005124  threshold=0.005000
+Full deviations sample rounds=2600000000  speed=3081997 hands/sec  avg|ΔQ|=0.004997  threshold=0.005000
+
+=== Comparison ===
+Policy                                   Spread 1:10     Spread std(X)  Kelly fraction      Kelly growth      Kelly stddev
+--------------------------------------------------------------------------------------------------------------------------
+HiLo (no deviations)                        0.068454          8.835807            0.50          1.000095          0.000015
+  Spread E[X^2]=78.076172  predicted Kelly multiplier from flat 1/E[X^2]=0.644468
+Walker (no deviations)                      0.041088          4.217000            0.90          1.000062          0.000008
+  Spread E[X^2]=17.784774  predicted Kelly multiplier from flat 1/E[X^2]=0.644491
+Walker + deviations                         0.042968          4.218052            0.90          1.000067          0.000008
+  Spread E[X^2]=17.793809  predicted Kelly multiplier from flat 1/E[X^2]=0.647901
+Walker + full deviations                    0.079580          4.514268            0.90          1.000136          0.000009
+  Spread E[X^2]=20.384947  predicted Kelly multiplier from flat 1/E[X^2]=0.643299
+  Trained fresh against Walker count
+HiLo + full deviations                      0.106633          9.222122            0.65          1.000194          0.000020
+  Spread E[X^2]=85.058900  predicted Kelly multiplier from flat 1/E[X^2]=0.634377
+  Trained fresh against Hi-Lo count
+
+Saved artifacts:
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d1/run.log
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d1/ev_count_graph.json
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d1/ev_count_graph.svg
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d1/count_histograms.json
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d1/count_histograms.svg
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d1/second_moment_count_graph.json
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d1/second_moment_count_graph.svg
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d1/kelly_fraction_graph.json
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d1/kelly_fraction_graph.svg
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d1/walker_full/full_deviations_strategy.json
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d1/hilo_full/full_deviations_strategy.json
+
+DebugPlayerBehavior commands to watch each policy play:
+  HiLo (no deviations):
+    ./build/bin/DebugPlayerBehavior --game spanish21 --decks 1 --ss17 false --redouble 1 --ddr true --count hilo
+  Walker (no deviations):
+    ./build/bin/DebugPlayerBehavior --game spanish21 --decks 1 --ss17 false --redouble 1 --ddr true --count walker
+  Walker + deviations:
+    ./build/bin/DebugPlayerBehavior --game spanish21 --decks 1 --ss17 false --redouble 1 --ddr true --count walker --walker-deviations
+  Walker + full deviations:
+    ./build/bin/DebugPlayerBehavior --game spanish21 --decks 1 --ss17 false --redouble 1 --ddr true --count walker --strategy-file /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d1/walker_full/full_deviations_strategy.json
+  HiLo + full deviations:
+    ./build/bin/DebugPlayerBehavior --game spanish21 --decks 1 --ss17 false --redouble 1 --ddr true --count hilo --strategy-file /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d1/hilo_full/full_deviations_strategy.json

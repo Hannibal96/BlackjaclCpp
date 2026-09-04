@@ -1,0 +1,2401 @@
+
+=== Spanish21AlternatingOptimization ===
+Command:       /home/pliops/Desktop/BlackJackS/build/bin/AlternatingOptimization --game spanish21 --penetration 75 --ss17 false --redouble 1 --ddr true --card-count-bonuses false --num-threads 10 --stop-mode diff --sample-rounds 100000000 --diff-threshold 0.005 --num-rounds 5000000000 --eval-rounds 5000000000 --graph-rounds 500000000 --kelly-measurements 1000 --kelly-fraction-step 0.05 --iterations 3 --sample-every 2 --decks 1 --count-classical-ols --count-sum-zero-fixed-b1 --checkpoint-name sp21_nobonus_ols_b1
+Scenario:      decks=1_ss17=false_redouble=1_ddr=true_cardCountBonuses=false_penetration=75%
+Policy stop:   diff  sample=100000000  threshold=0.005  Threads: 10
+Count rounds:  10000000000  (record every 2 => target 5000000000 recorded samples)
+Eval rounds:   5000000000
+Graph rounds:  500000000
+Iterations:    3  (each iteration learns P_k then W_{k+1})
+Count objective: classical_ols
+Count constraint: sum_zero_fixed_w1_bias
+Penetration:   75%
+Sample-every:  2
+Kelly sweep:  centered at nearest step to 1/E[X^2] +/- 0.25 (minimum 0)  step 0.05
+Folder:        /home/pliops/Desktop/BlackJackS/checkpoints/spanish21-alternating-checkpoints/sp21_nobonus_ols_b1_decks=1_ss17=false_redouble=1_ddr=true_cardCountBonuses=false/
+Initial count: none (all zeros)
+Count scaling:  average 10/J/Q/K tag = -1
+===============================
+P0 sample rounds=100000000  speed=5523031 hands/sec  avg|ΔQ|=0.429395  threshold=0.005000
+P0 sample rounds=200000000  speed=5098269 hands/sec  avg|ΔQ|=0.013318  threshold=0.005000
+P0 sample rounds=300000000  speed=4944376 hands/sec  avg|ΔQ|=0.009597  threshold=0.005000
+P0 sample rounds=400000000  speed=4842322 hands/sec  avg|ΔQ|=0.007863  threshold=0.005000
+P0 sample rounds=500000000  speed=4768126 hands/sec  avg|ΔQ|=0.006827  threshold=0.005000
+P0 sample rounds=600000000  speed=4702895 hands/sec  avg|ΔQ|=0.006103  threshold=0.005000
+P0 sample rounds=700000000  speed=4630365 hands/sec  avg|ΔQ|=0.005562  threshold=0.005000
+P0 sample rounds=800000000  speed=4585710 hands/sec  avg|ΔQ|=0.005111  threshold=0.005000
+P0 sample rounds=900000000  speed=4545937 hands/sec  avg|ΔQ|=0.004698  threshold=0.005000
+
+--- P0 ---
+Training rounds: 900000000
+Training speed: 4545937 hands/sec
+Training flat edge:   -0.341061
+Evaluation flat edge (5000000000 rounds): -0.002630  std(X): 1.250546  E[X^2]: 1.563872
+Spread/Kelly evaluation skipped for P0: W0 is the zero count, so no positive-count betting signal is expected.
+
+=== P0 Strategy ===
+
+========== Count: 0 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  4    -   -   -   -   H   -  Dh   -   -   -
+  5    H   H   H   H  Dh   H   H   H   H   H
+  6    H   H   H   H  Dh   H   H   H   H   H
+  7    H   H   H  Dh  Dh   H   H   H   H   H
+  8    H   H  Dh  Dh  Dh   H   H   H   H   H
+  9   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H   H
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh   H  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   H   S   H   H   H   H   H
+ 14    H   H   S   S   S   H   H   H   H   H
+ 15    S   S   S   S   S   H   H   H   H   H
+ 16    S   S   S   S   S   H   H   H   H  Xh
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 12    -   -   -   -   -   -   -   -   H   -
+ 13    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 14    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 15    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 16    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 17    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 18    S   S  Ds  Ds  Ds   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    P   P   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H   H
+  6    H   P   P   P   P   P   H   H   H   H
+  7    P   P   P   P   P   P   P   H   H   H
+  8    P   P   P   P   P   P   P   P   P   H
+  9    S   P   P   P   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+  7    S   S   S   S   S   S   S  Xs  Xs  Xs
+  8   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 18    S   S  Ds  Ds  Ds   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+========================
+
+--- W1 ---
+Recorded rounds: 5000000000  speed: 8271928 hands/sec
+Count table:
+  Card      Original      Used          
+  --------------------------------------
+  2         0.4744        0.4744        
+  3         0.7549        0.7549        
+  4         1.1411        1.1411        
+  5         1.3159        1.3159        
+  6         0.8883        0.8883        
+  7         0.3036        0.3036        
+  8         -0.1844       -0.1844       
+  9         -0.3762       -0.3762       
+  10        ---           ---           
+  J         -0.9983       -1.0000       
+  Q         -1.0015       -1.0000       
+  K         -1.0002       -1.0000       
+  A         -1.3177       -1.3177       
+  Bias      -0.001467   
+  EV>0 TC   0.270075    
+  Factor    0.005433    
+
+Spread 1:10 evaluation edge (5000000000 rounds): 0.078555  std(X): 7.332902  E[X^2]: 53.777623
+Optimal Kelly multiplier:    0.750000  predicted 1/E[X^2]: 0.639439
+Optimal Kelly growth/round:  1.000118  stddev: 0.000016
+Sanity checks:
+  Sum(weights): 0.000000  (PASS, expected near 0)
+  10-value consistency: mean=-1.000000  max_dev=0.001721  rel=0.172143%  (PASS)
+  Bias vs flat edge: bias=-0.001467  flat_edge=-0.002630  diff=0.001163  rel_to_0.5%=23.255247%
+  Bias constraint: free
+EV-count graph:         41 points  res=0.250000  speed: 7050098 hands/sec
+Count histogram:        total=355238168  symmetry_rel_diff=5.4937%  (PASS, expected roughly symmetric)
+P1 sample rounds=100000000  speed=4141644 hands/sec  avg|ΔQ|=0.337530  threshold=0.005000
+P1 sample rounds=200000000  speed=3996323 hands/sec  avg|ΔQ|=0.045025  threshold=0.005000
+P1 sample rounds=300000000  speed=3871168 hands/sec  avg|ΔQ|=0.024769  threshold=0.005000
+P1 sample rounds=400000000  speed=3796868 hands/sec  avg|ΔQ|=0.017541  threshold=0.005000
+P1 sample rounds=500000000  speed=3741339 hands/sec  avg|ΔQ|=0.014048  threshold=0.005000
+P1 sample rounds=600000000  speed=3706976 hands/sec  avg|ΔQ|=0.011928  threshold=0.005000
+P1 sample rounds=700000000  speed=3681169 hands/sec  avg|ΔQ|=0.010600  threshold=0.005000
+P1 sample rounds=800000000  speed=3655121 hands/sec  avg|ΔQ|=0.009623  threshold=0.005000
+P1 sample rounds=900000000  speed=3624589 hands/sec  avg|ΔQ|=0.008925  threshold=0.005000
+P1 sample rounds=1000000000  speed=3595415 hands/sec  avg|ΔQ|=0.008268  threshold=0.005000
+P1 sample rounds=1100000000  speed=3572832 hands/sec  avg|ΔQ|=0.007850  threshold=0.005000
+P1 sample rounds=1200000000  speed=3564173 hands/sec  avg|ΔQ|=0.007504  threshold=0.005000
+P1 sample rounds=1300000000  speed=3550360 hands/sec  avg|ΔQ|=0.007135  threshold=0.005000
+P1 sample rounds=1400000000  speed=3546324 hands/sec  avg|ΔQ|=0.006865  threshold=0.005000
+P1 sample rounds=1500000000  speed=3528457 hands/sec  avg|ΔQ|=0.006598  threshold=0.005000
+P1 sample rounds=1600000000  speed=3516012 hands/sec  avg|ΔQ|=0.006341  threshold=0.005000
+P1 sample rounds=1700000000  speed=3493356 hands/sec  avg|ΔQ|=0.006152  threshold=0.005000
+P1 sample rounds=1800000000  speed=3478664 hands/sec  avg|ΔQ|=0.005930  threshold=0.005000
+P1 sample rounds=1900000000  speed=3465313 hands/sec  avg|ΔQ|=0.005845  threshold=0.005000
+P1 sample rounds=2000000000  speed=3450007 hands/sec  avg|ΔQ|=0.005644  threshold=0.005000
+P1 sample rounds=2100000000  speed=3440034 hands/sec  avg|ΔQ|=0.005410  threshold=0.005000
+P1 sample rounds=2200000000  speed=3430815 hands/sec  avg|ΔQ|=0.005325  threshold=0.005000
+P1 sample rounds=2300000000  speed=3416457 hands/sec  avg|ΔQ|=0.005222  threshold=0.005000
+P1 sample rounds=2400000000  speed=3407716 hands/sec  avg|ΔQ|=0.005074  threshold=0.005000
+P1 sample rounds=2500000000  speed=3392439 hands/sec  avg|ΔQ|=0.004951  threshold=0.005000
+
+--- P1 ---
+Training rounds: 2500000000
+Training speed: 3392439 hands/sec
+Training flat edge:   -0.510530
+Evaluation flat edge (5000000000 rounds): 0.005918  std(X): 1.247837  E[X^2]: 1.557131
+Spread 1:10 evaluation edge (5000000000 rounds): 0.122018  std(X): 7.738771  E[X^2]: 59.903463
+Kelly growth per round:      1.000244  stddev: 0.000022
+
+=== P1 Strategy ===
+
+========== Count: -5 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H  Dh   H   H   H   H   H
+ 11    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   H   H   H   H   H   H   H
+ 14    H   H   H   H   H   H   H   H   H   H
+ 15    H   H   H   H   H   H   H   H   H   H
+ 16    H   H   H   H   H   H   H   H   H   H
+ 17    S   S   S   S   S   S   S   S   S  Xh
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H   H   H  Dh  Dh   H   H   H   H   H
+ 14    H   H   H  Dh  Dh   H   H   H   H   H
+ 15    H   H   H   H  Dh   H   H   H   H   H
+ 16    H   H   H   H   H   H   H   H   H   H
+ 17    H   H   H   H  Dh   H   H   H   H   H
+ 18    S   S   H   H  Dh   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   P   P   H   H   H   H
+  3    H   H   P   P   P   P   H   H   H   H
+  4    H   H   H   P   P   H   H   H   H   H
+  5    H   H   H   H  Dh   H   H   H   H   H
+  6    H   H   H   H   P   P   P   H   H   H
+  7    P   P   P   P   P   P   P   H   H   H
+  8    P   P   P   P   P   P   P   P   P   H
+  9    S   S   S   S   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6   Xs   S   S   S   S   S  Xs   S  Xs  Xs
+  7    S   S   S   S   S   S  Xs   S  Xs  Xs
+  8    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12   Ds  Ds  Ds  Ds   S  Ds  Ds  Xs  Xs  Xs
+ 13   Ds  Ds  Ds   S   S  Ds  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S  Ds  Ds  Xs  Xs  Xs
+ 15    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 18    S   S   S   S  Ds   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: -4 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H  Dh  Dh   H   H   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 11   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   H   H   H   H   H   H   H
+ 14    H   H   H   H   H   H   H   H   H   H
+ 15    H   H   H   H   S   H   H   H   H   H
+ 16    H   S   S   S   S   H   H   H   H   H
+ 17    S   S   S   S   S   S   S   S   S  Xh
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H   H   H  Dh  Dh   H   H   H   H   H
+ 14    H   H   H  Dh  Dh   H   H   H   H   H
+ 15    H   H   H   H  Dh   H   H   H   H   H
+ 16    H   H   H   H  Dh   H   H   H   H   H
+ 17    H   H   H  Dh  Dh   H   H   H   H   H
+ 18    S   S   S   S  Ds   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H   P   P   P   P   H   H   H   H   H
+  5   Dh  Dh   H  Dh  Dh   H   H   H   H   H
+  6    P   H   P   P   P   P   P   H   H   H
+  7    P   P   P   P   P   P   P   H   H   H
+  8    P   P   P   P   P   P   P   P   P   H
+  9    S   S   S   S   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6   Ds   S   S  Ds   S  Xs  Xs   S  Xs   S
+  7    S   S   S   S   S   S   S   S  Xs  Xs
+  8    S   S   S  Ds   S  Ds  Xs  Xs   S  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12   Ds   S   S   S   S  Ds  Ds  Xs  Xs  Xs
+ 13    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: -3 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H  Dh   H   H   H   H   H
+  9    H   H   H  Dh  Dh   H   H   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 11   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   H   H   H   H   H   H   H
+ 14    H   H   H   H   S   H   H   H   H   H
+ 15    H   H   S   S   S   H   H   H   H   H
+ 16    H   S   S   S   S   H   H   H   H   H
+ 17    S   S   S   S   S   S   S   S   S  Xh
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H   H   H  Dh  Dh   H   H   H   H   H
+ 14    H   H   H   H  Dh   H   H   H   H   H
+ 15    H   H   H  Dh  Dh   H   H   H   H   H
+ 16    H   H   H   H  Dh   H   H   H   H   H
+ 17    H   H   H  Dh  Dh   H   H   H   H   H
+ 18    S   S   S  Ds  Ds   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    H   P   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H   P   P   P   P   H   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh   H   H   H   H   H
+  6    H   P   P   P   P   P   P   H   H   H
+  7    P   P   P   P   P   P   P   H   H   H
+  8    P   P   P   P   P   P   P   P   P   H
+  9    S   S   P   P   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6    S   S   S   S   S   S  Xs  Xs   S  Xs
+  7    S   S   S   S   S   S   S  Xs  Xs  Xs
+  8    S  Ds  Ds  Ds  Ds  Ds  Ds   S  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 18    S   S   S   S  Ds   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: -2 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H  Dh  Dh   H   H   H   H   H
+  9    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H   H
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   H   H   H   H   H   H   H
+ 14    H   H   H   H   S   H   H   H   H   H
+ 15    H   H   S   S   S   H   H   H   H   H
+ 16    S   S   S   S   S   H   H   H   H   H
+ 17    S   S   S   S   S   S   S   S   S  Xh
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H   H   H  Dh  Dh   H   H   H   H   H
+ 14    H   H   H  Dh  Dh   H   H   H   H   H
+ 15    H   H   H  Dh  Dh   H   H   H   H   H
+ 16    H   H   H   H  Dh   H   H   H   H   H
+ 17    H   H   H  Dh  Dh   H   H   H   H   H
+ 18    S   S   S  Ds  Ds   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    H   P   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H   H   P   P   P   H   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+  6    H   P   P   P   P   P   P   H   H   H
+  7    P   P   P   P   P   P   P   H   H   H
+  8    P   P   P   P   P   P   P   P   P   H
+  9    S   P   P   P   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6   Ds   S   S   S   S   S   S  Xs  Xs  Xs
+  7    S   S   S   S   S   S  Xs   S  Xs  Xs
+  8    S  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S  Ds   S  Xs  Xs  Xs
+ 13    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 18    S   S   S  Ds  Ds   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: -1 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H  Dh   H   H   H   H   H
+  8    H   H   H  Dh  Dh   H   H   H   H   H
+  9    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H   H
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh   H  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   H   H   H   H   H   H   H
+ 14    H   H   H   S   S   H   H   H   H   H
+ 15    H   S   S   S   S   H   H   H   H   H
+ 16    S   S   S   S   S   H   H   H   H  Xh
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 12    -   -  Dh   -   -   -   -   -   -   -
+ 13    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 14    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 15    H   H   H  Dh  Dh   H   H   H   H   H
+ 16    H   H   H   H  Dh   H   H   H   H   H
+ 17    H   H   H  Dh  Dh   H   H   H   H   H
+ 18    S   S   S  Ds  Ds   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    P   P   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H   H   P  Dh  Dh   H   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh  Dh   H  Dh   H   H
+  6    H   P   P   P   P   P   H   H   H   H
+  7    P   P   P   P   P   P   P   H   H   H
+  8    P   P   P   P   P   P   P   P   P   H
+  9    S   S   P   P   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6   Xs   S   S   S   S   S   S  Xs  Xs  Xs
+  7    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+  8   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 18    S   S   S  Ds  Ds   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: 0 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  4    -   -   -   -   -   -  Dh  Dh   -   -
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H  Dh   H   H   H   H   H
+  8    H   H  Dh  Dh  Dh   H   H   H   H   H
+  9    H  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   H   H   H   H   H   H   H
+ 14    H   H   H   S   S   H   H   H   H   H
+ 15    S   S   S   S   S   H   H   H   H   H
+ 16    S   S   S   S   S   H   H   H   H  Xh
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 14    H   H   H  Dh  Dh   H   H   H   H   H
+ 15    H   H   H  Dh  Dh   H   H   H   H   H
+ 16    H   H   H  Dh  Dh   H   H   H   H   H
+ 17    H   H   H  Dh  Dh   H   H   H   H   H
+ 18    S   S  Ds  Ds  Ds   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    P   P   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H   H  Dh  Dh  Dh   H   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H   H
+  6    H   P   P   P   P   P   P   H   H   H
+  7    P   P   P   P   P   P   P   H   H   H
+  8    P   P   P   P   P   P   P   P   P   H
+  9    S   P   P   P   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6   Xs   S   S   S   S   S  Xs  Xs  Xs  Xs
+  7    S   S   S   S   S   S  Xs   S  Xs  Xs
+  8    S  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 18    S   S   S  Ds  Ds   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: 1 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H   H  Dh   H   H   H   H   H
+  6    H   H   H   H  Dh   H   H   H   H   H
+  7    H   H   H  Dh  Dh   H   H   H   H   H
+  8    H   H  Dh  Dh  Dh   H   H   H   H   H
+  9   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   H   S   H   H   H   H   H
+ 14    H   H   S   S   S   H   H   H   H   H
+ 15    S   S   S   S   S   H   H   H   H  Xh
+ 16    S   S   S   S   S   H   H   H   H  Xh
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 14    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 15    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 16    H   H   H  Dh  Dh   H   H   H   H   H
+ 17    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 18    S   S  Ds  Ds  Ds   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    P   P   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H   H  Dh  Dh  Dh   H   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+  6    H   P   P   P   P   P   H   H   H   H
+  7    P   P   P   P   P   P   P   H   H  Xh
+  8    P   P   P   P   P   P   P   P   P  Xh
+  9    P   P   P   P   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6    S   S   S   S   S   S   S  Xs  Xs  Xs
+  7    S   S   S   S   S   S   S  Xs  Xs  Xs
+  8   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 18    S   S  Ds  Ds  Ds   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: 2 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H   H  Dh   H   H   H   H   H
+  6    H   H   H   H  Dh   H   H   H   H   H
+  7    H   H   H  Dh  Dh   H   H   H   H   H
+  8    H   H  Dh  Dh  Dh   H   H   H   H   H
+  9   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh   H  Dh
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   H   S   H   H   H   H   H
+ 14    H   S   S   S   S   H   H   H   H   H
+ 15    S   S   S   S   S   H   H   H   H  Xh
+ 16    S   S   S   S   S   H   H   H  Xh  Xh
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 14    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 15    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 16    H   H   H  Dh  Dh   H   H   H   H   H
+ 17    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 18    S   S  Ds  Ds  Ds   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    P   P   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H   H  Dh   P  Dh   H   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh   H  Dh
+  6    H   P   P   P   P   P   H   H   H   H
+  7    P   P   P   P   P   P   P   H   H  Xh
+  8    P   P   P   P   P   P   P   P   P  Xh
+  9    P   P   P   P   P   P   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+  7    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+  8   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds   S  Xs  Ds  Xs
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds   S  Ds
+ 18    S   S   S  Ds  Ds   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: 3 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H   H  Dh   H   H   H   H   H
+  6    H   H   H   H  Dh   H   H   H   H   H
+  7    H   H   H  Dh  Dh   H   H   H   H   H
+  8    H   H  Dh  Dh  Dh   H   H   H   H   H
+  9   Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   S   S   H   H   H   H   H
+ 14    H   S   S   S   S   H   H   H   H   H
+ 15    S   S   S   S   S   H   H   H   H  Xh
+ 16    S   S   S   S   S   H   H   H  Xh  Xh
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 14    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 15    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 16    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 17    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 18    S   S  Ds  Ds  Ds   S   S   H   H   H
+ 19    S   S   S   S  Ds   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    P   P   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H  Dh  Dh  Dh   P   H   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh   H
+  6    P   P   P   P   P   P   P   H   H   H
+  7    P   P   P   P   P   P   P   H  Xh  Xh
+  8    P   P   P   P   P   P   P   P   P   P
+  9    P   P   P   P   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6    S   S   S   S   S  Xs  Xs  Xs  Xs   S
+  7    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+  8   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds   S  Ds  Ds  Xs
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds   S   S  Xs
+ 18    S   S  Ds  Ds  Ds   S   S   S   S   S
+ 19    S   S   S   S  Ds   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: 4 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H  Dh  Dh   H   H   H   H   H
+  6    H   H   H  Dh  Dh   H   H   H   H   H
+  7    H   H  Dh  Dh  Dh   H   H   H   H   H
+  8    H  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+  9   Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   S   S   H   H   H   H   H
+ 14    S   S   S   S   S   H   H   H   H   H
+ 15    S   S   S   S   S   H   H   H  Xh  Xh
+ 16    S   S   S   S   S   H   H  Xh  Xs  Xh
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 14    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 15    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 16    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 17    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 18    S   S  Ds  Ds  Ds   S   S   H   H   H
+ 19    S   S   S  Ds  Ds   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    P   P   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+  6    P   P   P   P   P   P   P   H   H   H
+  7    P   P   P   P   P   P   P   P  Xh  Xh
+  8    P   P   P   P   P   P   P   P   P   P
+  9    P   P   P   P   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6    S   S   S   S   S   S   S   S  Xs  Ds
+  7    S   S   S  Ds   S   S  Xs  Xs  Xs  Xs
+  8   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds   S  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds   S
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 18    S   S  Ds  Ds  Ds   S   S   S   S   S
+ 19    S   S   S  Ds  Ds   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: 5 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H  Dh  Dh   H   H   H   H   H
+  6    H   H  Dh  Dh  Dh   H   H   H   H   H
+  7    H   H  Dh  Dh  Dh   H   H   H   H   H
+  8   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+  9   Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 12    H   H   H   S   S   H   H   H   H   H
+ 13    S   S   S   S   S   H   H   H   H   H
+ 14    S   S   S   S   S   H   H   H  Xh  Xh
+ 15    S   S   S   S   S   H   H  Xh  Xs  Xs
+ 16    S   S   S   S   S   H  Xh  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S   S
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 14    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 15    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 16    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 17    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 18   Ds  Ds  Ds  Ds  Ds   S   S   H   H   H
+ 19    S   S  Ds  Ds  Ds   S   S   S   S   S
+ 20    S   S   S  Ds  Ds   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    P   P   P   P   P   P   P   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+  6    P   P   P   P   P   P   H   H   H   H
+  7    P   P   P   P   P   P   P  Xh  Xs  Xs
+  8    P   P   P   P   P   P   P   P   P   P
+  9    P   P   P   P   P   P   P   P   S   P
+ 10    S   S   P   P   P   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6    S   S   S   S   S   S   S  Xs  Xs  Xs
+  7    S   S  Ds  Ds  Ds   S  Xs  Xs  Xs  Xs
+  8   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs
+ 17   Ds  Ds  Ds  Ds  Ds   S  Ds   S   S  Xs
+ 18    S   S  Ds  Ds  Ds   S   S   S   S   S
+ 19    S  Ds  Ds  Ds  Ds   S   S   S   S   S
+ 20    S   S  Ds  Ds  Ds   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+========================
+
+--- W2 ---
+Recorded rounds: 5000000000  speed: 7244618 hands/sec
+Count table:
+  Card      Original      Used          
+  --------------------------------------
+  2         0.3311        0.3311        
+  3         0.6528        0.6528        
+  4         1.1018        1.1018        
+  5         1.2958        1.2958        
+  6         0.9168        0.9168        
+  7         0.5060        0.5060        
+  8         -0.0202       -0.0202       
+  9         -0.2793       -0.2793       
+  10        ---           ---           
+  J         -1.0001       -1.0000       
+  Q         -1.0004       -1.0000       
+  K         -0.9995       -1.0000       
+  A         -1.5048       -1.5048       
+  Bias      -0.001467   
+  EV>0 TC   0.309749    
+  Factor    0.004737    
+
+Spread 1:10 evaluation edge (5000000000 rounds): 0.120029  std(X): 7.796844  E[X^2]: 60.805187
+Optimal Kelly multiplier:    0.900000  predicted 1/E[X^2]: 0.642207
+Optimal Kelly growth/round:  1.000230  stddev: 0.000017
+Sanity checks:
+  Sum(weights): 0.000000  (PASS, expected near 0)
+  10-value consistency: mean=-1.000000  max_dev=0.000495  rel=0.049515%  (PASS)
+  Bias vs flat edge: bias=-0.001467  flat_edge=0.005918  diff=0.007385  rel_to_0.5%=147.696991%
+  Bias constraint: fixed to W1 bias
+EV-count graph:         41 points  res=0.250000  speed: 6690306 hands/sec
+Count histogram:        total=352151850  symmetry_rel_diff=4.0126%  (PASS, expected roughly symmetric)
+P2 sample rounds=100000000  speed=4153169 hands/sec  avg|ΔQ|=0.337292  threshold=0.005000
+P2 sample rounds=200000000  speed=3970775 hands/sec  avg|ΔQ|=0.044839  threshold=0.005000
+P2 sample rounds=300000000  speed=3880933 hands/sec  avg|ΔQ|=0.024853  threshold=0.005000
+P2 sample rounds=400000000  speed=3813083 hands/sec  avg|ΔQ|=0.017751  threshold=0.005000
+P2 sample rounds=500000000  speed=3753895 hands/sec  avg|ΔQ|=0.014097  threshold=0.005000
+P2 sample rounds=600000000  speed=3707251 hands/sec  avg|ΔQ|=0.011986  threshold=0.005000
+P2 sample rounds=700000000  speed=3672786 hands/sec  avg|ΔQ|=0.010511  threshold=0.005000
+P2 sample rounds=800000000  speed=3654236 hands/sec  avg|ΔQ|=0.009702  threshold=0.005000
+P2 sample rounds=900000000  speed=3626035 hands/sec  avg|ΔQ|=0.008796  threshold=0.005000
+P2 sample rounds=1000000000  speed=3603733 hands/sec  avg|ΔQ|=0.008294  threshold=0.005000
+P2 sample rounds=1100000000  speed=3585106 hands/sec  avg|ΔQ|=0.007830  threshold=0.005000
+P2 sample rounds=1200000000  speed=3554934 hands/sec  avg|ΔQ|=0.007473  threshold=0.005000
+P2 sample rounds=1300000000  speed=3519735 hands/sec  avg|ΔQ|=0.007135  threshold=0.005000
+P2 sample rounds=1400000000  speed=3500849 hands/sec  avg|ΔQ|=0.006892  threshold=0.005000
+P2 sample rounds=1500000000  speed=3483228 hands/sec  avg|ΔQ|=0.006576  threshold=0.005000
+P2 sample rounds=1600000000  speed=3466715 hands/sec  avg|ΔQ|=0.006400  threshold=0.005000
+P2 sample rounds=1700000000  speed=3447458 hands/sec  avg|ΔQ|=0.006112  threshold=0.005000
+P2 sample rounds=1800000000  speed=3432900 hands/sec  avg|ΔQ|=0.005938  threshold=0.005000
+P2 sample rounds=1900000000  speed=3425442 hands/sec  avg|ΔQ|=0.005785  threshold=0.005000
+P2 sample rounds=2000000000  speed=3408979 hands/sec  avg|ΔQ|=0.005585  threshold=0.005000
+P2 sample rounds=2100000000  speed=3392426 hands/sec  avg|ΔQ|=0.005455  threshold=0.005000
+P2 sample rounds=2200000000  speed=3381416 hands/sec  avg|ΔQ|=0.005335  threshold=0.005000
+P2 sample rounds=2300000000  speed=3371490 hands/sec  avg|ΔQ|=0.005174  threshold=0.005000
+P2 sample rounds=2400000000  speed=3359575 hands/sec  avg|ΔQ|=0.005080  threshold=0.005000
+P2 sample rounds=2500000000  speed=3350335 hands/sec  avg|ΔQ|=0.004959  threshold=0.005000
+
+--- P2 ---
+Training rounds: 2500000000
+Training speed: 3350335 hands/sec
+Training flat edge:   -0.509805
+Evaluation flat edge (5000000000 rounds): 0.005280  std(X): 1.252290  E[X^2]: 1.568258
+Spread 1:10 evaluation edge (5000000000 rounds): 0.119977  std(X): 7.789511  E[X^2]: 60.690879
+Kelly growth per round:      1.000236  stddev: 0.000019
+
+=== P2 Strategy ===
+
+========== Count: -5 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H  Dh   H   H   H   H   H
+ 11   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   H   H   H   H   H   H   H
+ 14    H   H   H   H   H   H   H   H   H   H
+ 15    H   H   H   H   H   H   H   H   H   H
+ 16    H   H   H   H   H   H   H   H   H   H
+ 17    S   S   S   S   S   S   S   S   S  Xh
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H   H   H  Dh  Dh  Dh   H   H   H   H
+ 14    H   H   H  Dh  Dh   H   H   H   H   H
+ 15    H   H   H   H  Dh   H   H   H   H   H
+ 16    H   H   H   H  Dh   H   H   H   H   H
+ 17    H   H   H   H   H   H   H   H   H   H
+ 18    S   S   S   S  Ds   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   P   P   P   H   H   H   H
+  3    H   H   P   P   P   P   P   H   H   H
+  4    H   H   H   P   P   P   H   H   H   H
+  5    H   H   H   H  Dh   H   H   H   H   H
+  6    H   H   H   H   P   P   H   H   H   H
+  7    P   P   P   P   P   P   H   H   H   H
+  8    P   P   P   P   P   P   P   P   P   H
+  9    S   S   S   S   S   S   S   S   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6    S  Xs   S   S   S   S  Xs   S  Xs  Xs
+  7    S   S   S   S   S   S   S   S  Xs  Xs
+  8    S   S   S   S   S   S   S  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs
+ 13    S   S   S  Ds   S  Ds  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S  Ds  Ds  Xs  Xs  Xs
+ 15    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: -4 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H  Dh  Dh   H   H   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+ 11   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   H   H   H   H   H   H   H
+ 14    H   H   H   H   H   H   H   H   H   H
+ 15    H   H   H   S   S   H   H   H   H   H
+ 16    S   S   S   S   S   H   H   H   H   H
+ 17    S   S   S   S   S   S   S   S   S  Xh
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H   H   H  Dh  Dh   H   H   H   H   H
+ 14    H   H   H  Dh  Dh   H   H   H   H   H
+ 15    H   H   H   H  Dh   H   H   H   H   H
+ 16    H   H   H   H  Dh   H   H   H   H   H
+ 17    H   H   H  Dh  Dh   H   H   H   H   H
+ 18    S   S   S  Ds  Ds   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H   P   P   P   P   P   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh   H   H   H   H   H
+  6    H   H   P   P   P   P   H   H   H   H
+  7    P   P   P   P   P   P   H   H   H   H
+  8    P   P   P   P   P   P   P   P   P   H
+  9    S   S   S   P   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6    S   S   S   S   S   S   S  Xs  Xs  Xs
+  7    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+  8    S  Ds   S  Ds   S  Ds   S   S  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12   Ds   S  Ds   S   S  Ds  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: -3 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H  Dh   H   H   H   H   H
+  9    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh   H  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   H   H   H   H   H   H   H
+ 14    H   H   H   H   S   H   H   H   H   H
+ 15    H   H   S   S   S   H   H   H   H   H
+ 16    S   S   S   S   S   H   H   H   H   H
+ 17    S   S   S   S   S   S   S   S   S  Xh
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 14    H   H   H  Dh  Dh   H   H   H   H   H
+ 15    H   H   H  Dh  Dh   H   H   H   H   H
+ 16    H   H   H   H  Dh   H   H   H   H   H
+ 17    H   H   H  Dh  Dh   H   H   H   H   H
+ 18    S   S   S  Ds  Ds   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    P   P   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H   P   P   P   P   H   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh   H   H   H   H   H
+  6    H   H   P   P   P   P   P   H   H   H
+  7    P   P   P   P   P   P   P   H   H   H
+  8    P   P   P   P   P   P   P   P   P   H
+  9    S   P   S   P   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6    S  Xs  Xs  Ds   S  Xs  Xs  Xs  Xs  Xs
+  7    S   S   S   S   S   S   S  Xs  Xs  Xs
+  8    S  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds   S
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 18    S   S   S  Ds   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: -2 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H  Dh  Dh   H   H   H   H   H
+  9    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H   H
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh   H  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   H   H   H   H   H   H   H
+ 14    H   H   H   S   S   H   H   H   H   H
+ 15    H   S   S   S   S   H   H   H   H   H
+ 16    S   S   S   S   S   H   H   H   H   H
+ 17    S   S   S   S   S   S   S   S   S  Xh
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 12    -   -   -   -   -   -   -   -  Dh   -
+ 13    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 14    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 15    H   H   H  Dh  Dh   H   H   H   H   H
+ 16    H   H   H  Dh  Dh   H   H   H   H   H
+ 17    H   H   H  Dh  Dh   H   H   H   H   H
+ 18    S   S   S  Ds  Ds   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    H   P   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H   P   P   P   P   H   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+  6    H   H   P   P   P   P   H   H   H   H
+  7    P   P   P   P   P   P   P   H   H   H
+  8    P   P   P   P   P   P   P   P   P   H
+  9    S   P   P   P   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6    S  Xs   S   S   S   S   S  Xs  Xs  Xs
+  7    S   S   S   S   S  Xs  Xs   S  Xs  Xs
+  8    S  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 18    S   S   S  Ds  Ds   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: -1 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  4    -   -   -   -   S   -   -   -   -   -
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H  Dh   H   H   H   H   H
+  8    H   H   H  Dh  Dh   H   H   H   H   H
+  9    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H   H
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh   H  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   H   H   H   H   H   H   H
+ 14    H   H   H   S   S   H   H   H   H   H
+ 15    H   S   S   S   S   H   H   H   H   H
+ 16    S   S   S   S   S   H   H   H   H  Xh
+ 17    S   S   S   S   S   S   S   S   S  Xh
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 12    -   -   -   -   -   -   -   S   -   -
+ 13    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 14    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 15    H   H   H  Dh  Dh   H   H   H   H   H
+ 16    H   H   H  Dh  Dh   H   H   H   H   H
+ 17    H   H   H  Dh  Dh   H   H   H   H   H
+ 18    S   S   S  Ds  Ds   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    P   P   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H   H   P  Dh  Dh   H   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+  6    H   H   P   P   P   P   H   H   H   H
+  7    P   P   P   P   P   P   P   H   H   H
+  8    P   P   P   P   P   P   P   P   P   H
+  9    S   P   P   P   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6    S   S   S   S   S   S   S  Xs  Xs  Xs
+  7    S   S   S   S   S  Xs   S  Xs  Xs  Xs
+  8   Ds  Ds  Ds  Ds  Ds  Ds  Ds   S  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds  Ds   S  Ds  Ds
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 18    S   S   S   S  Ds   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: 0 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  4    -   -   -   -   -  Dh   H   -   -   -
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H  Dh   H   H   H   H   H
+  7    H   H   H   H  Dh   H   H   H   H   H
+  8    H   H  Dh  Dh  Dh   H   H   H   H   H
+  9    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   H   H   H   H   H   H   H
+ 14    H   H   S   S   S   H   H   H   H   H
+ 15    S   S   S   S   S   H   H   H   H   H
+ 16    S   S   S   S   S   H   H   H   H  Xh
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 14    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 15    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 16    H   H   H  Dh  Dh   H   H   H   H   H
+ 17    H   H   H  Dh  Dh   H   H   H   H   H
+ 18    S   S  Ds  Ds  Ds   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    P   P   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H   H  Dh  Dh  Dh   H   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H   H
+  6    H   P   P   P   P   P   H   H   H   H
+  7    P   P   P   P   P   P   P   H   H  Xh
+  8    P   P   P   P   P   P   P   P   P   H
+  9    S   P   P   P   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6   Xs   S   S   S   S   S  Xs   S  Xs  Xs
+  7    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+  8   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 18    S   S  Ds  Ds  Ds   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: 1 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H  Dh   H   H   H   H   H
+  7    H   H   H  Dh  Dh   H   H   H   H   H
+  8    H   H  Dh  Dh  Dh   H   H   H   H   H
+  9    H  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   H   H   H   H   H   H   H
+ 14    H   H   S   S   S   H   H   H   H   H
+ 15    S   S   S   S   S   H   H   H   H   H
+ 16    S   S   S   S   S   H   H   H   H  Xh
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 14    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 15    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 16    H   H   H  Dh  Dh   H   H   H   H   H
+ 17    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 18    S   S  Ds  Ds  Ds   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    P   P   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H   H  Dh  Dh  Dh   H   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H   H
+  6    H   P   P   P   P   P   H   H   H   H
+  7    P   P   P   P   P   P   P   H   H  Xh
+  8    P   P   P   P   P   P   P   P   P  Xh
+  9    S   P   P   P   P   S   P   P   S   P
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6    S   S   S   S   S  Xs  Xs  Xs   S   S
+  7    S   S   S   S   S   S   S  Xs  Xs  Xs
+  8   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds   S  Ds  Ds  Ds  Ds
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs
+ 18    S   S  Ds  Ds  Ds   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: 2 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H  Dh   H   H   H   H   H
+  7    H   H   H  Dh  Dh   H   H   H   H   H
+  8    H   H  Dh  Dh  Dh   H   H   H   H   H
+  9   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh   H  Dh
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   H   S   H   H   H   H   H
+ 14    H   H   S   S   S   H   H   H   H   H
+ 15    S   S   S   S   S   H   H   H   H  Xh
+ 16    S   S   S   S   S   H   H   H  Xh  Xh
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 14    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 15    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 16    H   H   H  Dh  Dh   H   H   H   H   H
+ 17    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 18    S   S  Ds  Ds  Ds   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    P   P   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H   H  Dh  Dh  Dh   H   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H
+  6    H   P   P   P   P   P   H   H   H   H
+  7    P   P   P   P   P   P   P   H   H  Xh
+  8    P   P   P   P   P   P   P   P   P   P
+  9    P   P   P   P   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6    S   S   S   S   S   S   S  Xs  Xs  Xs
+  7    S   S   S   S   S   S   S  Xs  Xs  Xs
+  8   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds   S  Ds  Ds   S   S
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds   S  Xs
+ 18    S   S  Ds  Ds  Ds   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: 3 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H  Dh  Dh   H   H   H   H   H
+  6    H   H   H   H  Dh   H   H   H   H   H
+  7    H   H   H  Dh  Dh   H   H   H   H   H
+  8    H   H  Dh  Dh  Dh   H   H   H   H   H
+  9   Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   S   S   H   H   H   H   H
+ 14    S   S   S   S   S   H   H   H   H   H
+ 15    S   S   S   S   S   H   H   H   H  Xh
+ 16    S   S   S   S   S   H   H   H  Xh  Xh
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 14    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 15    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 16    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 17    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 18    S  Ds  Ds  Ds  Ds   S   S   H   H   H
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    P   P   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4    H  Dh  Dh  Dh   P  Dh   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+  6    P   P   P   P   P   P   P   H   H   H
+  7    P   P   P   P   P   P   P   H   H  Xh
+  8    P   P   P   P   P   P   P   P   P   P
+  9    P   P   P   P   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6    S   S   S   S   S  Xs  Xs  Xs  Xs   S
+  7    S   S   S   S  Ds   S  Xs  Xs  Xs  Xs
+  8   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds   S  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds   S  Xs
+ 18    S   S  Ds  Ds  Ds   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: 4 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H   H  Dh  Dh   H   H   H   H   H
+  6    H   H   H  Dh  Dh   H   H   H   H   H
+  7    H   H  Dh  Dh  Dh   H   H   H   H   H
+  8    H  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+  9   Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 12    H   H   H   H   H   H   H   H   H   H
+ 13    H   H   H   S   S   H   H   H   H   H
+ 14    S   S   S   S   S   H   H   H   H   H
+ 15    S   S   S   S   S   H   H   H  Xh  Xh
+ 16    S   S   S   S   S   H   H  Xh  Xh  Xh
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 14    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 15    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 16    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 17    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 18   Ds  Ds  Ds  Ds  Ds   S   S   H   H   S
+ 19    S   S  Ds  Ds  Ds   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    P   P   P   P   P   P   H   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4   Dh  Dh  Dh   P  Dh  Dh   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+  6    P   P   P   P   P   P   P   H   H   H
+  7    P   P   P   P   P   P   P   P  Xs  Xh
+  8    P   P   P   P   P   P   P   P   P   P
+  9    P   P   P   P   P   S   P   P   S   S
+ 10    S   S   S   S   S   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6   Xs   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+  7    S   S   S  Ds  Ds   S  Xs  Xs  Xs  Xs
+  8   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S  Ds  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13    S  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 17   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds   S  Xs
+ 18    S  Ds  Ds  Ds  Ds   S   S   S   S   S
+ 19    S   S   S  Ds  Ds   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+========== Count: 5 ==========
+
+Hard
+       2   3   4   5   6   7   8   9  10   A
+  5    H   H  Dh  Dh  Dh   H   H   H   H   H
+  6    H   H  Dh  Dh  Dh   H   H   H   H   H
+  7    H   H  Dh  Dh  Dh   H   H   H   H   H
+  8   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+  9   Dh  Dh  Dh  Dh  Dh  Dh  Dh   H   H   H
+ 10   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 11   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+ 12    H   H   S   S   S   H   H   H   H   H
+ 13    S   S   S   S   S   H   H   H   H   H
+ 14    S   S   S   S   S   H   H   H  Xh  Xh
+ 15    S   S   S   S   S   H   H  Xh  Xs  Xs
+ 16    S   S   S   S   S   H  Xh  Xh  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S   S
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Soft
+       2   3   4   5   6   7   8   9  10   A
+ 13    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 14    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 15    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 16    H   H  Dh  Dh  Dh   H   H   H   H   H
+ 17    H  Dh  Dh  Dh  Dh   H   H   H   H   H
+ 18   Ds  Ds  Ds  Ds  Ds   S   S   H   H   H
+ 19    S  Ds  Ds  Ds  Ds   S   S   S   S   S
+ 20    S   S   S  Ds  Ds   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+Pair
+       2   3   4   5   6   7   8   9  10   A
+  2    P   P   P   P   P   P   P   H   H   H
+  3    P   P   P   P   P   P   P   H   H   H
+  4   Dh  Dh  Dh  Dh  Dh  Dh   H   H   H   H
+  5   Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh  Dh
+  6    P   P   P   P   P   P   H   H   H   H
+  7    P   P   P   P   P   P   P  Xh  Xs  Xs
+  8    P   P   P   P   P   P   P   P   P   P
+  9    P   P   P   P   P   P   P   P   S   P
+ 10    S   S   S   P   P   S   S   S   S   S
+ 11    P   P   P   P   P   P   P   P   P   P
+
+One card
+       2   3   4   5   6   7   8   9  10   A
+  2    H   H   H   H   H   H   H   H   H   H
+  3    H   H   H   H   H   H   H   H   H   H
+  4    H   H   H   H   H   H   H   H   H   H
+  5    H   H   H   H   H   H   H   H   H   H
+  6    H   H   H   H   H   H   H   H   H   H
+  7    H   H   H   H   H   H   H   H   H   H
+  8    H   H   H   H   H   H   H   H   H   H
+  9    H   H   H   H   H   H   H   H   H   H
+ 10    H   H   H   H   H   H   H   H   H   H
+  A    H   H   H   H   H   H   H   H   H   H
+
+BlackJack
+       2   3   4   5   6   7   8   9  10   A
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double
+       2   3   4   5   6   7   8   9  10   A
+  6    S   S  Ds   S   S   S  Xs  Xs  Xs  Xs
+  7    S  Ds  Ds  Ds  Ds   S  Xs  Xs  Xs  Xs
+  8   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs  Xs
+  9   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 10   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 11   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds
+ 12    S   S   S   S   S   S  Xs  Xs  Xs  Xs
+ 13    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 14    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 15    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 16    S   S   S   S   S  Xs  Xs  Xs  Xs  Xs
+ 17    S   S   S   S   S   S   S   S   S  Xs
+ 18    S   S   S   S   S   S   S   S   S   S
+ 19    S   S   S   S   S   S   S   S   S   S
+ 20    S   S   S   S   S   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+
+After Double (Soft)
+       2   3   4   5   6   7   8   9  10   A
+ 13   Ds  Ds  Ds  Ds  Ds  Ds   S  Ds  Ds   S
+ 14   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Ds
+ 15   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs
+ 16   Ds  Ds  Ds  Ds  Ds  Ds  Ds  Ds  Xs  Xs
+ 17   Ds  Ds  Ds  Ds  Ds   S  Ds  Ds   S   S
+ 18   Ds  Ds  Ds  Ds  Ds   S   S   S   S   S
+ 19    S  Ds  Ds  Ds  Ds   S   S   S   S   S
+ 20    S   S   S  Ds  Ds   S   S   S   S   S
+ 21    S   S   S   S   S   S   S   S   S   S
+========================
+
+--- W3 ---
+Recorded rounds: 5000000000  speed: 6980998 hands/sec
+Count table:
+  Card      Original      Used          
+  --------------------------------------
+  2         0.3421        0.3421        
+  3         0.6581        0.6581        
+  4         1.0911        1.0911        
+  5         1.2835        1.2835        
+  6         0.9124        0.9124        
+  7         0.4733        0.4733        
+  8         -0.0604       -0.0604       
+  9         -0.2908       -0.2908       
+  10        ---           ---           
+  J         -1.0005       -1.0000       
+  Q         -0.9999       -1.0000       
+  K         -0.9997       -1.0000       
+  A         -1.4093       -1.4093       
+  Bias      -0.001467   
+  EV>0 TC   0.299840    
+  Factor    0.004893    
+
+Spread 1:10 evaluation edge (5000000000 rounds): 0.121483  std(X): 7.759617  E[X^2]: 60.226421
+Optimal Kelly multiplier:    0.900000  predicted 1/E[X^2]: 0.637650
+Optimal Kelly growth/round:  1.000233  stddev: 0.000017
+Sanity checks:
+  Sum(weights): -0.000000  (PASS, expected near 0)
+  10-value consistency: mean=-1.000000  max_dev=0.000452  rel=0.045195%  (PASS)
+  Bias vs flat edge: bias=-0.001467  flat_edge=0.005280  diff=0.006747  rel_to_0.5%=134.948571%
+  Bias constraint: fixed to W1 bias
+EV-count graph:         41 points  res=0.250000  speed: 6837700 hands/sec
+Count histogram:        total=354882845  symmetry_rel_diff=4.3231%  (PASS, expected roughly symmetric)

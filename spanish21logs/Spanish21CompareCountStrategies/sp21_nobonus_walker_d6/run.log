@@ -1,0 +1,157 @@
+
+=== Spanish21CompareCountStrategies (Walker) ===
+Command:       /home/pliops/Desktop/BlackJackS/build/bin/CompareCountStrategies --game spanish21 --penetration 75 --ss17 false --redouble 1 --ddr true --card-count-bonuses false --num-threads 10 --stop-mode diff --sample-rounds 100000000 --diff-threshold 0.005 --num-rounds 5000000000 --eval-rounds 5000000000 --graph-rounds 500000000 --kelly-measurements 1000 --kelly-fraction-step 0.05 --decks 6 --output-dir checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d6
+Scenario:      decks=6_ss17=false_redouble=1_ddr=true_cardCountBonuses=false_penetration=75%
+Eval rounds:   5000000000  Threads: 10
+Graph rounds:  500000000
+Train rounds:  5000000000
+Count grid:    range=[-15,10]
+===============================
+Katarina Walker's Spanish 21 index deviations (true-counted Hi-Lo, running count starts at -4/deck):
+  16 vs X: Surrender -2, Stand +3
+  17 vs A: Surrender -6, Stand -3
+  doubled 17 vs A: Forfeit +2
+  A,6 vs 4: Double -5
+  A,7 vs 4: Double -5
+  8,8 vs 9: Split -11
+  9 vs 6: Double -3
+  11 vs 9: Double -5
+
+Full deviations sample rounds=100000000  speed=4185852 hands/sec  avg|ΔQ|=0.169100  threshold=0.005000
+Full deviations sample rounds=200000000  speed=4066694 hands/sec  avg|ΔQ|=0.036408  threshold=0.005000
+Full deviations sample rounds=300000000  speed=4067080 hands/sec  avg|ΔQ|=0.022339  threshold=0.005000
+Full deviations sample rounds=400000000  speed=3983032 hands/sec  avg|ΔQ|=0.016653  threshold=0.005000
+Full deviations sample rounds=500000000  speed=3923815 hands/sec  avg|ΔQ|=0.013507  threshold=0.005000
+Full deviations sample rounds=600000000  speed=3880958 hands/sec  avg|ΔQ|=0.011567  threshold=0.005000
+Full deviations sample rounds=700000000  speed=3816836 hands/sec  avg|ΔQ|=0.010299  threshold=0.005000
+Full deviations sample rounds=800000000  speed=3774707 hands/sec  avg|ΔQ|=0.009304  threshold=0.005000
+Full deviations sample rounds=900000000  speed=3756731 hands/sec  avg|ΔQ|=0.008507  threshold=0.005000
+Full deviations sample rounds=1000000000  speed=3713855 hands/sec  avg|ΔQ|=0.007926  threshold=0.005000
+Full deviations sample rounds=1100000000  speed=3684561 hands/sec  avg|ΔQ|=0.007426  threshold=0.005000
+Full deviations sample rounds=1200000000  speed=3661975 hands/sec  avg|ΔQ|=0.007004  threshold=0.005000
+Full deviations sample rounds=1300000000  speed=3636252 hands/sec  avg|ΔQ|=0.006657  threshold=0.005000
+Full deviations sample rounds=1400000000  speed=3621623 hands/sec  avg|ΔQ|=0.006386  threshold=0.005000
+Full deviations sample rounds=1500000000  speed=3603777 hands/sec  avg|ΔQ|=0.006137  threshold=0.005000
+Full deviations sample rounds=1600000000  speed=3584896 hands/sec  avg|ΔQ|=0.005851  threshold=0.005000
+Full deviations sample rounds=1700000000  speed=3567659 hands/sec  avg|ΔQ|=0.005658  threshold=0.005000
+Full deviations sample rounds=1800000000  speed=3545184 hands/sec  avg|ΔQ|=0.005419  threshold=0.005000
+Full deviations sample rounds=1900000000  speed=3537497 hands/sec  avg|ΔQ|=0.005331  threshold=0.005000
+Full deviations sample rounds=2000000000  speed=3523056 hands/sec  avg|ΔQ|=0.005120  threshold=0.005000
+Full deviations sample rounds=2100000000  speed=3510473 hands/sec  avg|ΔQ|=0.005027  threshold=0.005000
+Full deviations sample rounds=2200000000  speed=3498199 hands/sec  avg|ΔQ|=0.004870  threshold=0.005000
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Full deviations sample rounds=100000000  speed=3930972 hands/sec  avg|ΔQ|=0.268607  threshold=0.005000
+Full deviations sample rounds=200000000  speed=3898939 hands/sec  avg|ΔQ|=0.041678  threshold=0.005000
+Full deviations sample rounds=300000000  speed=3878876 hands/sec  avg|ΔQ|=0.023092  threshold=0.005000
+Full deviations sample rounds=400000000  speed=3822119 hands/sec  avg|ΔQ|=0.016630  threshold=0.005000
+Full deviations sample rounds=500000000  speed=3788855 hands/sec  avg|ΔQ|=0.013183  threshold=0.005000
+Full deviations sample rounds=600000000  speed=3766951 hands/sec  avg|ΔQ|=0.011314  threshold=0.005000
+Full deviations sample rounds=700000000  speed=3706351 hands/sec  avg|ΔQ|=0.009988  threshold=0.005000
+Full deviations sample rounds=800000000  speed=3681428 hands/sec  avg|ΔQ|=0.009035  threshold=0.005000
+Full deviations sample rounds=900000000  speed=3645732 hands/sec  avg|ΔQ|=0.008243  threshold=0.005000
+Full deviations sample rounds=1000000000  speed=3628250 hands/sec  avg|ΔQ|=0.007771  threshold=0.005000
+Full deviations sample rounds=1100000000  speed=3586824 hands/sec  avg|ΔQ|=0.007282  threshold=0.005000
+Full deviations sample rounds=1200000000  speed=3559183 hands/sec  avg|ΔQ|=0.006942  threshold=0.005000
+Full deviations sample rounds=1300000000  speed=3518401 hands/sec  avg|ΔQ|=0.006583  threshold=0.005000
+Full deviations sample rounds=1400000000  speed=3508974 hands/sec  avg|ΔQ|=0.006296  threshold=0.005000
+Full deviations sample rounds=1500000000  speed=3488624 hands/sec  avg|ΔQ|=0.006009  threshold=0.005000
+Full deviations sample rounds=1600000000  speed=3466280 hands/sec  avg|ΔQ|=0.005760  threshold=0.005000
+Full deviations sample rounds=1700000000  speed=3442341 hands/sec  avg|ΔQ|=0.005599  threshold=0.005000
+Full deviations sample rounds=1800000000  speed=3425805 hands/sec  avg|ΔQ|=0.005430  threshold=0.005000
+Full deviations sample rounds=1900000000  speed=3410562 hands/sec  avg|ΔQ|=0.005257  threshold=0.005000
+Full deviations sample rounds=2000000000  speed=3394208 hands/sec  avg|ΔQ|=0.005147  threshold=0.005000
+Full deviations sample rounds=2100000000  speed=3380391 hands/sec  avg|ΔQ|=0.004954  threshold=0.005000
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+Error during Spanish 21 simulation: No intersection between allowed Actions and Strategy Actions
+
+=== Comparison ===
+Policy                                   Spread 1:10     Spread std(X)  Kelly fraction      Kelly growth      Kelly stddev
+--------------------------------------------------------------------------------------------------------------------------
+HiLo (no deviations)                       -0.043757         10.880569            0.40          0.999968          0.000009
+  Spread E[X^2]=118.388690  predicted Kelly multiplier from flat 1/E[X^2]=0.626239
+Walker (no deviations)                     -0.001789          2.357159            0.90          1.000003          0.000001
+  Spread E[X^2]=5.556202  predicted Kelly multiplier from flat 1/E[X^2]=0.626248
+Walker + deviations                        -0.001887          2.354143            0.90          1.000003          0.000001
+  Spread E[X^2]=5.541992  predicted Kelly multiplier from flat 1/E[X^2]=0.630175
+Walker + full deviations                    0.000444          2.352983            0.90          1.000003          0.000001
+  Spread E[X^2]=5.536528  predicted Kelly multiplier from flat 1/E[X^2]=0.651792
+  Trained fresh against Walker count
+HiLo + full deviations                     -0.040365         10.740881            0.40          0.999973          0.000009
+  Spread E[X^2]=115.368145  predicted Kelly multiplier from flat 1/E[X^2]=0.650322
+  Trained fresh against Hi-Lo count
+
+Saved artifacts:
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d6/run.log
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d6/ev_count_graph.json
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d6/ev_count_graph.svg
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d6/count_histograms.json
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d6/count_histograms.svg
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d6/second_moment_count_graph.json
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d6/second_moment_count_graph.svg
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d6/kelly_fraction_graph.json
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d6/kelly_fraction_graph.svg
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d6/walker_full/full_deviations_strategy.json
+  /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d6/hilo_full/full_deviations_strategy.json
+
+DebugPlayerBehavior commands to watch each policy play:
+  HiLo (no deviations):
+    ./build/bin/DebugPlayerBehavior --game spanish21 --decks 6 --ss17 false --redouble 1 --ddr true --count hilo
+  Walker (no deviations):
+    ./build/bin/DebugPlayerBehavior --game spanish21 --decks 6 --ss17 false --redouble 1 --ddr true --count walker
+  Walker + deviations:
+    ./build/bin/DebugPlayerBehavior --game spanish21 --decks 6 --ss17 false --redouble 1 --ddr true --count walker --walker-deviations
+  Walker + full deviations:
+    ./build/bin/DebugPlayerBehavior --game spanish21 --decks 6 --ss17 false --redouble 1 --ddr true --count walker --strategy-file /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d6/walker_full/full_deviations_strategy.json
+  HiLo + full deviations:
+    ./build/bin/DebugPlayerBehavior --game spanish21 --decks 6 --ss17 false --redouble 1 --ddr true --count hilo --strategy-file /home/pliops/Desktop/BlackJackS/checkpoints/Spanish21CompareCountStrategies/sp21_nobonus_walker_d6/hilo_full/full_deviations_strategy.json

@@ -1,0 +1,32 @@
+{
+  "count": {
+    "bias": -0.005,
+    "continuous_betting_count": false,
+    "factor": 0.005,
+    "max_count": 10,
+    "min_count": -15,
+    "resolution": 1.0,
+    "weights": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      -1.0,
+      -1.0,
+      -1.0,
+      -1.0,
+      -1.0
+    ]
+  },
+  "game": {
+    "card_count_bonuses": false,
+    "ddr": true,
+    "decks": 6,
+    "redouble": 1,
+    "ss17": false
+  }
+}

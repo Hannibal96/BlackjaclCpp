@@ -1,0 +1,199 @@
+
+=== Spanish21AlternatingOptimization ===
+Command:       /home/pliops/Desktop/BlackJackS/build/bin/AlternatingOptimization --game spanish21 --penetration 75 --ss17 false --redouble 1 --ddr true --card-count-bonuses false --num-threads 10 --stop-mode diff --sample-rounds 100000000 --diff-threshold 0.005 --num-rounds 5000000000 --eval-rounds 5000000000 --graph-rounds 500000000 --kelly-measurements 1000 --kelly-fraction-step 0.05 --iterations 3 --sample-every 2 --decks 1 --count-quadratic-kelly --count-sum-zero-fixed-b1 --checkpoint-name sp21_nobonus_qk_b1
+Scenario:      decks=1_ss17=false_redouble=1_ddr=true_cardCountBonuses=false_penetration=75%
+Policy stop:   diff  sample=100000000  threshold=0.005  Threads: 10
+Count rounds:  10000000000  (record every 2 => target 5000000000 recorded samples)
+Eval rounds:   5000000000
+Graph rounds:  500000000
+Iterations:    3  (each iteration learns P_k then W_{k+1})
+Count objective: quadratic_kelly
+Count constraint: sum_zero_fixed_w1_bias
+Penetration:   75%
+Sample-every:  2
+Kelly sweep:  centered at fitted-signal multiplier 1.0 +/- 0.25 (minimum 0)  step 0.05
+Folder:        /home/pliops/Desktop/BlackJackS/checkpoints/spanish21-alternating-checkpoints/sp21_nobonus_qk_b1_decks=1_ss17=false_redouble=1_ddr=true_cardCountBonuses=false/
+Initial count: none (all zeros)
+Count scaling:  average 10/J/Q/K tag = -1
+===============================
+P0 sample rounds=100000000  speed=5283457 hands/sec  avg|ΔQ|=0.429826  threshold=0.005000
+P0 sample rounds=200000000  speed=5127416 hands/sec  avg|ΔQ|=0.013729  threshold=0.005000
+P0 sample rounds=300000000  speed=4877890 hands/sec  avg|ΔQ|=0.009489  threshold=0.005000
+P0 sample rounds=400000000  speed=4831035 hands/sec  avg|ΔQ|=0.007762  threshold=0.005000
+P0 sample rounds=500000000  speed=4662570 hands/sec  avg|ΔQ|=0.006587  threshold=0.005000
+P0 sample rounds=600000000  speed=4617125 hands/sec  avg|ΔQ|=0.006167  threshold=0.005000
+P0 sample rounds=700000000  speed=4545248 hands/sec  avg|ΔQ|=0.005556  threshold=0.005000
+P0 sample rounds=800000000  speed=4510142 hands/sec  avg|ΔQ|=0.005115  threshold=0.005000
+P0 sample rounds=900000000  speed=4459883 hands/sec  avg|ΔQ|=0.004612  threshold=0.005000
+
+--- P0 ---
+Training rounds: 900000000
+Training speed: 4459883 hands/sec
+Training flat edge:   -0.340866
+Evaluation flat edge (5000000000 rounds): -0.002624  std(X): 1.240883  E[X^2]: 1.539797
+Spread/Kelly evaluation skipped for P0: W0 is the zero count, so no positive-count betting signal is expected.
+
+--- W1 ---
+Recorded rounds: 5000000000  speed: 8312510 hands/sec
+Count table:
+  Card      Original      Used          
+  --------------------------------------
+  2         0.4406        0.4406        
+  3         0.7449        0.7449        
+  4         1.1837        1.1837        
+  5         1.3737        1.3737        
+  6         0.9005        0.9005        
+  7         0.3163        0.3163        
+  8         -0.1839       -0.1839       
+  9         -0.3629       -0.3629       
+  10        ---           ---           
+  J         -0.9990       -1.0000       
+  Q         -1.0007       -1.0000       
+  K         -1.0003       -1.0000       
+  A         -1.4128       -1.4128       
+  Bias      0.000558    
+  Bet>0 TC  -0.171280   
+  Factor    0.003260    
+
+Spread 1:10 evaluation edge (5000000000 rounds): 0.076890  std(X): 9.144458  E[X^2]: 83.627022
+Optimal Kelly multiplier:    1.100000  fitted-signal target: 1.000000
+Optimal Kelly growth/round:  1.000117  stddev: 0.000015
+Sanity checks:
+  Sum(weights): 0.000000  (PASS, expected near 0)
+  10-value consistency: mean=-1.000000  max_dev=0.000958  rel=0.095811%  (PASS)
+  Bias vs flat edge: bias=0.000558  flat_edge=-0.002624  diff=0.003182  rel_to_0.5%=63.646037%
+  Bias constraint: free
+EV-count graph:         41 points  res=0.250000  speed: 7041063 hands/sec
+Count histogram:        total=350822383  symmetry_rel_diff=5.0246%  (PASS, expected roughly symmetric)
+P1 sample rounds=100000000  speed=4135991 hands/sec  avg|ΔQ|=0.337048  threshold=0.005000
+P1 sample rounds=200000000  speed=3966287 hands/sec  avg|ΔQ|=0.044883  threshold=0.005000
+P1 sample rounds=300000000  speed=3814513 hands/sec  avg|ΔQ|=0.024749  threshold=0.005000
+P1 sample rounds=400000000  speed=3748161 hands/sec  avg|ΔQ|=0.017573  threshold=0.005000
+P1 sample rounds=500000000  speed=3694126 hands/sec  avg|ΔQ|=0.014130  threshold=0.005000
+P1 sample rounds=600000000  speed=3648281 hands/sec  avg|ΔQ|=0.012036  threshold=0.005000
+P1 sample rounds=700000000  speed=3609215 hands/sec  avg|ΔQ|=0.010573  threshold=0.005000
+P1 sample rounds=800000000  speed=3583009 hands/sec  avg|ΔQ|=0.009717  threshold=0.005000
+P1 sample rounds=900000000  speed=3551122 hands/sec  avg|ΔQ|=0.008926  threshold=0.005000
+P1 sample rounds=1000000000  speed=3535730 hands/sec  avg|ΔQ|=0.008317  threshold=0.005000
+P1 sample rounds=1100000000  speed=3511023 hands/sec  avg|ΔQ|=0.007917  threshold=0.005000
+P1 sample rounds=1200000000  speed=3487875 hands/sec  avg|ΔQ|=0.007499  threshold=0.005000
+P1 sample rounds=1300000000  speed=3481820 hands/sec  avg|ΔQ|=0.007166  threshold=0.005000
+P1 sample rounds=1400000000  speed=3458344 hands/sec  avg|ΔQ|=0.006830  threshold=0.005000
+P1 sample rounds=1500000000  speed=3443953 hands/sec  avg|ΔQ|=0.006562  threshold=0.005000
+P1 sample rounds=1600000000  speed=3426249 hands/sec  avg|ΔQ|=0.006344  threshold=0.005000
+P1 sample rounds=1700000000  speed=3422775 hands/sec  avg|ΔQ|=0.006224  threshold=0.005000
+P1 sample rounds=1800000000  speed=3400448 hands/sec  avg|ΔQ|=0.006024  threshold=0.005000
+P1 sample rounds=1900000000  speed=3394797 hands/sec  avg|ΔQ|=0.005787  threshold=0.005000
+P1 sample rounds=2000000000  speed=3376798 hands/sec  avg|ΔQ|=0.005554  threshold=0.005000
+P1 sample rounds=2100000000  speed=3366437 hands/sec  avg|ΔQ|=0.005512  threshold=0.005000
+P1 sample rounds=2200000000  speed=3355029 hands/sec  avg|ΔQ|=0.005343  threshold=0.005000
+P1 sample rounds=2300000000  speed=3346482 hands/sec  avg|ΔQ|=0.005189  threshold=0.005000
+P1 sample rounds=2400000000  speed=3335015 hands/sec  avg|ΔQ|=0.005033  threshold=0.005000
+P1 sample rounds=2500000000  speed=3323151 hands/sec  avg|ΔQ|=0.004944  threshold=0.005000
+
+--- P1 ---
+Training rounds: 2500000000
+Training speed: 3323151 hands/sec
+Training flat edge:   -0.509336
+Evaluation flat edge (5000000000 rounds): 0.005556  std(X): 1.247226  E[X^2]: 1.555602
+Spread 1:10 evaluation edge (5000000000 rounds): 0.120372  std(X): 9.552882  E[X^2]: 91.272041
+Kelly growth per round:      1.000210  stddev: 0.000014
+
+--- W2 ---
+Recorded rounds: 5000000000  speed: 6976965 hands/sec
+Count table:
+  Card      Original      Used          
+  --------------------------------------
+  2         0.3665        0.3665        
+  3         0.6734        0.6734        
+  4         1.0863        1.0863        
+  5         1.2668        1.2668        
+  6         0.8789        0.8789        
+  7         0.4730        0.4730        
+  8         -0.0452       -0.0452       
+  9         -0.3045       -0.3045       
+  10        ---           ---           
+  J         -1.0005       -1.0000       
+  Q         -0.9992       -1.0000       
+  K         -1.0003       -1.0000       
+  A         -1.3952       -1.3952       
+  Bias      0.000558    
+  Bet>0 TC  -0.163723   
+  Factor    0.003411    
+
+Spread 1:10 evaluation edge (5000000000 rounds): 0.121087  std(X): 9.548525  E[X^2]: 91.188983
+Optimal Kelly multiplier:    1.250000  fitted-signal target: 1.000000
+Optimal Kelly growth/round:  1.000233  stddev: 0.000018
+Sanity checks:
+  Sum(weights): 0.000000  (PASS, expected near 0)
+  10-value consistency: mean=-1.000000  max_dev=0.000812  rel=0.081229%  (PASS)
+  Bias vs flat edge: bias=0.000558  flat_edge=0.005556  diff=0.004998  rel_to_0.5%=99.961135%
+  Bias constraint: fixed to W1 bias
+EV-count graph:         41 points  res=0.250000  speed: 6803276 hands/sec
+Count histogram:        total=356001977  symmetry_rel_diff=4.3541%  (PASS, expected roughly symmetric)
+P2 sample rounds=100000000  speed=4326195 hands/sec  avg|ΔQ|=0.337756  threshold=0.005000
+P2 sample rounds=200000000  speed=4168838 hands/sec  avg|ΔQ|=0.044753  threshold=0.005000
+P2 sample rounds=300000000  speed=3980364 hands/sec  avg|ΔQ|=0.024783  threshold=0.005000
+P2 sample rounds=400000000  speed=3919033 hands/sec  avg|ΔQ|=0.017588  threshold=0.005000
+P2 sample rounds=500000000  speed=3841662 hands/sec  avg|ΔQ|=0.014098  threshold=0.005000
+P2 sample rounds=600000000  speed=3796940 hands/sec  avg|ΔQ|=0.011939  threshold=0.005000
+P2 sample rounds=700000000  speed=3752446 hands/sec  avg|ΔQ|=0.010528  threshold=0.005000
+P2 sample rounds=800000000  speed=3686976 hands/sec  avg|ΔQ|=0.009549  threshold=0.005000
+P2 sample rounds=900000000  speed=3634220 hands/sec  avg|ΔQ|=0.008900  threshold=0.005000
+P2 sample rounds=1000000000  speed=3561076 hands/sec  avg|ΔQ|=0.008310  threshold=0.005000
+P2 sample rounds=1100000000  speed=3532423 hands/sec  avg|ΔQ|=0.007924  threshold=0.005000
+P2 sample rounds=1200000000  speed=3497849 hands/sec  avg|ΔQ|=0.007508  threshold=0.005000
+P2 sample rounds=1300000000  speed=3466362 hands/sec  avg|ΔQ|=0.007117  threshold=0.005000
+P2 sample rounds=1400000000  speed=3421536 hands/sec  avg|ΔQ|=0.006863  threshold=0.005000
+P2 sample rounds=1500000000  speed=3390260 hands/sec  avg|ΔQ|=0.006610  threshold=0.005000
+P2 sample rounds=1600000000  speed=3362143 hands/sec  avg|ΔQ|=0.006350  threshold=0.005000
+P2 sample rounds=1700000000  speed=3340276 hands/sec  avg|ΔQ|=0.006087  threshold=0.005000
+P2 sample rounds=1800000000  speed=3316420 hands/sec  avg|ΔQ|=0.006007  threshold=0.005000
+P2 sample rounds=1900000000  speed=3296528 hands/sec  avg|ΔQ|=0.005837  threshold=0.005000
+P2 sample rounds=2000000000  speed=3274753 hands/sec  avg|ΔQ|=0.005641  threshold=0.005000
+P2 sample rounds=2100000000  speed=3259250 hands/sec  avg|ΔQ|=0.005426  threshold=0.005000
+P2 sample rounds=2200000000  speed=3235032 hands/sec  avg|ΔQ|=0.005330  threshold=0.005000
+P2 sample rounds=2300000000  speed=3221171 hands/sec  avg|ΔQ|=0.005203  threshold=0.005000
+P2 sample rounds=2400000000  speed=3202306 hands/sec  avg|ΔQ|=0.005125  threshold=0.005000
+P2 sample rounds=2500000000  speed=3188849 hands/sec  avg|ΔQ|=0.004957  threshold=0.005000
+
+--- P2 ---
+Training rounds: 2500000000
+Training speed: 3188849 hands/sec
+Training flat edge:   -0.511003
+Evaluation flat edge (5000000000 rounds): 0.005667  std(X): 1.250138  E[X^2]: 1.562877
+Spread 1:10 evaluation edge (5000000000 rounds): 0.121837  std(X): 9.556083  E[X^2]: 91.333562
+Kelly growth per round:      1.000215  stddev: 0.000015
+
+--- W3 ---
+Recorded rounds: 5000000000  speed: 7134520 hands/sec
+Count table:
+  Card      Original      Used          
+  --------------------------------------
+  2         0.3526        0.3526        
+  3         0.6678        0.6678        
+  4         1.0983        1.0983        
+  5         1.2854        1.2854        
+  6         0.8987        0.8987        
+  7         0.4586        0.4586        
+  8         -0.0527       -0.0527       
+  9         -0.2982       -0.2982       
+  10        ---           ---           
+  J         -1.0009       -1.0000       
+  Q         -0.9987       -1.0000       
+  K         -1.0004       -1.0000       
+  A         -1.4105       -1.4105       
+  Bias      0.000558    
+  Bet>0 TC  -0.167188   
+  Factor    0.003340    
+
+Spread 1:10 evaluation edge (5000000000 rounds): 0.121795  std(X): 9.562098  E[X^2]: 91.448549
+Optimal Kelly multiplier:    1.250000  fitted-signal target: 1.000000
+Optimal Kelly growth/round:  1.000235  stddev: 0.000018
+Sanity checks:
+  Sum(weights): -0.000000  (PASS, expected near 0)
+  10-value consistency: mean=-1.000000  max_dev=0.001318  rel=0.131787%  (PASS)
+  Bias vs flat edge: bias=0.000558  flat_edge=0.005667  diff=0.005109  rel_to_0.5%=102.178923%
+  Bias constraint: fixed to W1 bias
+EV-count graph:         41 points  res=0.250000  speed: 6564609 hands/sec
+Count histogram:        total=354936416  symmetry_rel_diff=4.3257%  (PASS, expected roughly symmetric)

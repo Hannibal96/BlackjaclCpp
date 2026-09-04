@@ -1,0 +1,420 @@
+{
+  "hands_per_sec": 6785549.493798007,
+  "has_ev_regression_line": true,
+  "max_count": 5.0,
+  "min_count": -5.0,
+  "points": [
+    {
+      "conditional_second_moment": 1.419833494843124,
+      "confidence_lower": -0.03265680973249597,
+      "confidence_upper": -0.029715983953191832,
+      "count": -5.0,
+      "mean_reward": -0.0311863968428439,
+      "n": 2521003,
+      "regression_reward": -0.033430945085144284,
+      "stddev_reward": 1.1911594786153048
+    },
+    {
+      "conditional_second_moment": 1.4260437270922712,
+      "confidence_lower": -0.030681797705477534,
+      "confidence_upper": -0.027911889343155694,
+      "count": -4.75,
+      "mean_reward": -0.029296843524316614,
+      "n": 2854386,
+      "regression_reward": -0.03217631152588707,
+      "stddev_reward": 1.1938113008561206
+    },
+    {
+      "conditional_second_moment": 1.4287664611527953,
+      "confidence_lower": -0.02914672965870554,
+      "confidence_upper": -0.026538830398621798,
+      "count": -4.5,
+      "mean_reward": -0.02784278002866367,
+      "n": 3226384,
+      "regression_reward": -0.030921677966629854,
+      "stddev_reward": 1.194985874708597
+    },
+    {
+      "conditional_second_moment": 1.434010787728097,
+      "confidence_lower": -0.028723405245921506,
+      "confidence_upper": -0.026267890160259565,
+      "count": -4.25,
+      "mean_reward": -0.027495647703090535,
+      "n": 3652669,
+      "regression_reward": -0.02966704440737264,
+      "stddev_reward": 1.1971861914863053
+    },
+    {
+      "conditional_second_moment": 1.4361899881700533,
+      "confidence_lower": -0.027167385372561324,
+      "confidence_upper": -0.02485777962279085,
+      "count": -4.0,
+      "mean_reward": -0.026012582497676087,
+      "n": 4135268,
+      "regression_reward": -0.028412410848115424,
+      "stddev_reward": 1.198129097268677
+    },
+    {
+      "conditional_second_moment": 1.4405583251101972,
+      "confidence_lower": -0.02568683716036282,
+      "confidence_upper": -0.023511714427299376,
+      "count": -3.75,
+      "mean_reward": -0.0245992757938311,
+      "n": 4676845,
+      "regression_reward": -0.02715777728885821,
+      "stddev_reward": 1.1999805001501551
+    },
+    {
+      "conditional_second_moment": 1.4460720073368571,
+      "confidence_lower": -0.025557036802322096,
+      "confidence_upper": -0.02351036349975938,
+      "count": -3.5,
+      "mean_reward": -0.024533700151040738,
+      "n": 5302543,
+      "regression_reward": -0.025903143729600994,
+      "stddev_reward": 1.202277049973822
+    },
+    {
+      "conditional_second_moment": 1.4560883655241303,
+      "confidence_lower": -0.024218255673179825,
+      "confidence_upper": -0.022288100230439166,
+      "count": -3.25,
+      "mean_reward": -0.023253177951809496,
+      "n": 6003631,
+      "regression_reward": -0.024648510170343786,
+      "stddev_reward": 1.206460797224374
+    },
+    {
+      "conditional_second_moment": 1.4688185186942166,
+      "confidence_lower": -0.023065433019349556,
+      "confidence_upper": -0.021245054397186974,
+      "count": -3.0,
+      "mean_reward": -0.022155243708268265,
+      "n": 6808817,
+      "regression_reward": -0.02339387661108657,
+      "stddev_reward": 1.2117457092436696
+    },
+    {
+      "conditional_second_moment": 1.486699087332076,
+      "confidence_lower": -0.021287888613585368,
+      "confidence_upper": -0.019569134505783216,
+      "count": -2.75,
+      "mean_reward": -0.020428511559684292,
+      "n": 7731180,
+      "regression_reward": -0.022139243051829356,
+      "stddev_reward": 1.2191315610907347
+    },
+    {
+      "conditional_second_moment": 1.493969062247871,
+      "confidence_lower": -0.020735462045452468,
+      "confidence_upper": -0.019118584829908834,
+      "count": -2.5,
+      "mean_reward": -0.01992702343768065,
+      "n": 8778983,
+      "regression_reward": -0.02088460949257214,
+      "stddev_reward": 1.2221178241007637
+    },
+    {
+      "conditional_second_moment": 1.4956823854938537,
+      "confidence_lower": -0.019730674393360757,
+      "confidence_upper": -0.018213138964341652,
+      "count": -2.25,
+      "mean_reward": -0.018971906678851205,
+      "n": 9977674,
+      "regression_reward": -0.019629975933314926,
+      "stddev_reward": 1.2228337794855124
+    },
+    {
+      "conditional_second_moment": 1.4901278262102515,
+      "confidence_lower": -0.017673828126106562,
+      "confidence_upper": -0.01625390508440135,
+      "count": -2.0,
+      "mean_reward": -0.016963866605253956,
+      "n": 11354870,
+      "regression_reward": -0.01837534237405771,
+      "stddev_reward": 1.2205900431512828
+    },
+    {
+      "conditional_second_moment": 1.4889564950139462,
+      "confidence_lower": -0.01708586899680893,
+      "confidence_upper": -0.015755940015780394,
+      "count": -1.75,
+      "mean_reward": -0.016420904506294663,
+      "n": 12933575,
+      "regression_reward": -0.017120708814800496,
+      "stddev_reward": 1.220117555364704
+    },
+    {
+      "conditional_second_moment": 1.485940401803938,
+      "confidence_lower": -0.015890675020144907,
+      "confidence_upper": -0.014646456813957246,
+      "count": -1.5,
+      "mean_reward": -0.015268565917051077,
+      "n": 14747292,
+      "regression_reward": -0.015866075255543285,
+      "stddev_reward": 1.2188959236533587
+    },
+    {
+      "conditional_second_moment": 1.4841075221986557,
+      "confidence_lower": -0.014200577490813729,
+      "confidence_upper": -0.013037071818692698,
+      "count": -1.25,
+      "mean_reward": -0.013618824654753213,
+      "n": 16844038,
+      "regression_reward": -0.01461144169628607,
+      "stddev_reward": 1.2181633920840336
+    },
+    {
+      "conditional_second_moment": 1.4914406040342483,
+      "confidence_lower": -0.013154015165902297,
+      "confidence_upper": -0.012062117165230209,
+      "count": -1.0,
+      "mean_reward": -0.012608066165566253,
+      "n": 19220632,
+      "regression_reward": -0.013356808137028857,
+      "stddev_reward": 1.221180429216671
+    },
+    {
+      "conditional_second_moment": 1.504514310038804,
+      "confidence_lower": -0.01152325928444515,
+      "confidence_upper": -0.010500805127179139,
+      "count": -0.75,
+      "mean_reward": -0.011012032205812145,
+      "n": 22112903,
+      "regression_reward": -0.012102174577771643,
+      "stddev_reward": 1.2265370133777058
+    },
+    {
+      "conditional_second_moment": 1.515372528643479,
+      "confidence_lower": -0.01042174788084489,
+      "confidence_upper": -0.009464205867457923,
+      "count": -0.5,
+      "mean_reward": -0.009942976874151407,
+      "n": 25394960,
+      "regression_reward": -0.010847541018514428,
+      "stddev_reward": 1.2309645266433793
+    },
+    {
+      "conditional_second_moment": 1.5260823662354825,
+      "confidence_lower": -0.00943663734430774,
+      "confidence_upper": -0.008512456424657745,
+      "count": -0.25,
+      "mean_reward": -0.008974546884482742,
+      "n": 27454478,
+      "regression_reward": -0.009592907459257213,
+      "stddev_reward": 1.2353144635046174
+    },
+    {
+      "conditional_second_moment": 1.5330449323399291,
+      "confidence_lower": -0.008208028320390186,
+      "confidence_upper": -0.007450639350473374,
+      "count": 0.0,
+      "mean_reward": -0.00782933383543178,
+      "n": 41064988,
+      "regression_reward": -0.0083382739,
+      "stddev_reward": 1.238137162785942
+    },
+    {
+      "conditional_second_moment": 1.547275634535036,
+      "confidence_lower": -0.006729309372995432,
+      "confidence_upper": -0.005782865057646605,
+      "count": 0.25,
+      "mean_reward": -0.006256087215321018,
+      "n": 26542309,
+      "regression_reward": -0.007083640340742786,
+      "stddev_reward": 1.2438796147167097
+    },
+    {
+      "conditional_second_moment": 1.5540588314933343,
+      "confidence_lower": -0.005630003202747114,
+      "confidence_upper": -0.004632465696131618,
+      "count": 0.5,
+      "mean_reward": -0.005131234449439366,
+      "n": 23997929,
+      "regression_reward": -0.005829006781485572,
+      "stddev_reward": 1.246608399589205
+    },
+    {
+      "conditional_second_moment": 1.5601699789269063,
+      "confidence_lower": -0.0036171842853973467,
+      "confidence_upper": -0.00255202789115854,
+      "count": 0.75,
+      "mean_reward": -0.0030846060882779433,
+      "n": 21130737,
+      "regression_reward": -0.004574373222228358,
+      "stddev_reward": 1.2490638350909797
+    },
+    {
+      "conditional_second_moment": 1.569296598101283,
+      "confidence_lower": -0.00249169608974877,
+      "confidence_upper": -0.0013487606285559103,
+      "count": 1.0,
+      "mean_reward": -0.00192022835915234,
+      "n": 18460044,
+      "regression_reward": -0.0033197396629711436,
+      "stddev_reward": 1.2527142175389931
+    },
+    {
+      "conditional_second_moment": 1.5743155298636347,
+      "confidence_lower": -0.0015341940292405566,
+      "confidence_upper": -0.00030963891178393903,
+      "count": 1.25,
+      "mean_reward": -0.0009219164705122478,
+      "n": 16132698,
+      "regression_reward": -0.0020651061037139295,
+      "stddev_reward": 1.2547169720433593
+    },
+    {
+      "conditional_second_moment": 1.5741432351098454,
+      "confidence_lower": -0.0003021384954408507,
+      "confidence_upper": 0.001005424473713767,
+      "count": 1.5,
+      "mean_reward": 0.0003516429891364581,
+      "n": 14147872,
+      "regression_reward": -0.0008104725444567154,
+      "stddev_reward": 1.2546486007871103
+    },
+    {
+      "conditional_second_moment": 1.5741417965762805,
+      "confidence_lower": 0.001455298529002356,
+      "confidence_upper": 0.002850547045486229,
+      "count": 1.75,
+      "mean_reward": 0.0021529227872442926,
+      "n": 12425434,
+      "regression_reward": 0.00044416101480049784,
+      "stddev_reward": 1.2546462296200283
+    },
+    {
+      "conditional_second_moment": 1.5693987062520955,
+      "confidence_lower": 0.0026568948073351106,
+      "confidence_upper": 0.004142826051337598,
+      "count": 2.0,
+      "mean_reward": 0.0033998604293363544,
+      "n": 10922066,
+      "regression_reward": 0.0016987945740577128,
+      "stddev_reward": 1.2527518298534457
+    },
+    {
+      "conditional_second_moment": 1.566305949584909,
+      "confidence_lower": 0.0044899901168622205,
+      "confidence_upper": 0.0060722920417896325,
+      "count": 2.25,
+      "mean_reward": 0.0052811410793259265,
+      "n": 9613074,
+      "regression_reward": 0.002953428133314928,
+      "stddev_reward": 1.25151031123751
+    },
+    {
+      "conditional_second_moment": 1.5727682640528244,
+      "confidence_lower": 0.005339514755216716,
+      "confidence_upper": 0.007029687041072902,
+      "count": 2.5,
+      "mean_reward": 0.006184600898144809,
+      "n": 8459883,
+      "regression_reward": 0.004208061692572141,
+      "stddev_reward": 1.2540853299375425
+    },
+    {
+      "conditional_second_moment": 1.5799413971080591,
+      "confidence_lower": 0.006768487678425562,
+      "confidence_upper": 0.008572142217236822,
+      "count": 2.75,
+      "mean_reward": 0.007670314947831192,
+      "n": 7462601,
+      "regression_reward": 0.005462695251829354,
+      "stddev_reward": 1.2569337943490342
+    },
+    {
+      "conditional_second_moment": 1.5974291110000776,
+      "confidence_lower": 0.007765853102221152,
+      "confidence_upper": 0.00969658571325559,
+      "count": 3.0,
+      "mean_reward": 0.008731219407738371,
+      "n": 6584590,
+      "regression_reward": 0.006717328811086569,
+      "stddev_reward": 1.2638642636010131
+    },
+    {
+      "conditional_second_moment": 1.6101111702728155,
+      "confidence_lower": 0.009841739173428999,
+      "confidence_upper": 0.011905120475887036,
+      "count": 3.25,
+      "mean_reward": 0.010873429824658018,
+      "n": 5810816,
+      "regression_reward": 0.007971962370343784,
+      "stddev_reward": 1.2688549715379862
+    },
+    {
+      "conditional_second_moment": 1.6140470995366412,
+      "confidence_lower": 0.011702530658201434,
+      "confidence_upper": 0.01390164844429699,
+      "count": 3.5,
+      "mean_reward": 0.012802089551249212,
+      "n": 5127991,
+      "regression_reward": 0.009226595929600996,
+      "stddev_reward": 1.2703870300187117
+    },
+    {
+      "conditional_second_moment": 1.6165092330062276,
+      "confidence_lower": 0.012376614567921926,
+      "confidence_upper": 0.014716881555278321,
+      "count": 3.75,
+      "mean_reward": 0.013546748061600123,
+      "n": 4534926,
+      "regression_reward": 0.01048122948885821,
+      "stddev_reward": 1.2713479927318025
+    },
+    {
+      "conditional_second_moment": 1.6230405486226624,
+      "confidence_lower": 0.014248850292273085,
+      "confidence_upper": 0.016744274693836297,
+      "count": 4.0,
+      "mean_reward": 0.015496562493054691,
+      "n": 4004501,
+      "regression_reward": 0.011735863048115426,
+      "stddev_reward": 1.2738918341733576
+    },
+    {
+      "conditional_second_moment": 1.633385913530835,
+      "confidence_lower": 0.014834000986304132,
+      "confidence_upper": 0.017495341275784584,
+      "count": 4.25,
+      "mean_reward": 0.016164671131044358,
+      "n": 3543159,
+      "regression_reward": 0.01299049660737264,
+      "stddev_reward": 1.2779376420381632
+    },
+    {
+      "conditional_second_moment": 1.6385693647342008,
+      "confidence_lower": 0.016559313014867853,
+      "confidence_upper": 0.019394939977353903,
+      "count": 4.5,
+      "mean_reward": 0.017977126496110878,
+      "n": 3130784,
+      "regression_reward": 0.014245130166629856,
+      "stddev_reward": 1.2799399156433648
+    },
+    {
+      "conditional_second_moment": 1.6431965738423029,
+      "confidence_lower": 0.018896046572611385,
+      "confidence_upper": 0.02191958523566748,
+      "count": 4.75,
+      "mean_reward": 0.020407815904139433,
+      "n": 2761344,
+      "regression_reward": 0.015499763725887067,
+      "stddev_reward": 1.2817098325644247
+    },
+    {
+      "conditional_second_moment": 1.6441682044706853,
+      "confidence_lower": 0.019841191600105113,
+      "confidence_upper": 0.023058826681385577,
+      "count": 5.0,
+      "mean_reward": 0.021450009140745345,
+      "n": 2439626,
+      "regression_reward": 0.01675439728514428,
+      "stddev_reward": 1.2820718004770821
+    }
+  ],
+  "resolution": 0.25,
+  "rounds": 500000000
+}

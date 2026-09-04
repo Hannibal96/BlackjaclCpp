@@ -1,0 +1,468 @@
+{
+  "graphs": [
+    {
+      "graph": {
+        "hands_per_sec": 6775067.750677507,
+        "has_ev_regression_line": false,
+        "max_count": 5.0,
+        "min_count": -5.0,
+        "points": [
+          {
+            "conditional_second_moment": 1.639179685641583,
+            "confidence_lower": -0.02292501465908256,
+            "confidence_upper": -0.020513472791846572,
+            "count": -5.0,
+            "fitted_bet_fraction": -0.018316146046368526,
+            "mean_reward": -0.021719243725464566,
+            "n": 4329962,
+            "regression_reward": null,
+            "stddev_reward": 1.2801202912592147
+          },
+          {
+            "conditional_second_moment": 1.6377460884624573,
+            "confidence_lower": -0.023312806233769284,
+            "confidence_upper": -0.020979655087922763,
+            "count": -4.75,
+            "fitted_bet_fraction": -0.0175335112540501,
+            "mean_reward": -0.022146230660846023,
+            "n": 4621712,
+            "regression_reward": null,
+            "stddev_reward": 1.2795529035291873
+          },
+          {
+            "conditional_second_moment": 1.627944706016177,
+            "confidence_lower": -0.022297259227934362,
+            "confidence_upper": -0.020047405821939684,
+            "count": -4.5,
+            "fitted_bet_fraction": -0.01675087646173167,
+            "mean_reward": -0.021172332524937023,
+            "n": 4940646,
+            "regression_reward": null,
+            "stddev_reward": 1.2757336862964896
+          },
+          {
+            "conditional_second_moment": 1.6228169948733582,
+            "confidence_lower": -0.020806125275648665,
+            "confidence_upper": -0.01865340250822193,
+            "count": -4.25,
+            "fitted_bet_fraction": -0.015968241669413245,
+            "mean_reward": -0.019729763891935297,
+            "n": 5379740,
+            "regression_reward": null,
+            "stddev_reward": 1.2737455520197614
+          },
+          {
+            "conditional_second_moment": 1.6237959799633022,
+            "confidence_lower": -0.019418366428155892,
+            "confidence_upper": -0.017288111809484932,
+            "count": -4.0,
+            "fitted_bet_fraction": -0.01518560687709482,
+            "mean_reward": -0.018353239118820412,
+            "n": 5497313,
+            "regression_reward": null,
+            "stddev_reward": 1.2741503594855474
+          },
+          {
+            "conditional_second_moment": 1.6169793442245408,
+            "confidence_lower": -0.01804018450140183,
+            "confidence_upper": -0.016032924877221973,
+            "count": -3.75,
+            "fitted_bet_fraction": -0.014402972084776393,
+            "mean_reward": -0.0170365546893119,
+            "n": 6165830,
+            "regression_reward": null,
+            "stddev_reward": 1.2714908965576037
+          },
+          {
+            "conditional_second_moment": 1.607502274802443,
+            "confidence_lower": -0.015987849016949593,
+            "confidence_upper": -0.014014311454001538,
+            "count": -3.5,
+            "fitted_bet_fraction": -0.013620337292457967,
+            "mean_reward": -0.015001080235475564,
+            "n": 6341210,
+            "regression_reward": null,
+            "stddev_reward": 1.2677843832427547
+          },
+          {
+            "conditional_second_moment": 1.60946452279592,
+            "confidence_lower": -0.015138474479845185,
+            "confidence_upper": -0.013239467978233865,
+            "count": -3.25,
+            "fitted_bet_fraction": -0.01283770250013954,
+            "mean_reward": -0.014188971229039525,
+            "n": 6857192,
+            "regression_reward": null,
+            "stddev_reward": 1.2685673793265304
+          },
+          {
+            "conditional_second_moment": 1.6029556783915075,
+            "confidence_lower": -0.014814551383690451,
+            "confidence_upper": -0.012953728446831176,
+            "count": -3.0,
+            "fitted_bet_fraction": -0.012055067707821115,
+            "mean_reward": -0.013884139915260814,
+            "n": 7112648,
+            "regression_reward": null,
+            "stddev_reward": 1.2660027286899191
+          },
+          {
+            "conditional_second_moment": 1.5944784594690242,
+            "confidence_lower": -0.013104485595019645,
+            "confidence_upper": -0.011250359316019915,
+            "count": -2.75,
+            "fitted_bet_fraction": -0.011272432915502688,
+            "mean_reward": -0.01217742245551978,
+            "n": 7126426,
+            "regression_reward": null,
+            "stddev_reward": 1.2626678778884668
+          },
+          {
+            "conditional_second_moment": 1.5938697627145726,
+            "confidence_lower": -0.011916853026157567,
+            "confidence_upper": -0.01011703945005556,
+            "count": -2.5,
+            "fitted_bet_fraction": -0.010489798123184263,
+            "mean_reward": -0.011016946238106564,
+            "n": 7560262,
+            "regression_reward": null,
+            "stddev_reward": 1.262437479485681
+          },
+          {
+            "conditional_second_moment": 1.586859569096447,
+            "confidence_lower": -0.009668978591623712,
+            "confidence_upper": -0.007898558576234052,
+            "count": -2.25,
+            "fitted_bet_fraction": -0.009707163330865836,
+            "mean_reward": -0.008783768583928882,
+            "n": 7779235,
+            "regression_reward": null,
+            "stddev_reward": 1.2596755195310858
+          },
+          {
+            "conditional_second_moment": 1.5777526006606875,
+            "confidence_lower": -0.008779247591140306,
+            "confidence_upper": -0.006987524732022117,
+            "count": -2.0,
+            "fitted_bet_fraction": -0.008924528538547409,
+            "mean_reward": -0.007883386161581211,
+            "n": 7551831,
+            "regression_reward": null,
+            "stddev_reward": 1.2560614845155131
+          },
+          {
+            "conditional_second_moment": 1.5728200504951286,
+            "confidence_lower": -0.007442914225673495,
+            "confidence_upper": -0.005685921415313958,
+            "count": -1.75,
+            "fitted_bet_fraction": -0.008141893746228984,
+            "mean_reward": -0.006564417820493726,
+            "n": 7828874,
+            "regression_reward": null,
+            "stddev_reward": 1.2541040462871518
+          },
+          {
+            "conditional_second_moment": 1.5744610860862334,
+            "confidence_lower": -0.006843042434103068,
+            "confidence_upper": -0.00515599761445918,
+            "count": -1.5,
+            "fitted_bet_fraction": -0.007359258953910557,
+            "mean_reward": -0.005999520024281124,
+            "n": 8500430,
+            "regression_reward": null,
+            "stddev_reward": 1.2547609700041327
+          },
+          {
+            "conditional_second_moment": 1.563589088051173,
+            "confidence_lower": -0.004945359763670353,
+            "confidence_upper": -0.0032265891667821968,
+            "count": -1.25,
+            "fitted_bet_fraction": -0.006576624161592132,
+            "mean_reward": -0.004085974465226275,
+            "n": 8133066,
+            "regression_reward": null,
+            "stddev_reward": 1.2504288835690907
+          },
+          {
+            "conditional_second_moment": 1.5574119006097848,
+            "confidence_lower": -0.0034793133813528065,
+            "confidence_upper": -0.001783481476958504,
+            "count": -1.0,
+            "fitted_bet_fraction": -0.005793989369273705,
+            "mean_reward": -0.002631397429155655,
+            "n": 8321624,
+            "regression_reward": null,
+            "stddev_reward": 1.2479603264356423
+          },
+          {
+            "conditional_second_moment": 1.555282833874514,
+            "confidence_lower": -0.003230376913459638,
+            "confidence_upper": -0.001594210233789123,
+            "count": -0.75,
+            "fitted_bet_fraction": -0.005011354576955279,
+            "mean_reward": -0.0024122935736243805,
+            "n": 8927396,
+            "regression_reward": null,
+            "stddev_reward": 1.247107459168707
+          },
+          {
+            "conditional_second_moment": 1.5503347248590038,
+            "confidence_lower": -0.0016350916588909617,
+            "confidence_upper": 2.607253390732279e-05,
+            "count": -0.5,
+            "fitted_bet_fraction": -0.004228719784636853,
+            "mean_reward": -0.0008045095624918194,
+            "n": 8633210,
+            "regression_reward": null,
+            "stddev_reward": 1.2451241213723905
+          },
+          {
+            "conditional_second_moment": 1.5432059147285866,
+            "confidence_lower": -0.0007110690782169758,
+            "confidence_upper": 0.0009566755202839404,
+            "count": -0.25,
+            "fitted_bet_fraction": -0.003446084992318426,
+            "mean_reward": 0.00012280322103348234,
+            "n": 8525835,
+            "regression_reward": null,
+            "stddev_reward": 1.2422583868293888
+          },
+          {
+            "conditional_second_moment": 1.5453658507991412,
+            "confidence_lower": -0.001468938310512347,
+            "confidence_upper": -0.0009304268608110408,
+            "count": 0.0,
+            "fitted_bet_fraction": -0.0026634502,
+            "mean_reward": -0.001199682585661694,
+            "n": 81886660,
+            "regression_reward": null,
+            "stddev_reward": 1.243126868650515
+          },
+          {
+            "conditional_second_moment": 1.5369287675194803,
+            "confidence_lower": 0.0016834460853571945,
+            "confidence_upper": 0.0033397002747898316,
+            "count": 0.25,
+            "fitted_bet_fraction": -0.001880815407681574,
+            "mean_reward": 0.002511573180073513,
+            "n": 8609345,
+            "regression_reward": null,
+            "stddev_reward": 1.2397267680903084
+          },
+          {
+            "conditional_second_moment": 1.5310415358509633,
+            "confidence_lower": 0.0030781558463531663,
+            "confidence_upper": 0.0047732901971998054,
+            "count": 0.5,
+            "fitted_bet_fraction": -0.0010981806153631476,
+            "mean_reward": 0.003925723021776486,
+            "n": 8187409,
+            "regression_reward": null,
+            "stddev_reward": 1.237346404427523
+          },
+          {
+            "conditional_second_moment": 1.5261874898136367,
+            "confidence_lower": 0.004301938988215277,
+            "confidence_upper": 0.006006815489911386,
+            "count": 0.75,
+            "fitted_bet_fraction": -0.0003155458230447213,
+            "mean_reward": 0.0051543772390633315,
+            "n": 8068385,
+            "regression_reward": null,
+            "stddev_reward": 1.235378857763445
+          },
+          {
+            "conditional_second_moment": 1.518970194650534,
+            "confidence_lower": 0.005838564914737907,
+            "confidence_upper": 0.007524204297864496,
+            "count": 1.0,
+            "fitted_bet_fraction": 0.00046708896927370475,
+            "mean_reward": 0.006681384606301201,
+            "n": 8214465,
+            "regression_reward": null,
+            "stddev_reward": 1.2324469780685403
+          },
+          {
+            "conditional_second_moment": 1.5149048727143557,
+            "confidence_lower": 0.006239971031491944,
+            "confidence_upper": 0.007986094685670105,
+            "count": 1.25,
+            "fitted_bet_fraction": 0.0012497237615921313,
+            "mean_reward": 0.007113032858581024,
+            "n": 7634718,
+            "regression_reward": null,
+            "stddev_reward": 1.2307941653574364
+          },
+          {
+            "conditional_second_moment": 1.5088847377879344,
+            "confidence_lower": 0.00815922098243323,
+            "confidence_upper": 0.009908249838178514,
+            "count": 1.5,
+            "fitted_bet_fraction": 0.0020323585539105573,
+            "mean_reward": 0.009033735410305872,
+            "n": 7578980,
+            "regression_reward": null,
+            "stddev_reward": 1.228333476468207
+          },
+          {
+            "conditional_second_moment": 1.5036472515260522,
+            "confidence_lower": 0.00931817444595301,
+            "confidence_upper": 0.011084556667847315,
+            "count": 1.75,
+            "fitted_bet_fraction": 0.0028149933462289834,
+            "mean_reward": 0.010201365556900162,
+            "n": 7404891,
+            "regression_reward": null,
+            "stddev_reward": 1.2261905168720018
+          },
+          {
+            "conditional_second_moment": 1.4993074216112006,
+            "confidence_lower": 0.010357055722716111,
+            "confidence_upper": 0.012138364162358506,
+            "count": 2.0,
+            "fitted_bet_fraction": 0.0035976281385474095,
+            "mean_reward": 0.011247709942537308,
+            "n": 7260189,
+            "regression_reward": null,
+            "stddev_reward": 1.2244104338955337
+          },
+          {
+            "conditional_second_moment": 1.492053322715729,
+            "confidence_lower": 0.01108132321021339,
+            "confidence_upper": 0.012958634237380124,
+            "count": 2.25,
+            "fitted_bet_fraction": 0.004380262930865835,
+            "mean_reward": 0.012019978723796758,
+            "n": 6504920,
+            "regression_reward": null,
+            "stddev_reward": 1.2214372038001824
+          },
+          {
+            "conditional_second_moment": 1.487263719722631,
+            "confidence_lower": 0.013513645143198446,
+            "confidence_upper": 0.015391015087185574,
+            "count": 2.5,
+            "fitted_bet_fraction": 0.005162897723184262,
+            "mean_reward": 0.01445233011519201,
+            "n": 6483349,
+            "regression_reward": null,
+            "stddev_reward": 1.219448584351498
+          },
+          {
+            "conditional_second_moment": 1.483975931842452,
+            "confidence_lower": 0.014327721319412406,
+            "confidence_upper": 0.016213581364779288,
+            "count": 2.75,
+            "fitted_bet_fraction": 0.005945532515502687,
+            "mean_reward": 0.015270651342095846,
+            "n": 6410794,
+            "regression_reward": null,
+            "stddev_reward": 1.2180897910458162
+          },
+          {
+            "conditional_second_moment": 1.4789710722843994,
+            "confidence_lower": 0.015350255327491177,
+            "confidence_upper": 0.01731677214847756,
+            "count": 3.0,
+            "fitted_bet_fraction": 0.006728167307821114,
+            "mean_reward": 0.01633351373798437,
+            "n": 5875680,
+            "regression_reward": null,
+            "stddev_reward": 1.2160198553532628
+          },
+          {
+            "conditional_second_moment": 1.4748526911159403,
+            "confidence_lower": 0.016947078234445155,
+            "confidence_upper": 0.018953659238457814,
+            "count": 3.25,
+            "fitted_bet_fraction": 0.0075108021001395395,
+            "mean_reward": 0.017950368736451484,
+            "n": 5627461,
+            "regression_reward": null,
+            "stddev_reward": 1.2143024645359846
+          },
+          {
+            "conditional_second_moment": 1.4695598402379164,
+            "confidence_lower": 0.01700927381148829,
+            "confidence_upper": 0.019039222811098336,
+            "count": 3.5,
+            "fitted_bet_fraction": 0.008293436892457966,
+            "mean_reward": 0.018024248311293314,
+            "n": 5478897,
+            "regression_reward": null,
+            "stddev_reward": 1.2121200298282053
+          },
+          {
+            "conditional_second_moment": 1.4630322212981224,
+            "confidence_lower": 0.0176837502940411,
+            "confidence_upper": 0.019747979383825543,
+            "count": 3.75,
+            "fitted_bet_fraction": 0.009076071684776392,
+            "mean_reward": 0.01871586483893332,
+            "n": 5274803,
+            "regression_reward": null,
+            "stddev_reward": 1.2094138818871947
+          },
+          {
+            "conditional_second_moment": 1.4603802116489417,
+            "confidence_lower": 0.01953107581535817,
+            "confidence_upper": 0.021676767090117264,
+            "count": 4.0,
+            "fitted_bet_fraction": 0.009858706477094819,
+            "mean_reward": 0.020603921452737716,
+            "n": 4872786,
+            "regression_reward": null,
+            "stddev_reward": 1.208286261640722
+          },
+          {
+            "conditional_second_moment": 1.453964234906095,
+            "confidence_lower": 0.019949139227990798,
+            "confidence_upper": 0.02215876550218617,
+            "count": 4.25,
+            "fitted_bet_fraction": 0.010641341269413246,
+            "mean_reward": 0.021053952365088485,
+            "n": 4574628,
+            "regression_reward": null,
+            "stddev_reward": 1.2056205729813603
+          },
+          {
+            "conditional_second_moment": 1.4486669098161091,
+            "confidence_lower": 0.020922337180173264,
+            "confidence_upper": 0.023147646243680944,
+            "count": 4.5,
+            "fitted_bet_fraction": 0.01142397606173167,
+            "mean_reward": 0.022034991711927104,
+            "n": 4493807,
+            "regression_reward": null,
+            "stddev_reward": 1.20340407551095
+          },
+          {
+            "conditional_second_moment": 1.444272086378266,
+            "confidence_lower": 0.022436084693383065,
+            "confidence_upper": 0.024738186630940826,
+            "count": 4.75,
+            "fitted_bet_fraction": 0.012206610854050098,
+            "mean_reward": 0.023587135662161945,
+            "n": 4186053,
+            "regression_reward": null,
+            "stddev_reward": 1.2015472247937327
+          },
+          {
+            "conditional_second_moment": 1.4407535245674923,
+            "confidence_lower": 0.022866996581535935,
+            "confidence_upper": 0.02523025180280596,
+            "count": 5.0,
+            "fitted_bet_fraction": 0.012989245646368525,
+            "mean_reward": 0.024048624192170947,
+            "n": 3962472,
+            "regression_reward": null,
+            "stddev_reward": 1.2000729928808314
+          }
+        ],
+        "resolution": 0.25,
+        "rounds": 500000000
+      },
+      "label": "W1"
+    }
+  ]
+}

@@ -15,7 +15,7 @@ readonly PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly COMPARE_BIN="${PROJECT_DIR}/build/bin/CompareCountStrategies"
 readonly ALTERNATING_BIN="${PROJECT_DIR}/build/bin/AlternatingOptimization"
 
-readonly NUM_THREADS=5
+readonly NUM_THREADS=10
 readonly NICE_LEVEL="${NICE_LEVEL:-10}"
 readonly SUITE_NAME="sp21_nobonus"
 readonly SUITE_LOG_DIR="${PROJECT_DIR}/checkpoints/performance-suites/${SUITE_NAME}"
@@ -62,7 +62,7 @@ EVALUATION_FLAGS=(
 
 ALTERNATING_FLAGS=(
   --iterations 3
-  --sample-every 5
+  --sample-every 2
 )
 
 require_executable() {
