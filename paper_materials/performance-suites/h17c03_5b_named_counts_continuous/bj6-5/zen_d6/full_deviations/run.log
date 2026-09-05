@@ -1,0 +1,92 @@
+Training fresh full deviations for the selected count...
+Training rounds=100000000 speed=4470073 rounds/sec avg|delta Q|=0.34851296 threshold=0.00500000
+Training rounds=200000000 speed=4513654 rounds/sec avg|delta Q|=0.04312881 threshold=0.00500000
+Training rounds=300000000 speed=4470139 rounds/sec avg|delta Q|=0.02523483 threshold=0.00500000
+Training rounds=400000000 speed=4437640 rounds/sec avg|delta Q|=0.01942792 threshold=0.00500000
+Training rounds=500000000 speed=4413257 rounds/sec avg|delta Q|=0.01659010 threshold=0.00500000
+Training rounds=600000000 speed=4403637 rounds/sec avg|delta Q|=0.01488372 threshold=0.00500000
+Training rounds=700000000 speed=4378229 rounds/sec avg|delta Q|=0.01405034 threshold=0.00500000
+Training rounds=800000000 speed=4379530 rounds/sec avg|delta Q|=0.01309538 threshold=0.00500000
+Training rounds=900000000 speed=4368253 rounds/sec avg|delta Q|=0.01248673 threshold=0.00500000
+Training rounds=1000000000 speed=4356046 rounds/sec avg|delta Q|=0.01208711 threshold=0.00500000
+Training rounds=1100000000 speed=4341066 rounds/sec avg|delta Q|=0.01147528 threshold=0.00500000
+Training rounds=1200000000 speed=4309432 rounds/sec avg|delta Q|=0.01115486 threshold=0.00500000
+Training rounds=1300000000 speed=4300833 rounds/sec avg|delta Q|=0.01064828 threshold=0.00500000
+Training rounds=1400000000 speed=4266472 rounds/sec avg|delta Q|=0.01010350 threshold=0.00500000
+Training rounds=1500000000 speed=4261812 rounds/sec avg|delta Q|=0.00991392 threshold=0.00500000
+Training rounds=1600000000 speed=4248652 rounds/sec avg|delta Q|=0.00959960 threshold=0.00500000
+Training rounds=1700000000 speed=4237837 rounds/sec avg|delta Q|=0.00936144 threshold=0.00500000
+Training rounds=1800000000 speed=4229711 rounds/sec avg|delta Q|=0.00906854 threshold=0.00500000
+Training rounds=1900000000 speed=4228386 rounds/sec avg|delta Q|=0.00874629 threshold=0.00500000
+Training rounds=2000000000 speed=4222126 rounds/sec avg|delta Q|=0.00858705 threshold=0.00500000
+Training rounds=2100000000 speed=4208257 rounds/sec avg|delta Q|=0.00829215 threshold=0.00500000
+Training rounds=2200000000 speed=4206742 rounds/sec avg|delta Q|=0.00818533 threshold=0.00500000
+Training rounds=2300000000 speed=4204630 rounds/sec avg|delta Q|=0.00787358 threshold=0.00500000
+Training rounds=2400000000 speed=4205428 rounds/sec avg|delta Q|=0.00774616 threshold=0.00500000
+Training rounds=2500000000 speed=4204804 rounds/sec avg|delta Q|=0.00747940 threshold=0.00500000
+Training rounds=2600000000 speed=4198193 rounds/sec avg|delta Q|=0.00738380 threshold=0.00500000
+Training rounds=2700000000 speed=4189853 rounds/sec avg|delta Q|=0.00724479 threshold=0.00500000
+Training rounds=2800000000 speed=4182600 rounds/sec avg|delta Q|=0.00693623 threshold=0.00500000
+Training rounds=2900000000 speed=4177880 rounds/sec avg|delta Q|=0.00684753 threshold=0.00500000
+Training rounds=3000000000 speed=4168195 rounds/sec avg|delta Q|=0.00666222 threshold=0.00500000
+Training rounds=3100000000 speed=4167115 rounds/sec avg|delta Q|=0.00662268 threshold=0.00500000
+Training rounds=3200000000 speed=4162477 rounds/sec avg|delta Q|=0.00650277 threshold=0.00500000
+Training rounds=3300000000 speed=4165320 rounds/sec avg|delta Q|=0.00624806 threshold=0.00500000
+Training rounds=3400000000 speed=4161139 rounds/sec avg|delta Q|=0.00617548 threshold=0.00500000
+Training rounds=3500000000 speed=4156676 rounds/sec avg|delta Q|=0.00607556 threshold=0.00500000
+Training rounds=3600000000 speed=4152278 rounds/sec avg|delta Q|=0.00597511 threshold=0.00500000
+Training rounds=3700000000 speed=4150248 rounds/sec avg|delta Q|=0.00591148 threshold=0.00500000
+Training rounds=3800000000 speed=4144169 rounds/sec avg|delta Q|=0.00577315 threshold=0.00500000
+Training rounds=3900000000 speed=4143470 rounds/sec avg|delta Q|=0.00563189 threshold=0.00500000
+Training rounds=4000000000 speed=4136026 rounds/sec avg|delta Q|=0.00556592 threshold=0.00500000
+Training rounds=4100000000 speed=4135791 rounds/sec avg|delta Q|=0.00545544 threshold=0.00500000
+Training rounds=4200000000 speed=4133333 rounds/sec avg|delta Q|=0.00536633 threshold=0.00500000
+Training rounds=4300000000 speed=4126014 rounds/sec avg|delta Q|=0.00532311 threshold=0.00500000
+Training rounds=4400000000 speed=4123012 rounds/sec avg|delta Q|=0.00523208 threshold=0.00500000
+Training rounds=4500000000 speed=4121487 rounds/sec avg|delta Q|=0.00509061 threshold=0.00500000
+Training rounds=4600000000 speed=4117506 rounds/sec avg|delta Q|=0.00497209 threshold=0.00500000
+
+=== EvaluateCountPolicy ===
+Command:          /home/pliops/BlackJackCounts/build/bin/EvaluateCountPolicy --game blackjack --count-name zen --policy full-deviations --output-dir /home/pliops/BlackJackCounts/paper_materials/performance-suites/h17c03_5b_named_counts_continuous/bj6-5/zen_d6/full_deviations --decks 6 --penetration 75 --ss17 false --peek true --surr no --das true --sas 4 --don ANY --rsa false --hsa false --bj 1.2 --factor 0.005 --bias -0.0199842 --count-normalization true --continuous-betting-count true --min-count -5 --max-count 5 --num-rounds 5000000000 --stop-mode diff --sample-rounds 100000000 --diff-threshold 0.005 --eval-rounds 5000000000 --kelly-rounds 1000000 --kelly-measurements 1000 --kelly-min 0.50 --kelly-max 1.00 --kelly-step 0.05 --max-total-wager-fraction 1.0 --num-threads 10 --seed 12345
+Game:             blackjack
+Scenario:         decks=6_ss17=False_das=True_sas=4_don=Any_reSplitAces=False_hitSplitAces=False_surr=no_peek=True_bj-pays=1.2
+Penetration:      75.00000000%
+Count:            named count zen
+Policy:           fresh full deviations trained for the selected count
+Spread:           5000000000 rounds, 1:10
+Kelly:            1000 x 1000000 rounds per multiplier
+Kelly search:     0.50000000 to 1.00000000 step 0.05000000
+Total wager cap:  1.00000000 x round-start bankroll
+Threads:          10
+Seed:             12345
+Output:           /home/pliops/BlackJackCounts/paper_materials/performance-suites/h17c03_5b_named_counts_continuous/bj6-5/zen_d6/full_deviations/
+
+Count weights:
+   2  1.000000000000
+   3  1.000000000000
+   4  2.000000000000
+   5  2.000000000000
+   6  2.000000000000
+   7  1.000000000000
+   8  0.000000000000
+   9  0.000000000000
+  10  -2.000000000000
+   J  -2.000000000000
+   Q  -2.000000000000
+   K  -2.000000000000
+   A  -1.000000000000
+Transform: running = 0.000000000000 + (0.000000000000 * decks) + tags; selected=true_count
+Signal f(c) = -0.019984200000 + 0.005000000000 * c
+
+Running spread and Kelly evaluations...
+
+=== Result ===
+Spread edge:               -0.019434580944
+Kelly growth @1:           0.999977490784
+Kelly exposure rounds @1: 1000000000
+Mean gross wager/bankroll: 0.002220415000
+Max gross wager/bankroll:  0.708265939806
+Mean |fX|:                 0.002031982688
+Max |fX|:                  0.708265939806
+
+Saved results to /home/pliops/BlackJackCounts/paper_materials/performance-suites/h17c03_5b_named_counts_continuous/bj6-5/zen_d6/full_deviations/

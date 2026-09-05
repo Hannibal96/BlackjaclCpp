@@ -13,20 +13,21 @@ set -Eeuo pipefail
 # Important count semantics:
 #   * Every named count uses its rank tags from CountingMethods.h.
 #   * The betting intercept is overridden with the rule/deck-specific Wizard
-#     edge, and all counts use a common 0.005 signal slope. Kelly multipliers
-#     0.50..1.00 scale that complete signal; there is no 1.35 divisor.
+#     edge. Level-one counts use a 0.005 signal slope; the level-two Hi-Opt II,
+#     Omega II, and Zen counts use 0.0025 so their doubled tags do not double
+#     the betting signal. Kelly multipliers scale that complete signal.
 #   * Betting uses the continuous selected count by default, while Full-
 #     deviation playing states retain the app's integer count resolution.
 #   * Named KO is an unnormalized running count with an IRC of zero. This keeps
 #     c=0 at the shuffle, so the Wizard bias is the initial betting signal.
-#   * Higher-level counts are not rescaled here. Their empirical Kelly optimum
-#     is therefore important when interpreting comparisons at multiplier 1.
+#   * KO uses a wider Kelly-multiplier search because its unnormalized running
+#     count has a materially different scale from the true-counted systems.
 
 readonly PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly COMPARE_APP="${PROJECT_DIR}/scripts/compare_count_strategies.py"
 readonly EVALUATOR="${PROJECT_DIR}/build/bin/EvaluateCountPolicy"
 
-readonly SUITE_NAME="${SUITE_NAME:-h17c03_5b_named_counts_continuous}"
+readonly SUITE_NAME="${SUITE_NAME:-h17c03_5b_named_counts_rescaled}"
 readonly OUTPUT_ROOT="${OUTPUT_ROOT:-${PROJECT_DIR}/paper_materials/performance-suites/${SUITE_NAME}}"
 readonly LOG_DIR="${OUTPUT_ROOT}/logs"
 
@@ -45,9 +46,12 @@ readonly KELLY_MEASUREMENTS="${KELLY_MEASUREMENTS:-1000}"
 readonly KELLY_MIN="${KELLY_MIN:-0.50}"
 readonly KELLY_MAX="${KELLY_MAX:-1.00}"
 readonly KELLY_STEP="${KELLY_STEP:-0.05}"
+readonly KO_KELLY_MIN="${KO_KELLY_MIN:-0.25}"
+readonly KO_KELLY_MAX="${KO_KELLY_MAX:-2.50}"
 readonly MAX_TOTAL_WAGER_FRACTION="${MAX_TOTAL_WAGER_FRACTION:-1.0}"
 
 readonly COUNT_FACTOR="${COUNT_FACTOR:-0.005}"
+readonly DOUBLED_COUNT_FACTOR="${DOUBLED_COUNT_FACTOR:-0.0025}"
 readonly CONTINUOUS_BETTING_COUNT="${CONTINUOUS_BETTING_COUNT:-true}"
 readonly COUNT_MIN="${COUNT_MIN:--5}"
 readonly COUNT_MAX="${COUNT_MAX:-5}"
@@ -194,6 +198,9 @@ run_count_case() {
   local output_dir
   local selected_count_min="${COUNT_MIN}"
   local selected_count_max="${COUNT_MAX}"
+  local selected_factor="${COUNT_FACTOR}"
+  local selected_kelly_min="${KELLY_MIN}"
+  local selected_kelly_max="${KELLY_MAX}"
   local -a normalization_flags=(--count-normalization true)
 
   bias="$(wizard_bias_for "${payout}" "${deck}")"
@@ -208,11 +215,17 @@ run_count_case() {
     )
     selected_count_min="${KO_COUNT_MIN}"
     selected_count_max="${KO_COUNT_MAX}"
+    selected_kelly_min="${KO_KELLY_MIN}"
+    selected_kelly_max="${KO_KELLY_MAX}"
+  elif [[ "${count}" == "hiopt2" || "${count}" == "omega2" || \
+          "${count}" == "zen" ]]; then
+    selected_factor="${DOUBLED_COUNT_FACTOR}"
   fi
 
-  printf '\nConfiguration: payout=%s, decks=%s, count=%s, factor=%s, bias=%s, range=%s..%s\n' \
-    "${payout}" "${deck}" "${count}" "${COUNT_FACTOR}" "${bias}" \
-    "${selected_count_min}" "${selected_count_max}"
+  printf '\nConfiguration: payout=%s, decks=%s, count=%s, factor=%s, bias=%s, count-range=%s..%s, Kelly-range=%s..%s\n' \
+    "${payout}" "${deck}" "${count}" "${selected_factor}" "${bias}" \
+    "${selected_count_min}" "${selected_count_max}" \
+    "${selected_kelly_min}" "${selected_kelly_max}"
 
   run_case "${case_label}" "${output_dir}/results.json" \
     "${COMPARE_APP}" \
@@ -231,7 +244,7 @@ run_count_case() {
     --rsa false \
     --hsa false \
     --bj "${payout}" \
-    --factor "${COUNT_FACTOR}" \
+    --factor "${selected_factor}" \
     --bias "${bias}" \
     "${normalization_flags[@]}" \
     --continuous-betting-count "${CONTINUOUS_BETTING_COUNT}" \
@@ -244,8 +257,8 @@ run_count_case() {
     --eval-rounds "${EVAL_ROUNDS}" \
     --kelly-rounds "${KELLY_ROUNDS}" \
     --kelly-measurements "${KELLY_MEASUREMENTS}" \
-    --kelly-min "${KELLY_MIN}" \
-    --kelly-max "${KELLY_MAX}" \
+    --kelly-min "${selected_kelly_min}" \
+    --kelly-max "${selected_kelly_max}" \
     --kelly-step "${KELLY_STEP}" \
     --max-total-wager-fraction "${MAX_TOTAL_WAGER_FRACTION}" \
     --num-threads "${NUM_THREADS}" \
@@ -343,10 +356,11 @@ main() {
   printf 'Evaluation: spread=%s; Kelly=%s x %s; range=%s..%s step=%s\n' \
     "${EVAL_ROUNDS}" "${KELLY_ROUNDS}" "${KELLY_MEASUREMENTS}" \
     "${KELLY_MIN}" "${KELLY_MAX}" "${KELLY_STEP}"
-  printf 'Count signal: multiplier x (Wizard bias + %s x continuous selected count)\n' \
-    "${COUNT_FACTOR}"
-  printf 'Kelly multipliers: %s..%s; no additional variance divisor\n' \
-    "${KELLY_MIN}" "${KELLY_MAX}"
+  printf 'Count factors: level-one=%s; Hi-Opt II/Omega II/Zen=%s\n' \
+    "${COUNT_FACTOR}" "${DOUBLED_COUNT_FACTOR}"
+  printf 'Kelly multipliers: default=%s..%s; KO=%s..%s; step=%s\n' \
+    "${KELLY_MIN}" "${KELLY_MAX}" "${KO_KELLY_MIN}" \
+    "${KO_KELLY_MAX}" "${KELLY_STEP}"
   printf 'KO: zero-IRC running count with playing-state range %s..%s\n' \
     "${KO_COUNT_MIN}" "${KO_COUNT_MAX}"
 

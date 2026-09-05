@@ -1,0 +1,45 @@
+
+=== EvaluateCountPolicy ===
+Command:          /home/pliops/BlackJackCounts/build/bin/EvaluateCountPolicy --game blackjack --count-name hilo --policy basic --output-dir /home/pliops/BlackJackCounts/paper_materials/performance-suites/h17c03_5b_named_counts_continuous/bj3-2/hilo_d2/basic --decks 2 --penetration 75 --ss17 false --peek true --surr no --das true --sas 4 --don ANY --rsa false --hsa false --bj 1.5 --factor 0.005 --bias -0.0045688 --count-normalization true --continuous-betting-count true --min-count -5 --max-count 5 --num-rounds 5000000000 --stop-mode diff --sample-rounds 100000000 --diff-threshold 0.005 --eval-rounds 5000000000 --kelly-rounds 1000000 --kelly-measurements 1000 --kelly-min 0.50 --kelly-max 1.00 --kelly-step 0.05 --max-total-wager-fraction 1.0 --num-threads 10 --seed 12345
+Game:             blackjack
+Scenario:         decks=2_ss17=False_das=True_sas=4_don=Any_reSplitAces=False_hitSplitAces=False_surr=no_peek=True_bj-pays=1.5
+Penetration:      75%
+Count:            named count hilo
+Policy:           basic strategy
+Spread:           5000000000 rounds, 1:10
+Kelly:            1000 x 1000000 rounds per multiplier
+Kelly search:     0.5 to 1 step 0.05
+Total wager cap:  1 x round-start bankroll
+Threads:          10
+Seed:             12345
+Output:           /home/pliops/BlackJackCounts/paper_materials/performance-suites/h17c03_5b_named_counts_continuous/bj3-2/hilo_d2/basic/
+
+Count weights:
+   2  1
+   3  1
+   4  1
+   5  1
+   6  1
+   7  0
+   8  0
+   9  0
+  10  -1
+   J  -1
+   Q  -1
+   K  -1
+   A  -1
+Transform: running = 0 + (0 * decks) + tags; selected=true_count
+Signal f(c) = -0.0045688 + 0.005 * c
+
+Running spread and Kelly evaluations...
+
+=== Result ===
+Spread edge:               0.0422500103
+Kelly growth @1:           1.00004246482
+Kelly exposure rounds @1: 1000000000
+Mean gross wager/bankroll: 0.00544735746553
+Max gross wager/bankroll:  0.6830184
+Mean |fX|:                 0.00507381730194
+Max |fX|:                  0.6830184
+
+Saved results to /home/pliops/BlackJackCounts/paper_materials/performance-suites/h17c03_5b_named_counts_continuous/bj3-2/hilo_d2/basic/
